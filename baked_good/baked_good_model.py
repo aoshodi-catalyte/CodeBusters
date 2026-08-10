@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class BakedGood(BaseModel):
     id: int
@@ -9,7 +9,7 @@ class BakedGood(BaseModel):
     retail_price: float = Field(ge=0)
 
     @field_validator("name")
-    def validate_description(cls, value):
+    def validate_name(cls, value):
         if not value.strip():
             raise ValueError("Name cannot be empty")
         return value
@@ -20,3 +20,10 @@ class BakedGood(BaseModel):
         if not value.strip():
             raise ValueError("Description cannot be empty")
         return value
+
+    @model_validator(mode="after")
+    def validate_retail_price(self):
+        if self.retail_price <= self.purchasing_cost:
+            raise ValueError("Retail price must be greater than purchasing cost")
+        return self
+
