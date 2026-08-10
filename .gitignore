@@ -1,0 +1,17 @@
+# Environments
+.env
+venv/
+.venv/
+ENV/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS & Editor Cruft
+.DS_Store
+.vscode/
+.idea/
+*.swp
