@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 from pydantic import BaseModel, Field
-from src.database import Base
+# from database import Base
 
 
 # ==========================================
