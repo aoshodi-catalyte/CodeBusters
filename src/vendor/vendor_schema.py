@@ -1,5 +1,6 @@
-from src.vendor.vendor_model import VendorBase
+from vendor.vendor_model import VendorBase
 from sqlalchemy import Column, Boolean, String, Integer
+from sqlalchemy.orm import relationship
 from pydantic import ConfigDict, field_serializer
 from database import Base
 
@@ -23,3 +24,5 @@ class Vendor(Base):
     contact_role = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String, index=True, nullable=False)
+    # ingredients = relationship("Ingredient", back_populates="vendor")
+    # baked_goods = relationship("BakedGood", back_populates="vendor")
