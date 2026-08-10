@@ -1,4 +1,4 @@
-from vendor_model import VendorBase
+from src.vendor.vendor_model import VendorBase
 from sqlalchemy import Column, Boolean, String, Integer
 from pydantic import ConfigDict, field_serializer
 from database import Base
