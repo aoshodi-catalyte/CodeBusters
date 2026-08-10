@@ -1,5 +1,5 @@
 import pytest
-from vendor.vendor_schema import Vendor, VendorSchema
+from src.vendor.vendor_schema import Vendor, VendorSchema
 
 
 def test_vendor_information():

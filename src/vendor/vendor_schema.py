@@ -1,8 +1,8 @@
-from vendor.vendor_model import VendorBase
+from src.vendor.vendor_model import VendorBase
+from src.database import Base
 from sqlalchemy import Column, Boolean, String, Integer
 from sqlalchemy.orm import relationship
 from pydantic import ConfigDict, field_serializer
-from database import Base
 
 
 class VendorSchema(VendorBase):
