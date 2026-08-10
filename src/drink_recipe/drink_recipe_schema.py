@@ -9,7 +9,7 @@ class DrinkRecipeSchema(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     active = Column(Boolean, default=True)
-    type = Column(String, nullable=False)
+    type = Column(Integer, nullable=False)
     production_cost = Column(Float, nullable=False)
 
     ingredients = relationship("IngredientSchema", back_populates="drink_recipe")
