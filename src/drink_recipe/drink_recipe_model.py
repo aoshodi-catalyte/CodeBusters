@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic import BaseModel, Field, field_validator
 from ingredient.ingredient_model import Ingredient
 from constants.DRINK_TYPES import DrinkType
@@ -8,9 +10,9 @@ class DrinkRecipe(BaseModel):
     ingredients: list[Ingredient] = Field(default_factory=list)
     active: bool
     type: DrinkType
-    production_cost: float = Field(ge=0, decimal_places=2)
+    production_cost: Decimal = Field(ge=0, decimal_places=2)
     markup_percentage: float = Field(ge=0)
-    sale_price: float = Field(ge=0, decimal_places=2)
+    sale_price: Decimal = Field(ge=0, decimal_places=2)
 
     @field_validator('type')
     def validate_drink_type(drink_type: str) -> DrinkType:
