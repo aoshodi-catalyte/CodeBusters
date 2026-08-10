@@ -3,7 +3,7 @@ from decimal import Decimal
 from sqlalchemy import Boolean, Column, Integer, Numeric, String
 from enum import Enum
 from constants.INGREDIENT_TYPES import UnitOfMeasure
-from app.database import Base
+from src.database import Base
 
 
 # ==========================================
@@ -19,13 +19,13 @@ ingredient_allergens = Table(
     Column("allergen_id", ForeignKey("allergens.id"), primary_key=True),
 )
 
-class Allergens(Base):
+class AllergenSchema(Base):
     __tablename__ = "allergens"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
 
-class Ingredient(Base):
+class IngredientSchema(Base):
     __tablename__ = "ingredients"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
