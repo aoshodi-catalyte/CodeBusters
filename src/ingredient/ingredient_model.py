@@ -1,16 +1,16 @@
 from dataclasses import dataclass
 from decimal import Decimal
 from pydantic import BaseModel, Field
-from app.database import Base
+# from database import Base
 
 
 # ==========================================
 # PYDANTIC SCHEMAS
 # ==========================================
-class AllergenCreate(BaseModel):
+class Allergen(BaseModel):
     name: str = Field(min_length=1)
 
-class IngredientCreate(BaseModel):
+class Ingredient(BaseModel):
     
     active: bool = True
     name: str = Field(min_length=1, max_length=255)

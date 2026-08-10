@@ -1,10 +1,9 @@
-from dataclasses import dataclass
-from decimal import Decimal
 from sqlalchemy import Boolean, Column, Integer, Numeric, String
-from enum import Enum
 from constants.INGREDIENT_TYPES import UnitOfMeasure
-from app.database import Base
-
+# from database import Base
+from sqlalchemy import ForeignKey, Table
+from sqlalchemy.orm import relationship
+from sqlalchemy import Enum
 
 # ==========================================
 # SQLALCHEMY MODEL
@@ -13,25 +12,25 @@ from app.database import Base
 
   # ASSOCIATION TABLE
 ingredient_allergens = Table(
-    "ingredient_allergens",
+    "ingredient_allergen",
     Base.metadata,
     Column("ingredient_id", ForeignKey("ingredients.id"), primary_key=True),
     Column("allergen_id", ForeignKey("allergens.id"), primary_key=True),
 )
 
-class Allergens(Base):
-    __tablename__ = "allergens"
+class AllergenSchema(Base):
+    __tablename__ = "allergen"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
 
-class Ingredient(Base):
-    __tablename__ = "ingredients"
+class IngredientSchema(Base):
+    __tablename__ = "ingredient"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     active = Column(Boolean, nullable=False, default=True)
     name = Column(String(255), nullable=False)
     purchasing_cost = Column(Numeric(10, 2), nullable=False)
     unit_amount = Column(Numeric(10, 2), nullable=False)
-    unit_of_measure: UnitOfMeasure
-    allergens = relationship("Allergens", secondary=ingredient_allergens,)
+    unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
+    allergens = relationship("AllergenSchema", secondary=ingredient_allergens)
