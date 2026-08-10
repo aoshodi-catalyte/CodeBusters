@@ -5,8 +5,8 @@ class BakedGood(BaseModel):
     active: bool
     name: str
     description: str
-    purchasing_cost: float = Field(ge=0)
-    retail_price: float = Field(ge=0)
+    purchasing_cost: float = Field(gt=0)
+    retail_price: float = Field(gt=0)
 
     @field_validator("name")
     def validate_name(cls, value):
