@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
+from database import Base
 
 class DrinkRecipeSchema(Base):
     __tablename__ = 'drink_recipe'
