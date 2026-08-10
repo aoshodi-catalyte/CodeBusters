@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from src.ingredient_model import Allergen, Ingredient
+from ingredient_model import Allergen, Ingredient
 from constants.INGREDIENT_TYPES import UnitOfMeasure
 
 
