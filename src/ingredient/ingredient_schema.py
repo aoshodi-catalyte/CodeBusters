@@ -3,6 +3,7 @@ from constants.INGREDIENT_TYPES import UnitOfMeasure
 # from database import Base
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.orm import relationship
+from database import Base
 from sqlalchemy import Enum
 
 # ==========================================
@@ -14,8 +15,8 @@ from sqlalchemy import Enum
 ingredient_allergens = Table(
     "ingredient_allergen",
     Base.metadata,
-    Column("ingredient_id", ForeignKey("ingredients.id"), primary_key=True),
-    Column("allergen_id", ForeignKey("allergens.id"), primary_key=True),
+    Column("ingredient_id", ForeignKey("ingredient.id"), primary_key=True),
+    Column("allergen_id", ForeignKey("allergen.id"), primary_key=True),
 )
 
 class AllergenSchema(Base):
@@ -27,6 +28,11 @@ class AllergenSchema(Base):
 class IngredientSchema(Base):
     __tablename__ = "ingredient"
 
+    drink_recipe = relationship(
+        "DrinkRecipeSchema",
+        back_populates="ingredient"
+    )
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     active = Column(Boolean, nullable=False, default=True)
     name = Column(String(255), nullable=False)
@@ -34,3 +40,4 @@ class IngredientSchema(Base):
     unit_amount = Column(Numeric(10, 2), nullable=False)
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
     allergens = relationship("AllergenSchema", secondary=ingredient_allergens)
+
