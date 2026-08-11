@@ -1,22 +1,33 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List, Generator, Optional
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
+from src.database import get_db
+from src.customer.customer_model import Customer
 from src.customer.customer_schema import CustomerSchema
-from database import get_db, Base, engine, SessionLocal
+
 
 router = APIRouter()
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+@router.post("/customers", response_model=Customer)
+def create_customer(
+    customer: Customer,
+    db: Session = Depends(get_db)
+):
+    """
+    Creates a new customer and persists it to the database.
+    """
 
-@router.get("/customers", response_model=List[CustomerSchema])
-def get_customers(db: Session = Depends(get_db)):
-    return db.query(CustomerSchema).all()
+    db_customer = CustomerSchema(
+        first_name=customer.first_name,
+        last_name=customer.last_name,
+        email=customer.email,
+        phone_number=customer.phone_number,
+        active=customer.active,
+        loyalty_points=customer.loyalty_points
+    )
 
-@router.post("/customers", response_model=CustomerSchema)
-def create_customer(customer: CustomerSchema, db: Session = Depends(get_db)):
-    return customer
+    db.add(db_customer)
+    db.commit()
+    db.refresh(db_customer)
+
+    return db_customer
