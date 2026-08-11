@@ -1,35 +1,22 @@
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from sqlalchemy import engine
-# from vendor.vendor_router import router as vendor_router
+# from src.vendor.vendor_router import router as vendor_router
 from src.constants.DRINK_TYPES import DrinkType
 from src.database import Base, SessionLocal
 from src.drink_recipe.drink_type_schema import DrinkTypeSchema
 from src.drink_recipe.drink_recipe_router import router as drink_recipe_router
-
 from src.database import Base, engine
-
-# Import models so SQLAlchemy knows about the tables
-from src.ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingredient_allergen)
-
+from src.ingredient.ingredient_schema import IngredientSchema, AllergenSchema, ingredient_allergen
 from src.ingredient.ingredient_router import router as ingredient_router
 
-
-# Create database tables
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
-
-
-app.include_router(ingredient_router)
-from vendor.vendor_router import router as vendor_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup logic ---
     db = SessionLocal()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     try:
         for drink_type in DrinkType:
             existing = db.query(DrinkTypeSchema).filter_by(name=drink_type.value).first()
@@ -47,6 +34,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# app.include_router(vendor_router)
 app.include_router(drink_recipe_router)
-app.include_router(vendor_router)
+# app.include_router(vendor_router)
+app.include_router(ingredient_router)

@@ -14,7 +14,7 @@ def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
 
 class DrinkRecipeRepository:
     def __init__(self, session: Session):
-        self.session: Session = session
+        self.session = session
 
     def create_drink_recipe(self, drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
         drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
@@ -24,13 +24,14 @@ class DrinkRecipeRepository:
             description=drink_recipe.description,
             active=drink_recipe.active,
             type_id=drink_type_id,
-            production_cost=float(drink_recipe.production_cost),
+            production_cost=drink_recipe.production_cost,
+            markup_percentage=drink_recipe.markup_percentage,
+            sale_price=drink_recipe.sale_price,
         )
 
         self.session.add(recipe)
-        self.session.flush()  # get recipe.id
+        self.session.flush()
 
-        # Attach ingredients
         for ingredient_id in drink_recipe.ingredients:
             ingredient = self.session.get(IngredientSchema, ingredient_id)
             if ingredient:
@@ -39,7 +40,6 @@ class DrinkRecipeRepository:
         self.session.commit()
         self.session.refresh(recipe)
         return recipe
-
 
     def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
         return self.session.query(DrinkRecipeSchema).filter(DrinkRecipeSchema.id == recipe_id).first()

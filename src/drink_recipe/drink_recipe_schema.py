@@ -10,12 +10,12 @@ class DrinkRecipeSchema(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     active = Column(Boolean, default=True)
-
-    type_id = Column(Integer, ForeignKey("drink_type.id"), nullable=False)
-    drink_type = relationship("DrinkTypeSchema", back_populates="drink_recipes")
-
     production_cost = Column(Float, nullable=False)
+    type_id = Column(Integer, ForeignKey("drink_type.id"), nullable=False)
+    markup_percentage = Column(Float, default=0.0)
+    sale_price = Column(Float, default=0.0)
 
+    drink_type = relationship("DrinkTypeSchema", back_populates="drink_recipes")
     # NEW: many-to-many with ingredients
     ingredients = relationship(
         "IngredientSchema",
