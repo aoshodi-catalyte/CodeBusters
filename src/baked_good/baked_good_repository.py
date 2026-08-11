@@ -1,4 +1,4 @@
-from baked_good_model import BakedGood
+from baked_good.baked_good_model import BakedGood
 from typing import List
 
 class BakedGoodRepository:
