@@ -16,3 +16,8 @@ app = FastAPI()
 
 
 app.include_router(ingredient_router)
+from src.vendor.vendor_router import router as vendor_router
+
+app = FastAPI()
+
+app.include_router(vendor_router)
