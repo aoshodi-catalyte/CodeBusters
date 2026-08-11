@@ -5,10 +5,11 @@ from src.vendor.vendor_model import VendorBase
 from src.vendor.vendor_schema import VendorSchema
 from src.repositories.vendor_repository import VendorRepository
 from src.ingredient.ingredient_schema import IngredientSchema, AllergenSchema
+from src.baked_good.baked_good_schema import BakedGoodSchema
 
 router = APIRouter()
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
+# Base.metadata.drop_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()

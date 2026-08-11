@@ -5,11 +5,11 @@ from typing import Generator, List
 from src.baked_good.baked_good_model import BakedGood
 from src.baked_good.baked_good_schema import BakedGoodSchema
 
-def create_db() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+# def create_db() -> None:
+#     Base.metadata.drop_all(bind=engine)
+#     Base.metadata.create_all(bind=engine)
 
-create_db()
+# create_db()
 
 router = APIRouter()
 

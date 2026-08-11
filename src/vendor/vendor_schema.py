@@ -25,4 +25,4 @@ class Vendor(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String, index=True, nullable=False)
     ingredients = relationship("IngredientSchema", back_populates="vendor")
-    # baked_goods = relationship("BakedGood", back_populates="vendor")
+    baked_goods = relationship("BakedGoodSchema", back_populates="vendor")
