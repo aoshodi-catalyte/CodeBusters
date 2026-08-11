@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
-from database import Base, SessionLocal, engine
-from vendor.vendor_model import VendorBase
-from vendor.vendor_schema import VendorSchema
-from repositories.vendor_repository import VendorRepository
+from src.database import Base, SessionLocal, engine
+from src.vendor.vendor_model import VendorBase
+from src.vendor.vendor_schema import VendorSchema
+from src.repositories.vendor_repository import VendorRepository
+from src.ingredient.ingredient_schema import IngredientSchema, AllergenSchema
 
 router = APIRouter()
 Base.metadata.drop_all(bind=engine)

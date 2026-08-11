@@ -1,15 +1,16 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from src.database import Base
 from src.vendor.vendor_model import VendorBase
 from src.vendor.vendor_schema import Vendor
 from src.repositories.vendor_repository import VendorRepository
+from src.ingredient.ingredient_schema import IngredientSchema
 
 
 @pytest.fixture
 def db_session():
-    # in-memory SQLite - real DB behavior, no Postgres needed
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(bind=engine)
 
@@ -88,3 +89,31 @@ def test_get_vendor_by_id_returns_none_when_not_found(db_session):
     result = repo.get_vendor_by_id(999)
 
     assert result is None
+
+
+def test_vendor_ingredients_relationship(db_session):
+    repo = VendorRepository(db_session)
+    vendor = repo.create_new_vendor(VendorBase(
+        active=True,
+        name="Bob's Burgers Supply Co",
+        contact_name="Bob Belcher",
+        contact_role="CEO",
+        email="supplyco@burger.com",
+        phone="1234567896"
+    ))
+
+    ingredient = IngredientSchema(
+        active=True,
+        name="Ground Beef",
+        purchasing_cost=12.50,
+        unit_amount=5,
+        unit_of_measure="lb",
+        vendor_id=vendor.id
+    )
+    db_session.add(ingredient)
+    db_session.commit()
+    db_session.refresh(vendor)
+
+    assert len(vendor.ingredients) == 1
+    assert vendor.ingredients[0].name == "Ground Beef"
+    assert ingredient.vendor.name == "Bob's Burgers Supply Co"
