@@ -1,5 +1,6 @@
-from sqlalchemy import Boolean, Column, Float, Integer, String
-from database import Base
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+from src.database import Base
 
 class BakedGoodSchema(Base):
 
@@ -11,3 +12,7 @@ class BakedGoodSchema(Base):
     description = Column(String, nullable=False)
     purchasing_cost = Column(Float, nullable=False)
     retail_price = Column(Float, nullable=False)
+
+    vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
+
+    vendor = relationship("Vendor", back_populates="baked_goods")
