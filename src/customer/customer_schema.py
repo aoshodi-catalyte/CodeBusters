@@ -1,5 +1,6 @@
-from sqlalchemy import Boolean, Column, Integer, String
-from src.database import Base
+from datetime import datetime, UTC
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from database import Base
 
 
 class CustomerSchema(Base):
@@ -64,6 +65,6 @@ class CustomerSchema(Base):
     # Used to determine the customer's yearly loyalty reset.
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         nullable=False
     )
