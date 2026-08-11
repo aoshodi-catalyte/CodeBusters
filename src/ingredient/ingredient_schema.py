@@ -5,6 +5,23 @@ from sqlalchemy import ForeignKey, Table
 from sqlalchemy.orm import relationship
 from src.database import Base
 from sqlalchemy import Enum
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, Numeric, String, Table
+from sqlalchemy.dialects.postgresql import ARRAY
+from src.constants.INGREDIENT_TYPES import UnitOfMeasure
+from src.database import Base
+
+from sqlalchemy.orm import relationship
+
+# ==========================================
+# ASSOCIATION TABLE
+# ==========================================
+
+ingredient_allergen = Table("ingredient_allergen",
+    Base.metadata,
+    Column( "ingredient_id", ForeignKey("ingredient.id"), primary_key=True,),
+    Column( "allergen_id",  ForeignKey("allergen.id"), primary_key=True,),
+)
+
 
 # ==========================================
 # SQLALCHEMY MODEL
@@ -42,3 +59,4 @@ class IngredientSchema(Base):
         secondary=drink_recipe_ingredient,
         back_populates="ingredients"
     )
+    allergens = relationship("AllergenSchema", secondary=ingredient_allergen,backref="ingredients",)
