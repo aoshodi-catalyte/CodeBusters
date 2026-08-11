@@ -16,6 +16,18 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+def create_db() -> None:
+    """Drop and recreate all database tables.
+
+    Used during development to keep the schema in sync with model definitions.
+    All existing data is removed on each call.
+    """
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+
+create_db()
+
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
