@@ -1,3 +1,10 @@
+"""
+API routes for Customer operations.
+
+This module handles HTTP requests and responses for customers.
+Database operations are delegated to the customer repository.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -5,6 +12,7 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.customer.customer_model import Customer
 from src.customer.customer_schema import CustomerSchema
+from src.customer import customer_repository
 
 
 router = APIRouter()
@@ -21,6 +29,16 @@ def create_customer(
 ):
     """
     Creates a new customer and persists it to the database.
+
+    Returns:
+        The newly created customer.
+
+    Raises:
+        HTTPException 409:
+            Email or phone number already exists.
+
+        HTTPException 500:
+            Unexpected database error.
     """
 
     db_customer = CustomerSchema(
@@ -33,9 +51,10 @@ def create_customer(
     )
 
     try:
-        db.add(db_customer)
-        db.commit()
-        db.refresh(db_customer)
+        return customer_repository.create_customer(
+            db,
+            db_customer
+        )
 
     except IntegrityError:
         db.rollback()
@@ -55,8 +74,6 @@ def create_customer(
             detail="An unexpected error occurred while creating the customer."
         )
 
-    return db_customer
-
 
 @router.get(
     "/customers",
@@ -68,10 +85,20 @@ def get_customers(
 ):
     """
     Retrieves all customers from the database.
+
+    Returns:
+        A list of all customers.
+
+    Raises:
+        HTTPException 404:
+            No customers were found.
+
+        HTTPException 500:
+            Unexpected database error.
     """
 
     try:
-        customers = db.query(CustomerSchema).all()
+        customers = customer_repository.get_customers(db)
 
     except Exception as e:
         print(f"ERROR RETRIEVING CUSTOMERS: {e}")
