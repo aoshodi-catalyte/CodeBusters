@@ -1,12 +1,11 @@
 import pytest
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.exc import IntegrityError
-
-from database import Base
-from customer.customer_schema import CustomerSchema
+from src.database import Base
+from src.customer.customer_schema import CustomerSchema
 
 
 # Separate SQLite database used only for tests.
@@ -30,7 +29,7 @@ TestingSessionLocal = sessionmaker(
 @pytest.fixture
 def db():
     """
-    Creates a fresh database before each test
+    Creates a fresh test database before each test
     and removes it after the test completes.
     """
 
@@ -74,7 +73,7 @@ def test_create_customer(db):
 
 def test_email_must_be_unique(db):
     """
-    Tests that a customer's email must be unique.
+    Tests that a customer's email address must be unique.
     """
 
     customer1 = CustomerSchema(
@@ -130,7 +129,7 @@ def test_phone_number_must_be_unique(db):
 
 def test_last_name_is_optional(db):
     """
-    Tests that a customer's last name is optional.
+    Tests that a customer's last name can be NULL.
     """
 
     customer = CustomerSchema(
@@ -144,3 +143,40 @@ def test_last_name_is_optional(db):
     db.refresh(customer)
 
     assert customer.last_name is None
+
+
+def test_active_defaults_to_true(db):
+    """
+    Tests that a new customer is active by default.
+    """
+
+    customer = CustomerSchema(
+        first_name="John",
+        email="john@example.com",
+        phone_number="312-555-1234"
+    )
+
+    db.add(customer)
+    db.commit()
+    db.refresh(customer)
+
+    assert customer.active is True
+
+
+def test_loyalty_points_default_to_zero(db):
+    """
+    Tests that a new customer's loyalty points default to zero.
+    """
+
+    customer = CustomerSchema(
+        first_name="John",
+        email="john@example.com",
+        phone_number="312-555-1234"
+    )
+
+    db.add(customer)
+    db.commit()
+    db.refresh(customer)
+
+    assert customer.loyalty_points == 0
+
