@@ -1,9 +1,9 @@
 from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
-from database import Base, engine, SessionLocal
+from src.database import Base, engine, SessionLocal
 from typing import Generator, List
-from baked_good.baked_good_model import BakedGood
-from baked_good.baked_good_schema import BakedGoodSchema
+from src.baked_good.baked_good_model import BakedGood
+from src.baked_good.baked_good_schema import BakedGoodSchema
 
 def create_db() -> None:
     Base.metadata.drop_all(bind=engine)
@@ -32,9 +32,8 @@ def home_page() -> dict[str, str]:
 
 @router.post("/bakedgood", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
 def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodSchema:
-        new_baked_good = BakedGoodSchema(**baked_good.model.dump())
+        new_baked_good = BakedGoodSchema(**baked_good.model_dump())
         db.add(new_baked_good)
         db.commit()
         db.refresh(new_baked_good)
         return new_baked_good
-        

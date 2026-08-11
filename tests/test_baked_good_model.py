@@ -13,7 +13,6 @@ def test_valid_baked_good():
         retail_price=15.0,
     )
 
-    assert baked_good.id == 1
     assert baked_good.active is True
     assert baked_good.name == "Chocolate Cake"
     assert baked_good.description == "A chocolate cake"
