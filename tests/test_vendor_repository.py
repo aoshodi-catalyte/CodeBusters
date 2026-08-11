@@ -1,7 +1,6 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from src.database import Base
 from src.vendor.vendor_model import VendorBase
 from src.vendor.vendor_schema import Vendor
