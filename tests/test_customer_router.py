@@ -229,3 +229,65 @@ def test_get_customers_when_empty(client):
 
     assert response.json()["detail"] == "No customers found."
 
+def test_create_customer_unexpected_error(client, monkeypatch):
+    """
+    Tests that an unexpected repository error returns HTTP 500.
+    """
+
+    def mock_create_customer(db, customer):
+        raise Exception("Database failure")
+
+    monkeypatch.setattr(
+        "src.customer.customer_router.customer_repository.create_customer",
+        mock_create_customer
+    )
+
+    response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "last_name": "Smith",
+            "email": "john@example.com",
+            "phone_number": "312-555-1234"
+        }
+    )
+
+    assert response.status_code == 500
+
+    assert response.json()["detail"] == (
+        "An unexpected error occurred while creating the customer."
+    )
+
+def test_get_customers_unexpected_error(client, monkeypatch):
+    """
+    Tests that an unexpected repository error returns HTTP 500.
+    """
+
+    def mock_get_customers(db):
+        raise Exception("Database failure")
+
+    monkeypatch.setattr(
+        "src.customer.customer_router.customer_repository.get_customers",
+        mock_get_customers
+    )
+
+    response = client.get("/customers")
+
+    assert response.status_code == 500
+
+    assert response.json()["detail"] == (
+        "An unexpected error occurred while retrieving customers."
+    )
+
+def test_root(client):
+    """
+    Tests that the API root endpoint is available.
+    """
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "message": "Customer API is running"
+    }
