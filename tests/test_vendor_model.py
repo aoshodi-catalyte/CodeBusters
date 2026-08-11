@@ -1,10 +1,6 @@
 import pytest
-<<<<<<< HEAD
 from src.vendor.vendor_schema import Vendor, VendorSchema
 
-=======
-from vendor.vendor_schema import Vendor, VendorSchema
->>>>>>> 6f06dea1aa443c5b323d313d1f949317a892905f
 
 def test_vendor_information():
     vendor_example = Vendor(
@@ -13,21 +9,14 @@ def test_vendor_information():
         contact_name="Bob Belcher",
         contact_role="CEO",
         email="bestBurgers@burger.com",
-<<<<<<< HEAD
         phone="1234567896"
     )
 
-=======
-        phone="1234567896" 
-    )
-    
->>>>>>> 6f06dea1aa443c5b323d313d1f949317a892905f
     assert vendor_example.active == True
     assert vendor_example.name == "Bob's Burgers"
     assert vendor_example.contact_name == "Bob Belcher"
     assert vendor_example.contact_role == "CEO"
     assert vendor_example.email == "bestBurgers@burger.com"
-<<<<<<< HEAD
     assert vendor_example.phone == "1234567896"
 
 
@@ -56,6 +45,3 @@ def test_vendor_different_contact_role():
     )
 
     assert vendor_example.contact_role == "Manager"
-=======
-    assert vendor_example.phone == "1234567896"
->>>>>>> 6f06dea1aa443c5b323d313d1f949317a892905f
