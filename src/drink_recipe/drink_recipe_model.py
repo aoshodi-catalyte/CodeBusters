@@ -1,13 +1,12 @@
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
-from ingredient.ingredient_model import Ingredient
-from constants.DRINK_TYPES import DrinkType
+from src.constants.DRINK_TYPES import DrinkType
 
 class DrinkRecipe(BaseModel):
     name: str
     description: str
-    ingredients: list[Ingredient] = Field(default_factory=list)
+    ingredients: list[int] = Field(default_factory=list)
     active: bool
     type: DrinkType
     production_cost: Decimal = Field(ge=0, decimal_places=2)

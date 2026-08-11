@@ -1,9 +1,9 @@
 from sqlalchemy import Boolean, Column, Integer, Numeric, String
-from constants.INGREDIENT_TYPES import UnitOfMeasure
-# from database import Base
+from src.constants.INGREDIENT_TYPES import UnitOfMeasure
+from src.drink_recipe.drink_ingredients_schema import drink_recipe_ingredient
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.orm import relationship
-from database import Base
+from src.database import Base
 from sqlalchemy import Enum
 
 # ==========================================
@@ -28,11 +28,6 @@ class AllergenSchema(Base):
 class IngredientSchema(Base):
     __tablename__ = "ingredient"
 
-    drink_recipe = relationship(
-        "DrinkRecipeSchema",
-        back_populates="ingredient"
-    )
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     active = Column(Boolean, nullable=False, default=True)
     name = Column(String(255), nullable=False)
@@ -41,3 +36,9 @@ class IngredientSchema(Base):
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
     allergens = relationship("AllergenSchema", secondary=ingredient_allergens)
 
+    # NEW: many-to-many with drink recipes
+    drink_recipes = relationship(
+        "DrinkRecipeSchema",
+        secondary=drink_recipe_ingredient,
+        back_populates="ingredients"
+    )
