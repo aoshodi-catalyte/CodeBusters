@@ -14,6 +14,9 @@ from src.config import settings
 
 DATABASE_URL = settings.DATABASE_URL
 
+
+print(f"DATABASE URL: {DATABASE_URL}")
+
 engine = create_engine(
     DATABASE_URL,
     echo=True
