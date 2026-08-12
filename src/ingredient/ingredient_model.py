@@ -1,6 +1,6 @@
 from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator
-from src.constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
+from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
 # ==========================================
 # PYDANTIC SCHEMAS
@@ -16,6 +16,7 @@ class Ingredient(BaseModel):
     unit_amount: Decimal = Field( gt=0, decimal_places=2, )
     unit_of_measure: UnitOfMeasure
     allergens: list[CafeAllergen]
+    vendor_id: int = Field( gt=0,)
 
     @field_validator("unit_of_measure", mode="before")
     @classmethod
@@ -28,3 +29,5 @@ class Ingredient(BaseModel):
         if not isinstance(value, list):
             value = [value]
         return [CafeAllergen.from_string(allergen) for allergen in value]
+
+ 

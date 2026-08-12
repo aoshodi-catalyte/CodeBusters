@@ -1,9 +1,9 @@
 from sqlalchemy import Boolean, CheckConstraint, Column, Enum, ForeignKey, Integer, Numeric, String, Table, UniqueConstraint
-
-from src.constants.INGREDIENT_TYPES import UnitOfMeasure
-from src.database import Base
-
 from sqlalchemy.orm import relationship
+from constants.INGREDIENT_TYPES import UnitOfMeasure
+from database import Base
+from constants.INGREDIENT_TYPES import UnitOfMeasure
+
 
 # ==========================================
 # ASSOCIATION TABLE
@@ -18,7 +18,6 @@ ingredient_allergen = Table("ingredient_allergen",
 # ==========================================
 # SQLALCHEMY MODEL
 # ==========================================
-
 
 class AllergenSchema(Base):
     __tablename__ = "allergen"
@@ -47,3 +46,6 @@ class IngredientSchema(Base):
     unit_amount = Column(Numeric(10, 2), nullable=False) 
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
     allergens = relationship("AllergenSchema", secondary=ingredient_allergen, back_populates="ingredients")
+    vendor_id = Column(Integer, ForeignKey("vendor.id", ondelete="RESTRICT",), nullable=False)
+    vendor = relationship("Vendor", back_populates="ingredients")
+

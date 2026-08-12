@@ -1,5 +1,6 @@
-from sqlalchemy import Boolean, Column, Integer, String
-from src.database import Base
+from datetime import datetime, UTC
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from database import Base
 
 
 class CustomerSchema(Base):
@@ -54,11 +55,16 @@ class CustomerSchema(Base):
         nullable=False
     )
 
-# New customers start with zero loyalty points.
-# Loyalty points will be reset at the beginning of each year
-# through separate application/scheduled logic.
-loyalty_points = Column(
+    # Customer loyalty points.
+    loyalty_points = Column(
     Integer,
     default=0,
     nullable=False
-)
+    )
+
+    # Used to determine the customer's yearly loyalty reset.
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        nullable=False
+    )

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.ingredient.ingredient_model import Ingredient
-from src.ingredient.ingredient_repository import create_ingredient
+from database import get_db
+from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_repository import create_ingredient, VendorNotFoundError
 
 router = APIRouter(
     prefix="/ingredient",
@@ -13,10 +13,7 @@ router = APIRouter(
 # ==========================================
 # CREATE INGREDIENT
 # ==========================================
-@router.post(
-    "/",
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("/", status_code=status.HTTP_201_CREATED,)
 def create(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
@@ -27,6 +24,21 @@ def create(
             ingredient_data=ingredient,
         )
         return created_ingredient
+    # ======================================
+    # VENDOR NOT FOUND
+    # ======================================
+
+    except VendorNotFoundError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "vendor_not_found",
+                "message": str(exc),
+            },
+        ) from exc
+
     # ======================================
     # DATABASE CONSTRAINT ERROR
     # ======================================
@@ -92,6 +104,10 @@ def create(
     # ======================================
     except SQLAlchemyError as exc:
         db.rollback()
+        print("\n========== DATABASE ERROR ==========")
+        print(repr(exc))
+        traceback.print_exc()
+        print("====================================\n")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
