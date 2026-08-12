@@ -1,10 +1,7 @@
-from sqlalchemy import Boolean, Column, Integer, Numeric, String
-from src.constants.INGREDIENT_TYPES import UnitOfMeasure
-from src.drink_recipe.drink_ingredients_schema import drink_recipe_ingredient
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Table, Enum
+from constants.INGREDIENT_TYPES import UnitOfMeasure
+from database import Base
 from sqlalchemy import ForeignKey, Table
-from sqlalchemy.orm import relationship
-from src.database import Base
-from sqlalchemy import Enum
 from sqlalchemy.orm import relationship
 
 # ==========================================
@@ -21,6 +18,7 @@ ingredient_allergen = Table("ingredient_allergen",
 # ==========================================
 # SQLALCHEMY MODEL
 # ==========================================
+
 class AllergenSchema(Base):
     __tablename__ = "allergen"
 
@@ -43,4 +41,7 @@ class IngredientSchema(Base):
         secondary=drink_recipe_ingredient,
         back_populates="ingredients"
     )
+    
+    vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
+    vendor = relationship("Vendor", back_populates="ingredients")
     allergens = relationship("AllergenSchema", secondary=ingredient_allergen,backref="ingredients",)
