@@ -1,4 +1,6 @@
+from sqlalchemy.orm import Session
 from baked_good.baked_good_model import BakedGood
+from baked_good.baked_good_schema import BakedGoodSchema
 from typing import List
 
 class BakedGoodRepository:
@@ -15,7 +17,7 @@ class BakedGoodRepository:
         A BakedGoodRepository object containing an empty list of baked goods.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, session: Session) -> None:
         """
         Initializes the baked good repository.
 
@@ -28,9 +30,9 @@ class BakedGoodRepository:
                 None
             """
 
-        self.baked_goods: List[BakedGood] = []
+        self.session = session
 
-    def create_baked_good(self, baked_good: BakedGood) -> BakedGood:
+    def create_baked_good(self, baked_good: BakedGood) -> BakedGoodSchema:
         """
         Adds a baked good to the repository.
 
@@ -40,6 +42,8 @@ class BakedGoodRepository:
         Returns:
             The BakedGood object that was added to the repository.
         """
-        
-        self.baked_goods.append(baked_good)
-        return baked_good
+        new_baked_good = BakedGoodSchema(**baked_good.model_dump())
+        self.session.add(new_baked_good)
+        self.session.commit()
+        self.session.refresh(new_baked_good)
+        return new_baked_good

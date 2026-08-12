@@ -1,5 +1,28 @@
+from sqlalchemy.orm import sessionmaker
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_model import BakedGood
+import pytest
+
+from database import Base, engine
+from tests.test_customer_router import TestingSessionLocal
+
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+@pytest.fixture
+def db():
+    """Creates a fresh in-memory DB for each test."""
+    Base.metadata.create_all(bind=engine)
+    session = TestingSessionLocal()
+    
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
 
 def test_create_baked_good_repository():
     """
@@ -16,7 +39,7 @@ def test_create_baked_good_repository():
         None
     """
     
-    repository = BakedGoodRepository()
+    repository = BakedGoodRepository(db)
 
     baked_good = BakedGood (
         id=1,

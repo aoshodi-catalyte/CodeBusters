@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
 from typing import Generator
 from baked_good.baked_good_model import BakedGood
-from baked_good.baked_good_schema import BakedGoodSchema
+from baked_good.baked_good_repository import BakedGoodRepository
 
 def create_db() -> None:
     """
@@ -68,7 +68,7 @@ def home_page() -> dict[str, str]:
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
-def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodSchema:
+def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)):
     """
     Creates and stores a new baked good in the database.
 
@@ -84,8 +84,7 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
     Returns:
         The newly created BakedGoodSchema database object.
     """     
-    new_baked_good = BakedGoodSchema(**baked_good.model_dump())
-    db.add(new_baked_good)
-    db.commit()
-    db.refresh(new_baked_good)
-    return new_baked_good
+    repo = BakedGoodRepository(db)
+    baked_good_create = repo.create_baked_good(baked_good) 
+    
+    return baked_good_create
