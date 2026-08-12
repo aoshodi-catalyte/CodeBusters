@@ -85,7 +85,6 @@ def test_create_drink_recipe(client, db):
     }
 
     response = client.post("/drink_recipes/", json=payload)
-    print(response.json())
 
     assert response.status_code == 200
 
