@@ -11,6 +11,7 @@ def test_create_baked_good_repository():
         description="A chocolate cake",
         purchasing_cost=5.00,
         retail_price=10.00,
+        vendor_id=1
     )
 
     repository.create_baked_good(baked_good)
@@ -27,7 +28,8 @@ def test_create_baked_good_repository():
             name="Chocolate Cake",
             description="A chocolate cake",
             purchasing_cost=5.00,
-            retail_price=10.00
+            retail_price=10.00,
+            vendor_id=1
         )
 
         result = repository.create_baked_good(baked_good)

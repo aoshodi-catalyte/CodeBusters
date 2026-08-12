@@ -4,10 +4,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from src.database import Base
-from src.main import app
-from src.database import get_db
-from src.customer.customer_schema import CustomerSchema
+from database import Base
+from main import app
+from database import get_db
+from customer.customer_schema import CustomerSchema
 
 
 # Separate SQLite database used only for tests.

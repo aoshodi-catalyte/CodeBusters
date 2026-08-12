@@ -1,6 +1,6 @@
 from datetime import datetime, UTC
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
-from src.database import Base
+from database import Base
 
 
 class CustomerSchema(Base):
