@@ -5,13 +5,11 @@ from typing import Generator, List
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
 
-# def create_db() -> None:
-#     Base.metadata.drop_all(bind=engine)
-#     Base.metadata.create_all(bind=engine)
+def create_db() -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
 
-# create_db()
-
-router = APIRouter()
+create_db()
 
 def get_db() -> Generator[Session, None, None]:
     """Provide a SQLAlchemy session for the duration of a request.
@@ -30,15 +28,16 @@ router = APIRouter(
     tags=["baked_goods"]
 )
 
-@router.get("/baked_goods")
+@router.get("/")
 def home_page() -> dict[str, str]:
 
     return {"message": "Hello! You are in Baked Goods. Baked Goods table is currently empty."}
 
-@router.post("/bakedgoods/create", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
+@router.post("/create", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
 def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodSchema:
-        new_baked_good = BakedGoodSchema(**baked_good.model_dump())
-        db.add(new_baked_good)
-        db.commit()
-        db.refresh(new_baked_good)
-        return new_baked_good
+        
+    new_baked_good = BakedGoodSchema(**baked_good.model_dump())
+    db.add(new_baked_good)
+    db.commit()
+    db.refresh(new_baked_good)
+    return new_baked_good

@@ -1,7 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from src.database import Base, engine, SessionLocal, get_db
-from src.main import app
+from database import Base, engine, SessionLocal, get_db
+from main import app
+
 
 @pytest.fixture
 def client():
@@ -40,7 +41,8 @@ def test_post_baked_good(client):
         "name": "Chocolate Chip Cookie",
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 1.00,
-        "retail_price": 2.50
+        "retail_price": 2.50,
+        "vendor_id": 1
     }
 
     response = client.post("/baked_goods/create", json=baked_good)
@@ -49,12 +51,12 @@ def test_post_baked_good(client):
 
     data = response.json()
 
-    assert data["id"] == 1
     assert data["active"] is True
     assert data["name"] == "Chocolate Chip Cookie"
     assert data["description"] == "A cookie with chocolate chips."
     assert data["purchasing_cost"] == 1.00
     assert data["retail_price"] == 2.50
+    assert data["vendor_id"] == 1
 
 def test_post_baked_good_missing_description(client):
     baked_good = {
@@ -82,3 +84,18 @@ def test_post_baked_good_invalid_retail_price(client):
     response = client.post("/baked_goods/create", json=baked_good)
 
     assert response.status_code == 422    
+
+def test_post_baked_good_empty_name(client):
+    baked_good = {
+        "id": 1,
+        "active": True,
+        "name": "   ",
+        "description": "A cookie with chocolate chips.",
+        "purchasing_cost": 1.00,
+        "retail_price": 2.50
+    }
+
+    response = client.post("/baked_goods/create", json=baked_good)
+
+    assert response.status_code == 422
+
