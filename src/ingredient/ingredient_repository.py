@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.ingredient.ingredient_model import Ingredient
-from src.ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 
 
 def get_or_create_allergen(
@@ -40,6 +40,7 @@ def create_ingredient(
             purchasing_cost=ingredient_data.purchasing_cost,
             unit_amount=ingredient_data.unit_amount,
             unit_of_measure=ingredient_data.unit_of_measure,
+            vendor_id=ingredient_data.vendor_id,
         )
         # Find or create each allergen
         for allergen_name in unique_allergens:
