@@ -2,16 +2,21 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from database import Base, engine
 from vendor.vendor_router import router
 
 
 @pytest.fixture
 def client():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
     test_app = FastAPI()
     test_app.include_router(router)
 
     with TestClient(test_app) as test_client:
         yield test_client
+
 
 
 def test_post_new_vendor(client):
