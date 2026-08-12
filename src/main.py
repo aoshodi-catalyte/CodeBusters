@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import engine
-# from vendor.vendor_router import router as vendor_router
 from constants.DRINK_TYPES import DrinkType
 from database import Base, SessionLocal
 from drink_recipe.drink_type_schema import DrinkTypeSchema
@@ -32,13 +31,9 @@ async def lifespan(app: FastAPI):
 
     # --- Shutdown logic (optional) ---
     # e.g., close global resources, flush logs, etc.
-# Importing the SQLAlchemy model above registers it with
-# Base.metadata before the database tables are created.
-# create_db()
 
 app = FastAPI(lifespan=lifespan)
 
-app.include_router(ingredient_router)
 @app.get("/")
 def root():
     """
@@ -51,8 +46,3 @@ app.include_router(vendor_router)
 app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 app.include_router(customer_router)
-
-# Create database tables
-# Base.metadata.drop_all(bind=engine)
-# Base.metadata.create_all(bind=engine)
-
