@@ -4,8 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from src.database import Base
-from src.customer.customer_schema import CustomerSchema
+from database import Base
+from customer.customer_schema import CustomerSchema
 
 
 # Separate SQLite database used only for tests.

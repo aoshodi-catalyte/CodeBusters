@@ -6,9 +6,8 @@ from database import Base, engine
 from ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingredient_allergen)
 from ingredient.ingredient_router import router as ingredient_router
 
-from src.database import create_db
-from src.customer.customer_schema import CustomerSchema
-from src.customer.customer_router import router as customer_router
+from database import create_db
+from customer.customer_router import router as customer_router
 
 
 app = FastAPI(
@@ -35,7 +34,5 @@ app.include_router(vendor_router)
 app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 
-# Create database tables
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
+
 

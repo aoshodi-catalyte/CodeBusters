@@ -2,17 +2,16 @@
 API routes for Customer operations.
 
 This module handles HTTP requests and responses for customers.
-Database operations are delegated to the customer repository.
+Database operations are delegated to the CustomerRepository.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.customer.customer_model import Customer
-from src.customer.customer_schema import CustomerSchema
-from src.customer import customer_repository
+from database import get_db
+from customer.customer_model import Customer
+from customer.customer_repository import CustomerRepository
 
 
 router = APIRouter()
@@ -30,31 +29,27 @@ def create_customer(
     """
     Creates a new customer and persists it to the database.
 
+    Args:
+        customer: Customer data submitted in the request.
+        db: SQLAlchemy database session provided by FastAPI.
+
     Returns:
         The newly created customer.
 
     Raises:
         HTTPException 409:
-            Email or phone number already exists.
+            A customer with the provided email or phone number
+            already exists.
 
         HTTPException 500:
-            Unexpected database error.
+            An unexpected database error occurs while creating
+            the customer.
     """
-
-    db_customer = CustomerSchema(
-        first_name=customer.first_name,
-        last_name=customer.last_name,
-        email=customer.email,
-        phone_number=customer.phone_number,
-        active=customer.active,
-        loyalty_points=customer.loyalty_points
-    )
-
     try:
-        return customer_repository.create_customer(
-            db,
-            db_customer
-        )
+        repo = CustomerRepository(db)
+        customer = repo.create_customer(customer)
+
+        return customer
 
     except IntegrityError:
         db.rollback()
@@ -86,19 +81,23 @@ def get_customers(
     """
     Retrieves all customers from the database.
 
+    Args:
+        db: SQLAlchemy database session provided by FastAPI.
+
     Returns:
         A list of all customers.
 
     Raises:
         HTTPException 404:
-            No customers were found.
+            No customers exist in the database.
 
         HTTPException 500:
-            Unexpected database error.
+            An unexpected database error occurs while retrieving
+            customers.
     """
-
     try:
-        customers = customer_repository.get_customers(db)
+        repo = CustomerRepository(db)
+        customers = repo.get_customers()
 
     except Exception as e:
         print(f"ERROR RETRIEVING CUSTOMERS: {e}")
