@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from src.database import Base
+from database import Base
 
 class DrinkTypeSchema(Base):
     __tablename__ = "drink_type"

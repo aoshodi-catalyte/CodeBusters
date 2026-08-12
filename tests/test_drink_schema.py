@@ -13,7 +13,7 @@ def test_columns_exist():
     assert "name" in columns
     assert "description" in columns
     assert "active" in columns
-    assert "type" in columns
+    assert "type_id" in columns
     assert "production_cost" in columns
 
 
@@ -24,7 +24,7 @@ def test_column_types():
     assert isinstance(columns["name"].type, String)
     assert isinstance(columns["description"].type, String)
     assert isinstance(columns["active"].type, Boolean)
-    assert isinstance(columns["type"].type, Integer)
+    assert isinstance(columns["type_id"].type, Integer)
     assert isinstance(columns["production_cost"].type, Float)
 
 
@@ -38,7 +38,7 @@ def test_nullable_constraints():
 
     assert columns["name"].nullable is False
     assert columns["description"].nullable is False
-    assert columns["type"].nullable is False
+    assert columns["type_id"].nullable is False
     assert columns["production_cost"].nullable is False
 
 
@@ -46,12 +46,12 @@ def test_relationship_exists():
     # SQLAlchemy stores relationships in __mapper__.relationships
     relationships = DrinkRecipeSchema.__mapper__.relationships
 
-    assert "ingredient" in relationships
+    assert "ingredients" in relationships
 
-    rel = relationships["ingredient"]
+    rel = relationships["ingredients"]
 
     # Relationship points to IngredientSchema
     assert rel.mapper.class_.__name__ == "IngredientSchema"
 
     # Relationship is configured with back_populates
-    assert rel.back_populates == "drink_recipe"
+    assert rel.back_populates == "drink_recipes"

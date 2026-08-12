@@ -1,5 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Table
-from src.database import Base
+from database import Base
 
 drink_recipe_ingredient = Table(
     "drink_recipe_ingredient",
