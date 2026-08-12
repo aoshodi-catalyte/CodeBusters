@@ -3,7 +3,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+from vendor.vendor_schema import Vendor
 
+class VendorNotFoundError(Exception):
+    pass
 
 def get_or_create_allergen(
     db: Session,
@@ -29,6 +32,16 @@ def create_ingredient(
     ingredient_data: Ingredient,
 ):
     try:
+        # Check vendor exists
+        vendor = (
+            db.query(Vendor)
+            .filter(Vendor.id == ingredient_data.vendor_id)
+            .first()
+        )
+        if vendor is None:
+            raise VendorNotFoundError(
+                f"Vendor with ID {ingredient_data.vendor_id} does not exist."
+            )
         # Remove duplicate allergens
         unique_allergens = list(
             dict.fromkeys(ingredient_data.allergens)
@@ -58,7 +71,11 @@ def create_ingredient(
         db.refresh(ingredient)
 
         return ingredient
-
+    
+    except VendorNotFoundError:
+        db.rollback()
+        raise
+    
     except SQLAlchemyError:
         db.rollback()
         raise
