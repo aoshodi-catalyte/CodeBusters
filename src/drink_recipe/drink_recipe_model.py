@@ -6,7 +6,6 @@ rules for pricing and drink types. It handles conversion of drink type values
 from various formats (string, int) to the DrinkType enum.
 """
 
-from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator, condecimal
 from constants.DRINK_TYPES import DrinkType
 
@@ -41,9 +40,9 @@ class DrinkRecipe(BaseModel):
     )
     active: bool = Field(..., description="Whether this recipe is currently active/in use")
     type: DrinkType = Field(..., description="The type/category of the drink")
-    production_cost: ConstrainedMoney
+    production_cost: ConstrainedMoney # type: ignore
     markup_percentage: float = Field(ge=0)
-    sale_price: ConstrainedMoney
+    sale_price: ConstrainedMoney # type: ignore
 
     @field_validator("type", mode="before")
     def validate_drink_type(cls, value):
