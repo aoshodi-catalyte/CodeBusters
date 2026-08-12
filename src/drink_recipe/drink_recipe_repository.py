@@ -1,8 +1,8 @@
-from src.ingredient.ingredient_schema import IngredientSchema
-from src.constants.DRINK_TYPES import DrinkType
-from src.drink_recipe.drink_type_schema import DrinkTypeSchema
-from src.drink_recipe.drink_recipe_model import DrinkRecipe
-from src.drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+from ingredient.ingredient_schema import IngredientSchema
+from constants.DRINK_TYPES import DrinkType
+from drink_recipe.drink_type_schema import DrinkTypeSchema
+from drink_recipe.drink_recipe_model import DrinkRecipe
+from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from sqlalchemy.orm import Session
 
 def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:

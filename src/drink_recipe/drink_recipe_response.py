@@ -16,7 +16,3 @@ class DrinkRecipeResponse(BaseModel):
     production_cost: Decimal
     markup_percentage: float
     sale_price: Decimal
-
-    class Config:
-        from_attributes = True
-

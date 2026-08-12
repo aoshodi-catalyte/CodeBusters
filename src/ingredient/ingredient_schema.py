@@ -38,7 +38,7 @@ class IngredientSchema(Base):
     # NEW: many-to-many with drink recipes
     drink_recipes = relationship(
         "DrinkRecipeSchema",
-        secondary=drink_recipe_ingredient,
+        secondary="drink_recipe_ingredient",
         back_populates="ingredients"
     )
     
