@@ -25,6 +25,11 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
+router = APIRouter(
+    prefix="/baked_goods", 
+    tags=["baked_goods"]
+)
+
 @router.get("/")
 def home_page() -> dict[str, str]:
 
