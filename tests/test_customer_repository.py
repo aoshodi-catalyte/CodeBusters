@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.database import Base
+from database import Base
 
 
 # Separate SQLite database used only for tests.
@@ -47,8 +47,8 @@ def db():
 Tests for the Customer repository layer.
 """
 
-from src.customer.customer_schema import CustomerSchema
-from src.customer.customer_repository import (
+from customer.customer_schema import CustomerSchema
+from customer.customer_repository import (
     create_customer,
     get_customers
 )
