@@ -1,6 +1,5 @@
 from drink_recipe.drink_ingredients_schema import drink_recipe_ingredient
 from drink_recipe.drink_type_schema import DrinkTypeSchema
-from ingredient.ingredient_schema import IngredientSchema
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
@@ -20,7 +19,7 @@ class DrinkRecipeSchema(Base):
     drink_type = relationship(DrinkTypeSchema, back_populates="drink_recipes")
     # NEW: many-to-many with ingredients
     ingredients = relationship(
-        IngredientSchema,
+        "IngredientSchema",
         secondary=drink_recipe_ingredient,
         back_populates="drink_recipes"
     )

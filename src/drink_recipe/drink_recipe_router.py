@@ -2,31 +2,16 @@ from typing import Generator
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import engine
 from sqlalchemy.orm import Session
-from src.drink_recipe.drink_recipe_response import DrinkRecipeResponse
-from src.database import SessionLocal, engine, Base
-from src.drink_recipe.drink_recipe_repository import DrinkRecipeRepository
-from src.drink_recipe.drink_recipe_model import DrinkRecipe
+from drink_recipe.drink_recipe_response import DrinkRecipeResponse
+from database import get_db
+from drink_recipe.drink_recipe_repository import DrinkRecipeRepository
+from drink_recipe.drink_recipe_model import DrinkRecipe
 
-
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
 
 router = APIRouter(
     prefix="/drink_recipes", 
     tags=["drink_recipes"]
 )
-
-def get_db() -> Generator[Session, None, None]:
-    """Provide a SQLAlchemy session for the duration of a request.
-
-    Yields:
-        A database session that is closed when the request completes.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/", response_model=DrinkRecipeResponse)
 def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
