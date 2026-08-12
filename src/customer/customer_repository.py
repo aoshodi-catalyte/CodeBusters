@@ -9,7 +9,7 @@ status codes and HTTP exceptions belongs in the router.
 
 from sqlalchemy.orm import Session
 
-from src.customer.customer_schema import CustomerSchema
+from customer.customer_schema import CustomerSchema
 
 
 def create_customer(

@@ -11,6 +11,7 @@ def test_valid_baked_good():
         description="A chocolate cake",
         purchasing_cost=10.0,
         retail_price=15.0,
+        vendor_id=1
     )
 
     assert baked_good.active is True
@@ -18,6 +19,7 @@ def test_valid_baked_good():
     assert baked_good.description == "A chocolate cake"
     assert baked_good.purchasing_cost == 10.0
     assert baked_good.retail_price == 15.0
+    assert baked_good.vendor_id == 1
 
     def test_name_cannot_be_empty():
         with pytest.raises(ValidationError):
