@@ -30,12 +30,12 @@ router = APIRouter(
     tags=["baked_goods"]
 )
 
-@router.get("/")
+@router.get("/baked_goods")
 def home_page() -> dict[str, str]:
 
     return {"message": "Hello! You are in Baked Goods. Baked Goods table is currently empty."}
 
-@router.post("/bakedgood", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
+@router.post("/bakedgoods/create", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
 def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodSchema:
         new_baked_good = BakedGoodSchema(**baked_good.model_dump())
         db.add(new_baked_good)
