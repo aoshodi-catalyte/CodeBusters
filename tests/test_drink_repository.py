@@ -4,16 +4,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from drink_recipe.drink_recipe_repository import (
+from drink_recipe.drink_recipe_repository import ( # type: ignore
     DrinkRecipeRepository,
     map_enum_to_fk
 )
-from drink_recipe.drink_recipe_model import DrinkRecipe
-from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
-from drink_recipe.drink_type_schema import DrinkTypeSchema
-from ingredient.ingredient_schema import IngredientSchema
-from constants.DRINK_TYPES import DrinkType
-from database import Base
+from drink_recipe.drink_recipe_model import DrinkRecipe # type: ignore
+from drink_recipe.drink_recipe_schema import DrinkRecipeSchema # type: ignore
+from drink_recipe.drink_type_schema import DrinkTypeSchema # type: ignore
+from ingredient.ingredient_schema import IngredientSchema # type: ignore
+from constants.DRINK_TYPES import DrinkType # type: ignore
+from database import Base # type: ignore
 
 
 # ---------------------------

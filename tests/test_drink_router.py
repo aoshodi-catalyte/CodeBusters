@@ -5,10 +5,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app
-from database import Base, get_db
-from drink_recipe.drink_type_schema import DrinkTypeSchema
-from ingredient.ingredient_schema import IngredientSchema
+from main import app # type: ignore
+from database import Base, get_db # type: ignore
+from drink_recipe.drink_type_schema import DrinkTypeSchema # type: ignore
+from ingredient.ingredient_schema import IngredientSchema # type: ignore
 
 
 # ---------------------------
