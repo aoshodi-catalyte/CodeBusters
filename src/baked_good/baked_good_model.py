@@ -7,6 +7,7 @@ class BakedGood(BaseModel):
     description: str
     purchasing_cost: float = Field(gt=0)
     retail_price: float = Field(gt=0)
+    vendor_id: int
 
     @field_validator("name")
     def validate_name(cls, value):
