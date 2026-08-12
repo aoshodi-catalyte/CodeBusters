@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from src.database import Base
+from database import Base
 
 class BakedGoodSchema(Base):
 

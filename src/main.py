@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from src.vendor.vendor_router import router as vendor_router
-from src.baked_good.baked_good_router import router as baked_good_router
-from src.database import Base, engine
+from vendor.vendor_router import router as vendor_router
+from baked_good.baked_good_router import router as baked_good_router
+from database import Base, engine
 # Import models so SQLAlchemy knows about the tables
-from src.ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingredient_allergen)
-from src.ingredient.ingredient_router import router as ingredient_router
+from ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingredient_allergen)
+from ingredient.ingredient_router import router as ingredient_router
 
 app = FastAPI()
 

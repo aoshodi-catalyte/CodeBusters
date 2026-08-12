@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.ingredient.ingredient_model import Ingredient
-from src.ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 
 
 def get_or_create_allergen(

@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Table, Enum
-from src.constants.INGREDIENT_TYPES import UnitOfMeasure
-from src.database import Base
+from constants.INGREDIENT_TYPES import UnitOfMeasure
+from database import Base
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.orm import relationship
 

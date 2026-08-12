@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.ingredient.ingredient_model import Ingredient
-from src.ingredient.ingredient_repository import create_ingredient
+from database import get_db
+from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_repository import create_ingredient
 
 router = APIRouter(
     prefix="/ingredient",

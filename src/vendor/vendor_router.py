@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
-from src.database import Base, SessionLocal, engine
-from src.vendor.vendor_model import VendorBase
-from src.vendor.vendor_schema import VendorSchema
-from src.repositories.vendor_repository import VendorRepository
-from src.ingredient.ingredient_schema import IngredientSchema, AllergenSchema
-from src.baked_good.baked_good_schema import BakedGoodSchema
+from database import Base, SessionLocal, engine
+from vendor.vendor_model import VendorBase
+from vendor.vendor_schema import VendorSchema
+from repositories.vendor_repository import VendorRepository
+from ingredient.ingredient_schema import IngredientSchema, AllergenSchema
+from baked_good.baked_good_schema import BakedGoodSchema
 
 router = APIRouter()
 # Base.metadata.drop_all(bind=engine)

@@ -1,9 +1,9 @@
 from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
-from src.database import Base, engine, SessionLocal
+from database import Base, engine, SessionLocal
 from typing import Generator, List
-from src.baked_good.baked_good_model import BakedGood
-from src.baked_good.baked_good_schema import BakedGoodSchema
+from baked_good.baked_good_model import BakedGood
+from baked_good.baked_good_schema import BakedGoodSchema
 
 # def create_db() -> None:
 #     Base.metadata.drop_all(bind=engine)

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.vendor.vendor_schema import VendorSchema
+from vendor.vendor_schema import VendorSchema
 
 
 def test_vendor_schema_valid_data():

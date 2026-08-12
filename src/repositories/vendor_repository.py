@@ -1,5 +1,5 @@
-from src.vendor.vendor_model import VendorBase
-from src.vendor.vendor_schema import Vendor
+from vendor.vendor_model import VendorBase
+from vendor.vendor_schema import Vendor
 from sqlalchemy.orm import Session
 
 class VendorRepository:
