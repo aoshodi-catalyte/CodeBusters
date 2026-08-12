@@ -7,10 +7,38 @@ from vendor.vendor_router import router
 
 @pytest.fixture
 def client():
+    """
+    Creates a test client and prepares a clean database for each test.
+
+    Drops and recreates all database tables before each test. Overrides
+    the application's database dependency so that the test client uses
+    a test database session. The database session and dependency override
+    are cleaned up after the test is completed.
+
+    Args:
+        None
+
+    Yields:
+        TestClient: A FastAPI test client used to send requests to the API.
+    """
+    
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     def override_get_db():
+        """
+        Provides a database session for the test client.
+
+        Creates a SQLAlchemy database session and closes the session after
+        the test request is completed.
+
+        Args:
+            None
+
+        Yields:
+            A SQLAlchemy database session for the test request.
+        """
+
         db = SessionLocal()
         try:
             yield db
@@ -28,6 +56,19 @@ def client():
 
 
 def test_home_page(client):
+    """
+    Tests that the baked goods home page returns the expected response.
+
+    Sends a GET request to the baked goods endpoint and verifies that
+    the response has a 200 status code and contains the expected message.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
     response = client.get("/baked_goods/")
 
     assert response.status_code == 200
@@ -36,6 +77,20 @@ def test_home_page(client):
     }
 
 def test_post_baked_good(client):
+    """
+    Tests that a valid baked good can be created through the API.
+
+    Creates a test vendor first because the baked good requires a valid
+    vendor_id. Then sends a POST request containing valid baked good data
+    and verifies that the API returns a 201 status code and the expected
+    baked good information.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
 
     vendor = {
         "active": True,
@@ -72,6 +127,20 @@ def test_post_baked_good(client):
     assert data["vendor_id"] == 1
 
 def test_post_baked_good_missing_description(client):
+    """
+    Tests that a baked good cannot be created without a description.
+
+    Sends a POST request containing baked good data without the required
+    description field and verifies that the API returns a 422 validation
+    error.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
     baked_good = {
         "id": 1,
         "active": True,
@@ -85,6 +154,21 @@ def test_post_baked_good_missing_description(client):
     assert response.status_code == 422
 
 def test_post_baked_good_invalid_retail_price(client):
+    """
+    Tests that a baked good cannot be created when the retail price
+    is less than the purchasing cost.
+
+    Sends a POST request where the retail price is lower than the
+    purchasing cost and verifies that the API returns a 422 validation
+    error.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
     baked_good = {
         "id": 1,
         "active": True,
@@ -99,6 +183,19 @@ def test_post_baked_good_invalid_retail_price(client):
     assert response.status_code == 422    
 
 def test_post_baked_good_empty_name(client):
+    """
+    Tests that a baked good cannot be created with an empty name.
+
+    Sends a POST request where the name contains only whitespace and
+    verifies that the API returns a 422 validation error.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
     baked_good = {
         "id": 1,
         "active": True,
