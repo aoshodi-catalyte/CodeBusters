@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from database import Base, engine, SessionLocal, get_db
 from main import app
+from vendor.vendor_router import router
 
 
 @pytest.fixture
@@ -35,8 +36,21 @@ def test_home_page(client):
     }
 
 def test_post_baked_good(client):
+
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "John Doe",
+        "contact_role": "Manager",
+        "email": "john@testvendor.com",
+        "phone": "5551234567",
+        "vendor_id": 1
+    }
+
+    vendor_response = client.post("/vendor", json=vendor)
+    assert vendor_response.status_code == 201
+
     baked_good = {
-        "id": 1,
         "active": True,
         "name": "Chocolate Chip Cookie",
         "description": "A cookie with chocolate chips.",
@@ -46,7 +60,6 @@ def test_post_baked_good(client):
     }
 
     response = client.post("/baked_goods/create", json=baked_good)
-
     assert response.status_code == 201
 
     data = response.json()

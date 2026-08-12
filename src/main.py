@@ -6,13 +6,8 @@ from database import Base, engine
 from ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingredient_allergen)
 from ingredient.ingredient_router import router as ingredient_router
 
-<<<<<<< HEAD
 
 # from customer.customer_schema import CustomerSchema
-=======
-from database import create_db
-from customer.customer_schema import CustomerSchema
->>>>>>> b1ed93072dbb20af3f675c367a1c68ed6a57a002
 from customer.customer_router import router as customer_router
 
 
@@ -24,12 +19,9 @@ app = FastAPI(
 # Importing the SQLAlchemy model above registers it with
 # Base.metadata before the database tables are created.
 # create_db()
-<<<<<<< HEAD
 
 
 app.include_router(customer_router)
-=======
->>>>>>> b1ed93072dbb20af3f675c367a1c68ed6a57a002
 
 
 @app.get("/")
