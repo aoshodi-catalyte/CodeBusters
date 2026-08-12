@@ -44,3 +44,18 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(drink_recipe_router)
 # app.include_router(vendor_router)
 app.include_router(ingredient_router)
+@app.get("/")
+def root():
+    """
+    Health check endpoint.
+    """
+    return {"message": "Customer API is running"}
+# app.include_router(vendor_router)
+app.include_router(vendor_router)
+app.include_router(baked_good_router)
+app.include_router(ingredient_router)
+
+# Create database tables
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=engine)
+
