@@ -17,12 +17,3 @@ app.include_router(ingredient_router)
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
-# app = FastAPI()
-
-
-
-# from src.vendor.vendor_router import router as vendor_router
-
-# app = FastAPI()
-
-# app.include_router(vendor_router)
