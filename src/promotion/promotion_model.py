@@ -1,27 +1,33 @@
-from datetime import date
-from pydantic import BaseModel, field_validator
+from datetime import datetime
+from pydantic import BaseModel, Field, field_validator, model_validator
+from zoneinfo import ZoneInfo
 
 
 class Promotion(BaseModel):
     """
     Represents a promotion with an active status, promo code,
-    discount percentage, and date range.
+    discount percentage, and date/time range.
 
     Attributes:
         active: Indicates whether the promotion is currently active.
         promo_code: A promotion code containing uppercase letters.
-            Numbers, spaces, and symbols are allowed. Promo code uniqueness is enforced
-            by the database.
-        discount_percentage: The percentage discount applied by the promotion.
-        start_date: The date when the promotion begins.
-        end_date: The date when the promotion ends.
+            Numbers, spaces, and symbols are allowed. Promo code
+            uniqueness is enforced by the database.
+        discount_percentage: The percentage discount applied by
+            the promotion. Must be greater than zero.
+        start_datetime: The date and time when the promotion begins.
+            The expected input format is MM/DD/YYYY HH:MM AM/PM.
+        end_datetime: The date and time when the promotion ends.
+            The expected input format is MM/DD/YYYY HH:MM AM/PM.
+            The end datetime must be the same as or later than the
+            start datetime.
     """
 
     active: bool
     promo_code: str
-    discount_percentage: float
-    start_date: date
-    end_date: date
+    discount_percentage: float = Field(gt=0)
+    start_datetime: datetime
+    end_datetime: datetime
 
     @field_validator("promo_code")
     @classmethod
@@ -52,3 +58,74 @@ class Promotion(BaseModel):
             raise ValueError("Promo code cannot start or end with a space")
 
         return value
+
+    @field_validator("start_datetime", "end_datetime", mode="before")
+    @classmethod
+    def convert_datetimes(cls, value):
+        """
+        Converts a user-friendly date/time string into a datetime.
+
+        Accepts values in MM/DD/YYYY HH:MM AM/PM format.
+
+        Args:
+            value: The date/time value provided by the user.
+
+        Raises:
+            ValueError: If the date/time does not use the expected
+                MM/DD/YYYY HH:MM AM/PM format.
+
+        Returns:
+            A datetime object or the original value if it is
+            already a datetime.
+        """
+
+        if isinstance(value, str):
+            try:
+                return datetime.strptime(
+                value,
+                "%m/%d/%Y %I:%M %p"
+            )
+            except ValueError:
+                raise ValueError(
+                    "Invalid date/time format. Please use MM/DD/YYYY HH:MM AM/PM."
+                )
+        return value
+
+    @field_validator("start_datetime", "end_datetime")
+    @classmethod
+    def add_timezone(cls, value: datetime) -> datetime:
+        """
+        Adds the America/Chicago timezone to a datetime when
+        timezone information is not provided.
+
+        Args:
+            value: The datetime value to validate.
+
+        Returns:
+            A timezone-aware datetime using the America/Chicago timezone.
+        """
+
+        if value.tzinfo is None:
+            value = value.replace(
+                tzinfo=ZoneInfo("America/Chicago")
+            )
+        return value
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        """
+        Validates that the end datetime is the same as or later
+        than the start datetime.
+
+        Raises:
+            ValueError: If the end datetime occurs before the
+                start datetime.
+
+        Returns:
+            The validated Promotion object.
+        """
+
+        if self.end_datetime < self.start_datetime:
+            raise ValueError("End datetime must be the same as or after start datetime.")
+
+        return self
