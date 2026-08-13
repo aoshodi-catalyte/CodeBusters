@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
-from typing import List
 
 class BakedGoodRepository:
     """
@@ -17,7 +16,7 @@ class BakedGoodRepository:
         A BakedGoodRepository object containing an empty list of baked goods.
     """
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session):
         """
         Initializes the baked good repository.
 

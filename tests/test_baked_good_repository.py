@@ -1,10 +1,13 @@
 from sqlalchemy.orm import sessionmaker
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_model import BakedGood
+from baked_good.baked_good_schema import BakedGoodSchema
 import pytest
 
 from database import Base, engine
+from vendor.vendor_schema import Vendor
 from tests.test_customer_router import TestingSessionLocal
+from tests.test_vendor_router import client
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,
@@ -24,7 +27,7 @@ def db():
         session.close()
         Base.metadata.drop_all(bind=engine)
 
-def test_create_baked_good_repository():
+def test_create_baked_good_repository(db):
     """
     Tests that a baked good can be created and stored in the repository.
 
@@ -38,11 +41,23 @@ def test_create_baked_good_repository():
     Returns:
         None
     """
+    vendor = Vendor(
+        id=1,
+        active=True,
+        name="Test Vendor",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@testvendor.com",
+        phone="555-123-4567"
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
     
     repository = BakedGoodRepository(db)
 
     baked_good = BakedGood (
-        id=1,
         active=True,
         name="Chocolate Cake",
         description="A chocolate cake",
@@ -51,38 +66,54 @@ def test_create_baked_good_repository():
         vendor_id=1
     )
 
-    repository.create_baked_good(baked_good)
+    created = repository.create_baked_good(baked_good)
 
-    assert baked_good in repository.baked_goods
-    assert len(repository.baked_goods) == 1
+    assert created.id is not None
+    assert created.name == "Chocolate Cake"
 
-    def test_create_baked_good_returns_baked_good():
-        """
-        Tests that creating a baked good returns the same BakedGood object.
+def test_create_baked_good_returns_baked_good(db):
+    """
+    Tests that creating a baked good returns the same BakedGood object.
 
-        Creates a BakedGoodRepository and a valid BakedGood object, then passes
-        the baked good to the create_baked_good method. Verifies that the
-        returned object is equal to the baked good that was provided.
+    Creates a BakedGoodRepository and a valid BakedGood object, then passes
+    the baked good to the create_baked_good method. Verifies that the
+    returned object is equal to the baked good that was provided.
 
-        Args:
-            None
+    Args:
+        None
 
-        Returns:
-            None
-        """
+    Returns:
+        None
+    """
+    vendor = Vendor(
+        id=1,
+        active=True,
+        name="Test Vendor",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@testvendor.com",
+        phone="555-123-4567"
+    )
 
-        repository = BakedGoodRepository()
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+    repository = BakedGoodRepository(db)
 
-        baked_good = BakedGood(
-            id=1,
-            active=True,
-            name="Chocolate Cake",
-            description="A chocolate cake",
-            purchasing_cost=5.00,
-            retail_price=10.00,
-            vendor_id=1
-        )
+    baked_good = BakedGood(
+        active=True,
+        name="Chocolate Cake",
+        description="A chocolate cake",
+        purchasing_cost=5.00,
+        retail_price=10.00,
+        vendor_id=vendor.id
+    )
 
-        result = repository.create_baked_good(baked_good)
+    result = repository.create_baked_good(baked_good)
 
-        assert result == baked_good
+    assert result.name == baked_good.name
+    assert result.description == baked_good.description
+    assert result.purchasing_cost == baked_good.purchasing_cost
+    assert result.retail_price == baked_good.retail_price
+    assert result.vendor_id == baked_good.vendor_id
+    assert result.active == baked_good.active
