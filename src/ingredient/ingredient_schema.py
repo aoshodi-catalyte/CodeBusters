@@ -6,8 +6,6 @@ from sqlalchemy.orm import relationship
 
 # ==========================================
 # ASSOCIATION TABLE
-# ==========================================
-
 ingredient_allergen = Table("ingredient_allergen",
     Base.metadata,
     Column( "ingredient_id", ForeignKey("ingredient.id"), primary_key=True,),
@@ -17,8 +15,6 @@ ingredient_allergen = Table("ingredient_allergen",
 
 # ==========================================
 # SQLALCHEMY MODEL
-# ==========================================
-
 class AllergenSchema(Base):
     __tablename__ = "allergen"
 
