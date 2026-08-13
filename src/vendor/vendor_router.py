@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
-from database import Base, SessionLocal, engine
+from database import SessionLocal
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository

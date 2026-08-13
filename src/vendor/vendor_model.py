@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, field_validator, Field, field_serializer
+from pydantic import BaseModel, field_validator, Field
 
 
 PHONE_DIGITS_PATTERN = re.compile(r"^\d{10}$")
