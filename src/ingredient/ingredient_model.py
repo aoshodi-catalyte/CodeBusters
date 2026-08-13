@@ -4,6 +4,7 @@ from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
 # ==========================================
 # PYDANTIC SCHEMAS
+
 # ==========================================
 class AllergenOut(BaseModel):
     name: str
