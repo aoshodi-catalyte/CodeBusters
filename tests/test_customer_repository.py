@@ -4,9 +4,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from customer.customer_model import Customer
-from customer.customer_schema import CustomerSchema
+from customer.customer_model import CustomerCreate
 from customer.customer_repository import CustomerRepository
+from customer.customer_schema import CustomerSchema
 
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -26,140 +26,105 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture
 def db():
-    """
-    Creates a fresh test database for each test.
-    """
+    """Create a fresh in-memory database for each test."""
+
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    session = TestingSessionLocal()
 
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
         Base.metadata.drop_all(bind=engine)
 
 
-def test_create_customer(db):
-    """
-    Verifies that a customer can be created successfully.
-    """
-    customer = Customer(
+@pytest.fixture
+def repository(db):
+    """Create a CustomerRepository using the test database session."""
+
+    return CustomerRepository(db)
+
+
+def test_create_customer(repository, db):
+    """Repository should create and persist a customer."""
+
+    customer = CustomerCreate(
         first_name="John",
-        last_name="Doe",
-        email="john.doe@example.com",
-        phone_number="555-123-4567",
-        active=True,
-        loyalty_points=100
-    )
-
-    repo = CustomerRepository(db)
-
-    result = repo.create_customer(customer)
-
-    assert result.id is not None
-    assert result.first_name == "John"
-    assert result.last_name == "Doe"
-    assert result.email == "john.doe@example.com"
-    assert result.phone_number == "555-123-4567"
-    assert result.active is True
-    assert result.loyalty_points == 100
-
-
-def test_create_customer_persists_to_database(db):
-    """
-    Verifies that the created customer is actually persisted.
-    """
-    customer = Customer(
-        first_name="Jane",
         last_name="Smith",
-        email="jane.smith@example.com",
-        phone_number="555-987-6543",
-        active=True,
-        loyalty_points=250
-    )
-
-    repo = CustomerRepository(db)
-
-    created_customer = repo.create_customer(customer)
-
-    saved_customer = (
-        db.query(CustomerSchema)
-        .filter(CustomerSchema.id == created_customer.id)
-        .first()
-    )
-
-    assert saved_customer is not None
-    assert saved_customer.first_name == "Jane"
-    assert saved_customer.last_name == "Smith"
-    assert saved_customer.email == "jane.smith@example.com"
-    assert saved_customer.phone_number == "555-987-6543"
-    assert saved_customer.active is True
-    assert saved_customer.loyalty_points == 250
-
-
-def test_create_customer_generates_id(db):
-    """
-    Verifies that the database generates an ID for a new customer.
-    """
-    customer = Customer(
-        first_name="Michael",
-        last_name="Jordan",
-        email="michael@example.com",
-        phone_number="555-111-2222",
-        active=True,
-        loyalty_points=500
-    )
-
-    repo = CustomerRepository(db)
-
-    result = repo.create_customer(customer)
-
-    assert result.id is not None
-
-
-def test_get_customers_returns_all_customers(db):
-    """
-    Verifies that get_customers returns all customers.
-    """
-    customer1 = CustomerSchema(
-        first_name="John",
-        last_name="Doe",
         email="john@example.com",
-        phone_number="555-111-1111",
+        phone_number="312-555-1234",
         active=True,
         loyalty_points=100
     )
 
-    customer2 = CustomerSchema(
+    created_customer = repository.create_customer(customer)
+
+    assert created_customer.id is not None
+    assert created_customer.first_name == "John"
+    assert created_customer.last_name == "Smith"
+    assert created_customer.email == "john@example.com"
+    assert created_customer.phone_number == "3125551234"
+    assert created_customer.active is True
+    assert created_customer.loyalty_points == 100
+
+
+def test_create_customer_persists_to_database(repository, db):
+    """Created customer should actually be persisted in the database."""
+
+    customer = CustomerCreate(
         first_name="Jane",
         last_name="Doe",
         email="jane@example.com",
-        phone_number="555-222-2222",
-        active=True,
-        loyalty_points=200
+        phone_number="773-555-1234"
     )
 
-    db.add(customer1)
-    db.add(customer2)
+    created_customer = repository.create_customer(customer)
+
+    stored_customer = (
+        db.query(CustomerSchema)
+        .filter_by(id=created_customer.id)
+        .first()
+    )
+
+    assert stored_customer is not None
+    assert stored_customer.phone_number == "7735551234"
+
+
+def test_get_customers(repository, db):
+    """Repository should return all customers."""
+
+    customer_one = CustomerSchema(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+        active=True,
+        loyalty_points=100
+    )
+
+    customer_two = CustomerSchema(
+        first_name="Jane",
+        last_name="Doe",
+        email="jane@example.com",
+        phone_number="7735551234",
+        active=True,
+        loyalty_points=50
+    )
+
+    db.add_all([customer_one, customer_two])
     db.commit()
 
-    repo = CustomerRepository(db)
+    customers = repository.get_customers()
 
-    result = repo.get_customers()
-
-    assert len(result) == 2
-    assert result[0].first_name == "John"
-    assert result[1].first_name == "Jane"
+    assert len(customers) == 2
+    assert customers[0].first_name == "John"
+    assert customers[1].first_name == "Jane"
 
 
-def test_get_customers_returns_empty_list(db):
-    """
-    Verifies that get_customers returns an empty list when
-    no customers exist.
-    """
-    repo = CustomerRepository(db)
+def test_get_customers_returns_empty_list(repository):
+    """Repository should return an empty list when no customers exist."""
 
-    result = repo.get_customers()
+    customers = repository.get_customers()
 
-    assert result == []
+    assert customers == []

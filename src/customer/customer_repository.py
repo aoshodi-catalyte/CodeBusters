@@ -8,15 +8,21 @@ HTTP exceptions, belongs in the router layer.
 
 from sqlalchemy.orm import Session
 
-from customer.customer_model import Customer
+from customer.customer_model import CustomerCreate
 from customer.customer_schema import CustomerSchema
 
 
 class CustomerRepository:
+    """
+    Repository for customer database operations.
+
+    This class handles creating and retrieving customer records
+    using a SQLAlchemy database session.
+    """
 
     def __init__(self, db: Session):
         """
-        Initializes the customer repository with a database session.
+        Initialize the customer repository with a database session.
 
         Args:
             db: SQLAlchemy database session used for customer
@@ -26,22 +32,26 @@ class CustomerRepository:
 
     def create_customer(
         self,
-        customer: Customer
+        customer: CustomerCreate
     ) -> CustomerSchema:
         """
-        Creates and persists a customer in the database.
+        Create and persist a new customer in the database.
 
-        The provided Customer object is converted into a
-        CustomerSchema database record. The record is added to
-        the database, committed, refreshed, and returned.
+        The validated CustomerCreate object is converted into a
+        CustomerSchema database record. The record is added to the
+        database, committed, refreshed, and returned.
+
+        The phone number has already been normalized to 10 digits
+        by the CustomerCreate Pydantic model before reaching this
+        method.
 
         Args:
-            customer: Customer object containing the data to
-                be persisted.
+            customer: CustomerCreate object containing the validated
+                customer data.
 
         Returns:
             CustomerSchema: The newly created customer record,
-            including its generated ID.
+                including its generated database ID.
         """
         db_customer = CustomerSchema(
             first_name=customer.first_name,
@@ -60,11 +70,10 @@ class CustomerRepository:
 
     def get_customers(self) -> list[CustomerSchema]:
         """
-        Retrieves all customers from the database.
+        Retrieve all customers from the database.
 
         Returns:
             list[CustomerSchema]: A list containing all customer
-            records. Returns an empty list when no customers exist.
+                records. Returns an empty list when no customers exist.
         """
         return self.db.query(CustomerSchema).all()
-
