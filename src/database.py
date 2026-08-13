@@ -5,7 +5,6 @@ database initialization function, and database session dependency.
 """
 
 from typing import Generator
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -13,9 +12,6 @@ from config import settings
 
 
 DATABASE_URL = settings.DATABASE_URL
-
-
-print(f"DATABASE URL: {DATABASE_URL}")
 
 engine = create_engine(
     DATABASE_URL,

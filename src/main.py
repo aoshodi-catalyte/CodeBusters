@@ -17,10 +17,7 @@ app = FastAPI(
 
 # Importing the SQLAlchemy model above registers it with
 # Base.metadata before the database tables are created.
-create_db()
-
-
-app.include_router(customer_router)
+# create_db()
 
 
 @app.get("/")
@@ -33,6 +30,7 @@ def root():
 app.include_router(vendor_router)
 app.include_router(baked_good_router)
 app.include_router(ingredient_router)
+app.include_router(customer_router)
 
 
 
