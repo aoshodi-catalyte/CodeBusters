@@ -4,8 +4,6 @@ from database import Base, SessionLocal, engine
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
-from ingredient.ingredient_schema import IngredientSchema, AllergenSchema
-from baked_good.baked_good_schema import BakedGoodSchema
 
 router = APIRouter()
 
