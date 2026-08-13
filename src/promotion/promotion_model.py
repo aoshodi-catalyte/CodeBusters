@@ -10,7 +10,8 @@ class Promotion(BaseModel):
     Attributes:
         active: Indicates whether the promotion is currently active.
         promo_code: A promotion code containing uppercase letters.
-            Numbers, spaces, and symbols are allowed.
+            Numbers, spaces, and symbols are allowed. Promo code uniqueness is enforced
+            by the database.
         discount_percentage: The percentage discount applied by the promotion.
         start_date: The date when the promotion begins.
         end_date: The date when the promotion ends.
