@@ -1,21 +1,20 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, condecimal, field_validator
 from constants.EMPLOYEE_ROLES import EmployeeRole
 from datetime import date
 
-
+ConstrainedMoney = condecimal(gt=0, decimal_places=2)
 class Employee(BaseModel):
-    id: int
     active: bool
-    first_name: str
-    last_name: str
+    first_name: str = Field(..., min_length=1, max_length=50)
+    last_name: str = Field(..., min_length=1, max_length=50)
     role: EmployeeRole
-    hourly_rate: float
+    hourly_rate: ConstrainedMoney # type: ignore
     hire_date: date
     term_date: date | None
 
-    @field_validator('role')
-    def validate_role(role: str) -> EmployeeRole:
+    @field_validator("role", mode="before")
+    def validate_role(cls, value):
         try:
-            return EmployeeRole(role)
+            return EmployeeRole(value)
         except ValueError:
-            raise ValueError(f"Invalid role: {role}. Valid roles are: {[r.value for r in EmployeeRole]}")
+            raise ValueError(f"Invalid role: {value}. Valid roles are: {[r.value for r in EmployeeRole]}")
