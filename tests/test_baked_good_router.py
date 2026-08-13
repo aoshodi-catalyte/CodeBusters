@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from database import Base, engine, SessionLocal, get_db
 from main import app
-from vendor.vendor_router import router
+
 
 
 @pytest.fixture
@@ -103,6 +103,7 @@ def test_post_baked_good(client):
     }
 
     vendor_response = client.post("/vendor", json=vendor)
+
     assert vendor_response.status_code == 201
 
     baked_good = {
@@ -115,6 +116,7 @@ def test_post_baked_good(client):
     }
 
     response = client.post("/baked_goods/create", json=baked_good)
+
     assert response.status_code == 201
 
     data = response.json()
@@ -129,24 +131,14 @@ def test_post_baked_good(client):
 def test_post_baked_good_missing_description(client):
     """
     Tests that a baked good cannot be created without a description.
-
-    Sends a POST request containing baked good data without the required
-    description field and verifies that the API returns a 422 validation
-    error.
-
-    Args:
-        client: FastAPI test client provided by the client fixture.
-
-    Returns:
-        None
     """
 
     baked_good = {
-        "id": 1,
         "active": True,
         "name": "Chocolate Chip Cookie",
         "purchasing_cost": 1.00,
-        "retail_price": 2.50
+        "retail_price": 2.50,
+        "vendor_id": 1
     }
 
     response = client.post("/baked_goods/create", json=baked_good)
@@ -157,25 +149,15 @@ def test_post_baked_good_invalid_retail_price(client):
     """
     Tests that a baked good cannot be created when the retail price
     is less than the purchasing cost.
-
-    Sends a POST request where the retail price is lower than the
-    purchasing cost and verifies that the API returns a 422 validation
-    error.
-
-    Args:
-        client: FastAPI test client provided by the client fixture.
-
-    Returns:
-        None
     """
 
     baked_good = {
-        "id": 1,
         "active": True,
         "name": "Chocolate Chip Cookie",
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 3.00,
-        "retail_price": 2.00
+        "retail_price": 2.00,
+        "vendor_id": 1
     }
 
     response = client.post("/baked_goods/create", json=baked_good)
@@ -185,24 +167,15 @@ def test_post_baked_good_invalid_retail_price(client):
 def test_post_baked_good_empty_name(client):
     """
     Tests that a baked good cannot be created with an empty name.
-
-    Sends a POST request where the name contains only whitespace and
-    verifies that the API returns a 422 validation error.
-
-    Args:
-        client: FastAPI test client provided by the client fixture.
-
-    Returns:
-        None
     """
 
     baked_good = {
-        "id": 1,
         "active": True,
         "name": "   ",
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 1.00,
-        "retail_price": 2.50
+        "retail_price": 2.50,
+        "vendor_id": 1
     }
 
     response = client.post("/baked_goods/create", json=baked_good)

@@ -1,13 +1,11 @@
 from sqlalchemy.orm import sessionmaker
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_model import BakedGood
-from baked_good.baked_good_schema import BakedGoodSchema
 import pytest
 
 from database import Base, engine
 from vendor.vendor_schema import Vendor
 from tests.test_customer_router import TestingSessionLocal
-from tests.test_vendor_router import client
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,
@@ -17,7 +15,7 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture
 def db():
-    """Creates a fresh in-memory DB for each test."""
+    """Creates a fresh database session for each test."""
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     
