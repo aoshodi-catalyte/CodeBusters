@@ -7,7 +7,9 @@ database initialization function, and database session dependency.
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
 from config import settings
+
 
 DATABASE_URL = settings.DATABASE_URL
 
@@ -35,16 +37,16 @@ def create_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_db() -> Generator[Session, None, None]:
-    """
-    Provides a database session for FastAPI endpoints.
+# def get_db() -> Generator[Session, None, None]:
+#     """
+#     Provides a database session for FastAPI endpoints.
 
-    The session is automatically closed after the request completes.
-    """
+#     The session is automatically closed after the request completes.
+#     """
 
-    db = SessionLocal()
+#     db = SessionLocal()
 
-Base = declarative_base()
+# Base = declarative_base()
 
 def get_db():
     db = SessionLocal()

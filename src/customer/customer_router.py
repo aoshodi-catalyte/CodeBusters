@@ -5,69 +5,76 @@ This module handles HTTP requests and responses for customers.
 Database operations are delegated to the customer repository.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from customer.customer_model import Customer
-from customer.customer_schema import CustomerSchema
-from customer import customer_repository
+from customer.customer_model import CustomerCreate, CustomerResponse
+from customer.customer_repository import CustomerRepository
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 @router.post(
     "/customers",
-    response_model=Customer,
+    response_model=CustomerResponse,
     status_code=status.HTTP_201_CREATED
 )
 def create_customer(
-    customer: Customer,
+    customer: CustomerCreate,
     db: Session = Depends(get_db)
 ):
     """
-    Creates a new customer and persists it to the database.
+    Create a new customer and persist it to the database.
+
+    The incoming phone number is validated and normalized by the
+    CustomerCreate Pydantic model before being passed to the repository.
+    The CustomerResponse model formats the phone number for the API response.
+
+    Args:
+        customer: Customer data provided by the API client.
+        db: SQLAlchemy database session.
 
     Returns:
-        The newly created customer.
+        CustomerResponse: The newly created customer.
 
     Raises:
         HTTPException 409:
-            Email or phone number already exists.
+            If the email or phone number already exists.
 
         HTTPException 500:
-            Unexpected database error.
+            If an unexpected database error occurs.
     """
-
-    db_customer = CustomerSchema(
-        first_name=customer.first_name,
-        last_name=customer.last_name,
-        email=customer.email,
-        phone_number=customer.phone_number,
-        active=customer.active,
-        loyalty_points=customer.loyalty_points
-    )
-
     try:
-        return customer_repository.create_customer(
-            db,
-            db_customer
-        )
+        repo = CustomerRepository(db)
+        customer = repo.create_customer(customer)
+
+        return customer
 
     except IntegrityError:
         db.rollback()
 
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A customer with this email or phone number already exists."
+            detail=(
+                "A customer with this email or phone number "
+                "already exists."
+            )
         )
 
     except Exception as e:
         db.rollback()
 
-        print(f"ERROR CREATING CUSTOMER: {e}")
+        logger.error(
+            "Error creating customer: %s",
+            e
+        )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -77,41 +84,50 @@ def create_customer(
 
 @router.get(
     "/customers",
-    response_model=list[Customer],
+    response_model=list[CustomerResponse],
     status_code=status.HTTP_200_OK
 )
 def get_customers(
     db: Session = Depends(get_db)
 ):
     """
-    Retrieves all customers from the database.
+    Retrieve all customers from the database.
+
+    Args:
+        db: SQLAlchemy database session.
 
     Returns:
-        A list of all customers.
+        list[CustomerResponse]: A list of all customers.
 
     Raises:
         HTTPException 404:
-            No customers were found.
+            If no customers are found.
 
         HTTPException 500:
-            Unexpected database error.
+            If an unexpected database error occurs.
     """
-
     try:
-        customers = customer_repository.get_customers(db)
+        repo = CustomerRepository(db)
+        customers = repo.get_customers()
+
+        if not customers:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No customers found."
+            )
+
+        return customers
+
+    except HTTPException:
+        raise
 
     except Exception as e:
-        print(f"ERROR RETRIEVING CUSTOMERS: {e}")
+        logger.error(
+            "Error retrieving customers: %s",
+            e
+        )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving customers."
         )
-
-    if not customers:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No customers found."
-        )
-
-    return customers
