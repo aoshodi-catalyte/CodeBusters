@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from database import Base, SessionLocal, engine
 from vendor.vendor_model import VendorBase
-from vendor.vendor_schema import VendorSchema
+from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
 from ingredient.ingredient_schema import IngredientSchema, AllergenSchema
 from baked_good.baked_good_schema import BakedGoodSchema
@@ -10,7 +10,7 @@ from baked_good.baked_good_schema import BakedGoodSchema
 router = APIRouter()
 
 def get_db():
-    """Provide a database session for request‑scoped dependency injection.
+    """Provide a database session for request scoped dependency injection.
 
     Creates a new SQLAlchemy session, yields it to the request handler, and
     ensures the session is properly closed after the request completes.
@@ -27,7 +27,7 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/vendor", response_model=VendorSchema, status_code=201)
+@router.post("/vendor", response_model=VendorResponse, status_code=201)
 async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)):
     """Create a new vendor record and return the created vendor.
 
@@ -48,7 +48,7 @@ async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)
     new_vendor = repo.create_new_vendor(vendor_data)
     return new_vendor
 
-@router.get("/vendor", response_model=list[VendorSchema])
+@router.get("/vendor", response_model=list[VendorResponse])
 async def get_all_vendors(db: Session = Depends(get_db)):
     """Retrieve and return all vendors stored in the system.
 
@@ -64,7 +64,7 @@ async def get_all_vendors(db: Session = Depends(get_db)):
     repo = VendorRepository(db)
     return repo.get_all_vendors()
 
-@router.get("/vendor/{vendor_id}", response_model=VendorSchema)
+@router.get("/vendor/{vendor_id}", response_model=VendorResponse)
 async def get_vendor(vendor_id: int, db: Session = Depends(get_db)):
     """Retrieve a single vendor by its unique identifier.
 
