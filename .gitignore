@@ -16,3 +16,7 @@ __pycache__/
 .vscode/
 .idea/
 *.swp
+
+# SQLite dev DB
+dev.db
+*.db

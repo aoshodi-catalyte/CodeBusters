@@ -1,39 +1,75 @@
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 
+from ingredient.ingredient_exceptions import IngredientAlreadyExistsError, IngredientConstraintError, VendorNotFoundError
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+from vendor.vendor_schema import Vendor
 
 
 def get_or_create_allergen(
     db: Session,
     allergen_name: str,
 ):
-    # Find an existing allergen by name
+    """Return an existing allergen or create a new one.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        allergen_name: Name of the allergen.
+
+    Returns:
+        The existing or newly created allergen.
+    """
+
     allergen = (
         db.query(AllergenSchema)
         .filter(AllergenSchema.name == allergen_name)
         .first()
     )
-    # If the allergen does not exist, create it
     if allergen is None:
-        allergen = AllergenSchema(
-            name=allergen_name
-        )
+        allergen = AllergenSchema( name=allergen_name)
+
         db.add(allergen)
         db.flush()
+
     return allergen
+
 
 def create_ingredient(
     db: Session,
     ingredient_data: Ingredient,
 ):
+    """Create an ingredient and associate its allergens.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_data: Validated ingredient data.
+
+    Returns:
+        The newly created ingredient.
+
+    Raises:
+        VendorNotFoundError:
+            If the specified vendor does not exist.
+        IngredientAlreadyExistsError:
+            If an ingredient with the same name already exists.
+        IngredientConstraintError:
+            If the ingredient violates a database constraint.
+        SQLAlchemyError:
+            If an unexpected database error occurs.
+    """
     try:
-        # Remove duplicate allergens
-        unique_allergens = list(
-            dict.fromkeys(ingredient_data.allergens)
+        # Check vendor exists
+        vendor = (
+            db.query(Vendor)
+            .filter(Vendor.id == ingredient_data.vendor_id)
+            .first()
         )
-        # Create the SQLAlchemy ingredient (Pydantic Validation)
+        if vendor is None:
+            raise VendorNotFoundError(ingredient_data.vendor_id)
+        # Remove duplicate allergens
+        unique_allergens = list(dict.fromkeys(ingredient_data.allergens))
+        # Create ingredient
         ingredient = IngredientSchema(
             active=ingredient_data.active,
             name=ingredient_data.name,
@@ -42,22 +78,31 @@ def create_ingredient(
             unit_of_measure=ingredient_data.unit_of_measure,
             vendor_id=ingredient_data.vendor_id,
         )
-        # Find or create each allergen
+        # Find or create allergens
         for allergen_name in unique_allergens:
-            allergen = get_or_create_allergen(
-                db=db,
-                allergen_name=allergen_name,
-            )
-
-            # Connect allergen to ingredient
+            allergen = get_or_create_allergen(db=db, allergen_name=allergen_name,)
             ingredient.allergens.append(allergen)
-
         # Save ingredient
         db.add(ingredient)
         db.commit()
         db.refresh(ingredient)
 
         return ingredient
+
+    except VendorNotFoundError:
+        db.rollback()
+        raise
+
+    except IntegrityError as exc:
+        db.rollback()
+        constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+
+        if constraint == "uq_ingredient_name":
+            raise IngredientAlreadyExistsError(ingredient_data.name) from exc
+
+        raise IngredientConstraintError(
+            constraint
+        ) from exc
 
     except SQLAlchemyError:
         db.rollback()
