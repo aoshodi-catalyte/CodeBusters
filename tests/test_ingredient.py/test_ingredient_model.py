@@ -1,10 +1,8 @@
-from decimal import Decimal
-
 import pytest
 from pydantic import ValidationError
 
 from ingredient.ingredient_model import Allergen, Ingredient
-from constants.INGREDIENT_TYPES import UnitOfMeasure
+from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
 
 def test_allergen():
@@ -22,29 +20,30 @@ def test_ingredient():
     ingredient = Ingredient(
         active=True,
         name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
+        purchasing_cost=4.50,
+        unit_amount=1.00,
         unit_of_measure=UnitOfMeasure.liters,
         allergens=["milk"],
-        vendor_id=("1")
+        vendor_id=1,
     )
 
     assert ingredient.active is True
     assert ingredient.name == "Whole Milk"
-    assert ingredient.purchasing_cost == Decimal("4.50")
-    assert ingredient.unit_amount == Decimal("1.00")
+    assert ingredient.purchasing_cost == 4.50
+    assert ingredient.unit_amount == 1.00
     assert ingredient.unit_of_measure == UnitOfMeasure.liters
-    assert ingredient.allergens == ["milk"]
+    assert ingredient.allergens == ["Milk"]
+    assert ingredient.vendor_id == 1
 
 
 def test_ingredient_active_defaults_to_true():
     ingredient = Ingredient(
         active=True,
         name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
+        purchasing_cost=4.50,
+        unit_amount=1.00,
         unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+        vendor_id=1,
     )
 
     assert ingredient.active is True
@@ -53,10 +52,10 @@ def test_ingredient_active_defaults_to_true():
 def test_ingredient_allergens_default_to_empty_list():
     ingredient = Ingredient(
         name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
+        purchasing_cost=4.50,
+        unit_amount=1.00,
         unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+        vendor_id=1,
     )
 
     assert ingredient.allergens == []
@@ -65,32 +64,32 @@ def test_ingredient_allergens_default_to_empty_list():
 def test_purchasing_cost_cannot_be_negative():
     with pytest.raises(ValidationError):
         Ingredient(
-        name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
-        unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+            name="Whole Milk",
+            purchasing_cost=-4.50,
+            unit_amount=1.00,
+            unit_of_measure=UnitOfMeasure.liters,
+            vendor_id=1,
         )
 
 
 def test_unit_amount_must_be_greater_than_zero():
     with pytest.raises(ValidationError):
         Ingredient(
-        name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
-        unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+            name="Whole Milk",
+            purchasing_cost=4.50,
+            unit_amount=-1.00,
+            unit_of_measure=UnitOfMeasure.liters,
+            vendor_id=1,
         )
 
 
 def test_unit_of_measure():
     ingredient = Ingredient(
         name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
+        purchasing_cost=4.50,
+        unit_amount=1.00,
         unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+        vendor_id=1,
     )
 
-    assert ingredient.unit_of_measure == UnitOfMeasure.kilograms
+    assert ingredient.unit_of_measure == UnitOfMeasure.liters

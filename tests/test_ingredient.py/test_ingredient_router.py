@@ -84,7 +84,10 @@ def valid_ingredient_response():
         "purchasing_cost": Decimal(payload["purchasing_cost"]),
         "unit_amount": Decimal(payload["unit_amount"]),
         "unit_of_measure": payload["unit_of_measure"],
-        "allergens": [payload["allergens"][0]],
+        "allergens": [
+            {"name": allergen.title()}
+            for allergen in payload["allergens"]
+        ],
         "vendor_id": payload["vendor_id"],
     }
 

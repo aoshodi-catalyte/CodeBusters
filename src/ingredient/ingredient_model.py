@@ -24,13 +24,13 @@ class IngredientOut(BaseModel):
     id: int
     name: str
     active: bool
-    purchasing_cost: Decimal
-    unit_amount: Decimal
+    purchasing_cost: float
+    unit_amount: float
     unit_of_measure: str
     allergens: list[AllergenOut]
     vendor_id: int
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 class Ingredient(BaseModel):
     
@@ -63,10 +63,26 @@ class Ingredient(BaseModel):
 
     active: bool = True
     name: str = Field(min_length=1, max_length=255)
-    purchasing_cost: Decimal = Field( ge=0, decimal_places=2,)
-    unit_amount: Decimal = Field( gt=0, decimal_places=2, )
+    purchasing_cost: float = Field( ge=0, )
+    unit_amount: float = Field( gt=0, )
     unit_of_measure: UnitOfMeasure
-    allergens: list[CafeAllergen]
+    allergens: list[str] = Field(default_factory=list)
+
+    @field_validator("allergens", mode="before")
+    @classmethod
+    def validate_allergens(cls, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            value = [value]
+        validated_allergens = []
+       
+        return [
+            allergen
+            if isinstance(allergen, CafeAllergen)
+            else CafeAllergen.from_string(allergen)
+            for allergen in value
+        ]
     vendor_id: int = Field( gt=0,)
 
     @field_validator("unit_of_measure", mode="before")
@@ -90,30 +106,3 @@ class Ingredient(BaseModel):
                 to a valid UnitOfMeasure.
         """   
         return UnitOfMeasure.from_string(value)
-
-    @field_validator("allergens", mode="before")
-    @classmethod
-    def validate_allergens(cls, value):
-        """
-        Convert supplied allergen values into CafeAllergen values.
-
-        A single allergen value is converted into a list so that
-        the API accepts either one allergen or multiple allergens.
-        Each allergen is then converted using CafeAllergen.from_string().
-
-        Args:
-            value: A single allergen or a list of allergens supplied
-                by the client.
-
-        Returns:
-            A list of valid CafeAllergen values.
-
-        Raises:
-            ValueError: If an allergen cannot be converted into a
-                valid CafeAllergen.
-        """    
-        if not isinstance(value, list):
-            value = [value]
-        return [CafeAllergen.from_string(allergen) for allergen in value]
-
- 
