@@ -1,30 +1,14 @@
 from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from database import SessionLocal
+from database import get_db
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
 
 router = APIRouter()
 
-def get_db():
-    """Provide a database session for request scoped dependency injection.
 
-    Creates a new SQLAlchemy session, yields it to the request handler, and
-    ensures the session is properly closed after the request completes.
-
-    Yields:
-        Session: An active SQLAlchemy session used for database operations.
-
-    Raises:
-        SQLAlchemyError: If the session fails to initialize or close properly.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/vendor", response_model=VendorResponse, status_code=201)
 async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)):

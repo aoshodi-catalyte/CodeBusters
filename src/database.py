@@ -35,18 +35,29 @@ def create_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_db() -> Generator[Session, None, None]:
-    """
-    Provides a database session for FastAPI endpoints.
+# def get_db() -> Generator[Session, None, None]:
+#     """
+#     Provides a database session for FastAPI endpoints.
 
-    The session is automatically closed after the request completes.
-    """
+#     The session is automatically closed after the request completes.
+#     """
 
-    db = SessionLocal()
+#     db = SessionLocal()
 
-Base = declarative_base()
+# Base = declarative_base()
 
 def get_db():
+    """Provide a database session for request scoped dependency injection.
+
+    Creates a new SQLAlchemy session, yields it to the request handler, and
+    ensures the session is properly closed after the request completes.
+
+    Yields:
+        Session: An active SQLAlchemy session used for database operations.
+
+    Raises:
+        SQLAlchemyError: If the session fails to initialize or close properly.
+    """
     db = SessionLocal()
     try:
         yield db
