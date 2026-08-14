@@ -1,117 +1,77 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
+
+from ingredient.ingredient_exceptions import IngredientAlreadyExistsError, IngredientConstraintError, VendorNotFoundError
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import create_ingredient, VendorNotFoundError
+from ingredient.ingredient_repository import create_ingredient
+from ingredient.ingredient_model import IngredientOut
+
 
 router = APIRouter(
     prefix="/ingredient",
     tags=["ingredient"],
 )
+
+
 # ==========================================
 # CREATE INGREDIENT
 # ==========================================
-@router.post("/", status_code=status.HTTP_201_CREATED,)
+
+
+@router.post("/", response_model=IngredientOut, status_code=status.HTTP_201_CREATED,)
 def create(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
 ):
+    """Create a new ingredient.
+    Args:
+        ingredient: Validated ingredient information.
+        db: Database session provided by FastAPI.
+    Returns:
+        The newly created ingredient.
+    Raises:
+        HTTPException:
+            404 if the vendor does not exist.
+        HTTPException:
+            409 if the ingredient already exists or
+            violates a database constraint.
+        HTTPException:
+            500 if an unexpected database error occurs.
+    """
     try:
-        created_ingredient = create_ingredient(
-            db=db,
-            ingredient_data=ingredient,
-        )
-        return created_ingredient
-    # ======================================
+        return create_ingredient(db=db, ingredient_data=ingredient,)
     # VENDOR NOT FOUND
-    # ======================================
-
     except VendorNotFoundError as exc:
-        db.rollback()
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "vendor_not_found",
                 "message": str(exc),
             },
         ) from exc
-
-    # ======================================
-    # DATABASE CONSTRAINT ERROR
-    # ======================================
-    except IntegrityError as exc:
-        db.rollback()
-        constraint = getattr(
-            getattr(exc.orig, "diag", None),
-            "constraint_name",
-            None,
-        )
-        # ----------------------------------
-        # Duplicate ingredient
-        # ----------------------------------
-        if constraint == "uq_ingredient_name":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "error": "ingredient_already_exists",
-                    "message": ("An ingredient with this name already exists."),
-                },
-            ) from exc
-        # ----------------------------------
-        # Ingredient database constraints
-        # ----------------------------------
-        if constraint == "ck_ingredient_name_not_blank":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "error": "invalid_ingredient_name",
-                    "message": ("Ingredient name cannot be blank."),
-                },
-            ) from exc
-
-        if constraint == "ck_ingredient_purchasing_cost_non_negative":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "error": "invalid_purchasing_cost",
-                    "message": ("Purchasing cost cannot be negative."),
-                },
-            ) from exc
-
-        if constraint == "ck_ingredient_unit_amount_positive":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "error": "invalid_unit_amount",
-                    "message": ("Unit amount must be greater than zero."),
-                },
-            ) from exc
-        # ----------------------------------
-        # Other database constraint
-        # ----------------------------------
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+    # DUPLICATE INGREDIENT
+    except IngredientAlreadyExistsError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
             detail={
-                "error": "database_constraint_violation",
-                "message": ("The ingredient could not be created because of a database constraint."),
+                "error": "ingredient_already_exists",
+                "message": str(exc),
             },
         ) from exc
-    # ======================================
+    # DATABASE CONSTRAINT
+    except IngredientConstraintError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "database_constraint_violation",
+                "message": str(exc),
+            },
+        ) from exc
     # UNEXPECTED DATABASE ERROR
-    # ======================================
     except SQLAlchemyError as exc:
-        db.rollback()
-        print("\n========== DATABASE ERROR ==========")
-        print(repr(exc))
-        traceback.print_exc()
-        print("====================================\n")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "database_error",
-                "message": ("An unexpected database error occurred while creating the ingredient."),
+                "message": ("An unexpected database error occurred while creating the ingredient.")
             },
         ) from exc

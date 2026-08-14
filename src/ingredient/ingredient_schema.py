@@ -4,21 +4,14 @@ from constants.INGREDIENT_TYPES import UnitOfMeasure
 from database import Base
 from constants.INGREDIENT_TYPES import UnitOfMeasure
 
-
-# ==========================================
 # ASSOCIATION TABLE
-# ==========================================
-
 ingredient_allergen = Table("ingredient_allergen",
     Base.metadata,
     Column( "ingredient_id", ForeignKey("ingredient.id",ondelete="CASCADE"), primary_key=True,),
     Column( "allergen_id",  ForeignKey("allergen.id",ondelete="CASCADE"), primary_key=True,),
 )
 
-# ==========================================
 # SQLALCHEMY MODEL
-# ==========================================
-
 class AllergenSchema(Base):
     __tablename__ = "allergen"
     __table_args__ = (
