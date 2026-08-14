@@ -53,4 +53,3 @@ async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)
             status_code=status.HTTP_409_CONFLICT,
             detail="Vendor with this contact name or email already exists."
         )
-    return new_vendor
