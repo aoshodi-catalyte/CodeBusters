@@ -54,28 +54,6 @@ def client():
         app.dependency_overrides.clear()
         Base.metadata.drop_all(bind=engine)
 
-
-def test_home_page(client):
-    """
-    Tests that the baked goods home page returns the expected response.
-
-    Sends a GET request to the baked goods endpoint and verifies that
-    the response has a 200 status code and contains the expected message.
-
-    Args:
-        client: FastAPI test client provided by the client fixture.
-
-    Returns:
-        None
-    """
-
-    response = client.get("/baked_goods/")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "message": "Hello! You are in Baked Goods. Baked Goods table is currently empty."
-    }
-
 def test_post_baked_good(client):
     """
     Tests that a valid baked good can be created through the API.
@@ -103,7 +81,6 @@ def test_post_baked_good(client):
     }
 
     vendor_response = client.post("/vendor", json=vendor)
-
     assert vendor_response.status_code == 201
 
     baked_good = {
@@ -114,12 +91,10 @@ def test_post_baked_good(client):
         "retail_price": 2.50,
         "vendor_id": 1
     }
+    baked_good_response = client.post("/baked_goods/", json=baked_good)
+    assert baked_good_response.status_code == 201
 
-    response = client.post("/baked_goods/create", json=baked_good)
-
-    assert response.status_code == 201
-
-    data = response.json()
+    data = baked_good_response.json()
 
     assert data["active"] is True
     assert data["name"] == "Chocolate Chip Cookie"
@@ -141,7 +116,7 @@ def test_post_baked_good_missing_description(client):
         "vendor_id": 1
     }
 
-    response = client.post("/baked_goods/create", json=baked_good)
+    response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 422
 
@@ -160,7 +135,7 @@ def test_post_baked_good_invalid_retail_price(client):
         "vendor_id": 1
     }
 
-    response = client.post("/baked_goods/create", json=baked_good)
+    response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 422    
 
@@ -178,7 +153,73 @@ def test_post_baked_good_empty_name(client):
         "vendor_id": 1
     }
 
-    response = client.post("/baked_goods/create", json=baked_good)
+    response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 422
 
+def test_get_baked_goods_empty(client):
+    """
+    Tests that the GET baked goods endpoint returns an empty list
+    when no baked goods are stored in the database.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    response = client.get("/baked_goods/")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+def test_get_baked_goods(client):
+    """
+    Tests that the GET baked goods endpoint returns stored baked goods.
+
+    Creates a test vendor and baked good, then sends a GET request to
+    the baked goods endpoint and verifies that the response has a 200
+    status code and contains the expected baked good.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "John Doe",
+        "contact_role": "Manager",
+        "email": "john@testvendor.com",
+        "phone": "5551234567",
+        "vendor_id": 1
+    }
+
+    vendor_response = client.post("/vendor", json=vendor)
+    assert vendor_response.status_code == 201
+
+    baked_good = {
+        "active": True,
+        "name": "Chocolate Cake",
+        "description": "A chocolate cake",
+        "purchasing_cost": 5.0,
+        "retail_price": 10.0,
+        "vendor_id": 1
+    }
+
+    baked_good_response = client.post(
+        "/baked_goods/",
+        json=baked_good
+    )
+
+    assert baked_good_response.status_code == 201
+
+    response = client.get("/baked_goods/")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["name"] == "Chocolate Cake"
+    assert response.json()[0]["vendor_id"] == 1

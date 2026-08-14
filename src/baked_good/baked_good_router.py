@@ -1,9 +1,10 @@
 from fastapi import Depends, status, APIRouter
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
-from typing import Generator
+from typing import Generator, List
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
+
 
 def create_db() -> None:
     """
@@ -48,27 +49,28 @@ router = APIRouter(
     tags=["baked_goods"]
 )
 
-@router.get("/")
-def home_page() -> dict[str, str]:
+@router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGood])
+def get_baked_goods(db: Session = Depends(get_db)) -> List[BakedGood]:
     """
-    Returns a message confirming access to the baked goods endpoint.
+    Retrieves all baked goods from the database.
 
     Args:
-        None
+        db: The SQLAlchemy database session used to access the
+            baked goods stored in the database.
 
     Returns:
-        A dictionary containing a message indicating that the user is
-        currently in the Baked Goods section of the application.
+        A list of BakedGood objects representing all baked
+        goods stored in the database.
     """
 
-    return {
-        "message": "Hello! You are in Baked Goods. "
-        "Baked Goods table is currently empty."
-    }
+    repo = BakedGoodRepository(db)
+    baked_goods = repo.get_baked_goods()
+
+    return baked_goods
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
-def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)):
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
+def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGood:
     """
     Creates and stores a new baked good in the database.
 
@@ -82,9 +84,10 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)):
         db: The SQLAlchemy database session provided by the get_db dependency.
 
     Returns:
-        The newly created BakedGoodSchema database object.
+        The newly created BakedGood object.
     """     
     repo = BakedGoodRepository(db)
-    baked_good_create = repo.create_baked_good(baked_good) 
-    
+    baked_good_create = repo.create_baked_good(baked_good)
+
     return baked_good_create
+    

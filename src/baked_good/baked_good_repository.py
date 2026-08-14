@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import List
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
 
@@ -6,15 +7,15 @@ class BakedGoodRepository:
     """
     Stores and manages baked good objects using a SQLAlchemy session.
 
-    The repository provides methods for creating and persisting
-    BakedGood objects in the database.
+    The repository provides methods for retrieving all baked goods and
+    creating and persisting BakedGood objects in the database.
 
     Args:
         session: The SQLAlchemy database session used to interact
-        with the database.
+            with the database.
 
     Returns:
-         A BakedGoodRepository object configured with the provided
+        A BakedGoodRepository object configured with the provided
         database session.
     """
 
@@ -31,6 +32,17 @@ class BakedGoodRepository:
         """
 
         self.session = session
+
+    def get_baked_goods(self) -> List[BakedGoodSchema]:
+        """
+        Retrieves all baked goods from the database.
+
+        Returns:
+            A list of BakedGoodSchema objects representing all baked goods
+            stored in the database.
+        """
+        
+        return self.session.query(BakedGoodSchema).all()
 
     def create_baked_good(self, baked_good: BakedGood) -> BakedGoodSchema:
         """
