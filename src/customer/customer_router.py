@@ -5,20 +5,40 @@ This module handles HTTP requests and responses for customers.
 Database operations are delegated to the customer repository.
 """
 
-import logging
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import engine, get_db
 from customer.customer_model import CustomerCreate, CustomerResponse
 from customer.customer_repository import CustomerRepository
+from customer.customer_schema import CustomerSchema
 
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# DEVELOPMENT ONLY:
+# Reset the customer table whenever the application reloads.
+def reset_customer_table() -> None:
+    """
+    Drop and recreate the customer table.
+
+    This is intended for development only and will delete
+    all existing customer records.
+    """
+    CustomerSchema.__table__.drop(
+        bind=engine,
+        checkfirst=True
+    )
+
+    CustomerSchema.__table__.create(
+        bind=engine,
+        checkfirst=True
+    )
+
+
+reset_customer_table()
 
 
 @router.post(
@@ -68,13 +88,8 @@ def create_customer(
             )
         )
 
-    except Exception as e:
+    except Exception:
         db.rollback()
-
-        logger.error(
-            "Error creating customer: %s",
-            e
-        )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -110,24 +125,16 @@ def get_customers(
         repo = CustomerRepository(db)
         customers = repo.get_customers()
 
-        if not customers:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No customers found."
-            )
-
-        return customers
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(
-            "Error retrieving customers: %s",
-            e
-        )
-
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving customers."
         )
+
+    if not customers:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No customers found."
+        )
+
+    return customers
