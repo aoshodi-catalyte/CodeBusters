@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from database import Base, engine, SessionLocal, get_db
+from database import Base, engine, SessionLocal
 from main import app
-
+from baked_good.baked_good_router import get_db
 
 
 @pytest.fixture

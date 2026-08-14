@@ -1,29 +1,9 @@
 from fastapi import Depends, status, APIRouter
 from sqlalchemy.orm import Session
-from database import Base, engine, SessionLocal
+from database import SessionLocal
 from typing import Generator, List
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
-
-
-def create_db() -> None:
-    """
-    Creates the database tables required by the application.
-
-    Drops all existing tables before recreating them using the SQLAlchemy
-    engine and Base metadata.
-
-    Args:
-        None
-
-    Returns:
-        None
-    """
-
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-create_db()
 
 def get_db() -> Generator[Session, None, None]:
     """Provide a SQLAlchemy session for the duration of a request.
