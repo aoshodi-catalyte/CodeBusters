@@ -5,4 +5,5 @@ class EmployeeResponse(BaseModel):
     active: bool
     first_name: str
     last_name: str
+    email: str
     role: str
