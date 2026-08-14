@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-
+from unittest.mock import MagicMock
 from ingredient.ingredient_model import Allergen, Ingredient
 from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
@@ -93,3 +93,15 @@ def test_unit_of_measure():
     )
 
     assert ingredient.unit_of_measure == UnitOfMeasure.liters
+
+def test_create_ingredient_with_empty_allergens():
+    ingredient = Ingredient(
+        name="Flour",
+        purchasing_cost=4.50,
+        unit_amount=1.00,
+        unit_of_measure=UnitOfMeasure.kilograms,
+        allergens=[],
+        vendor_id=1,
+    )
+
+    assert ingredient.allergens == []
