@@ -27,7 +27,8 @@ A shared serializer function converts ORM models into dictionaries that
 are validated through DrinkRecipeResponse before being returned to clients.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from utils.response import to_response
 from database import get_db
@@ -74,24 +75,27 @@ def serialize_recipe(recipe):
     }
 
 
-@router.post("/", response_model=DrinkRecipeResponse)
+@router.post("/", response_model=DrinkRecipeResponse, status_code=201)
 def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
-    """
-    Args:
-        drink_recipe (DrinkRecipe):
-            The incoming recipe definition containing descriptive fields,
-            ingredient usage, and markup percentage.
-
-        db (Session):
-            SQLAlchemy session injected via FastAPI dependency.
-
-    Returns:
-        DrinkRecipeResponse: The newly created drink recipe with all
-        calculated pricing fields and associated ingredient details.
-    """
     repo = DrinkRecipeRepository(db)
-    recipe = repo.create_drink_recipe(drink_recipe)
-    return to_response(DrinkRecipeResponse, serialize_recipe(recipe))
+
+    try:
+        recipe = repo.create_drink_recipe(drink_recipe)
+        return to_response(DrinkRecipeResponse, serialize_recipe(recipe))
+
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(e))
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Drink recipe name '{drink_recipe.name}' already exists"
+        )
+
+    except Exception:
+        db.rollback()
 
 
 @router.get("/{recipe_id}", response_model=DrinkRecipeResponse)

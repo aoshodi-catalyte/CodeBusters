@@ -94,7 +94,7 @@ def test_create_drink_recipe(client, db):
     }
 
     response = client.post("/drink_recipes/", json=payload)
-    assert response.status_code == 200
+    assert response.status_code == 201
 
     data = response.json()
     assert data["name"] == "Sweet Coffee"
@@ -111,6 +111,68 @@ def test_create_drink_recipe(client, db):
     assert milk["name"] == "Milk"
     assert milk["quantity_used"] == 30.00
     assert milk["unit_of_measure_used"] == "ml"
+
+
+def test_duplicate_drink_name_rejected(client, db):
+    """POST /drink_recipes should reject duplicate recipe names."""
+
+    drink_type = DrinkTypeSchema(name="coffee")
+    db.add(drink_type)
+    db.commit()
+
+    recipe_payload = {
+        "name": "Sweet Coffee",
+        "description": "Coffee with sugar",
+        "ingredients": [],
+        "active": True,
+        "type": "coffee",
+        "production_cost": "2.00",
+        "markup_percentage": 20,
+        "sale_price": "2.40"
+    }
+
+    # First creation should succeed
+    response1 = client.post("/drink_recipes/", json=recipe_payload)
+    assert response1.status_code == 201
+
+    # Second creation with same name should fail
+    response2 = client.post("/drink_recipes/", json=recipe_payload)
+
+    assert response2.status_code == 409
+    assert "already exists" in response2.json()["detail"].lower()
+
+
+def test_create_recipe_invalid_ingredient_id(client, db):
+    """POST /drink_recipes should reject recipes containing invalid ingredient IDs."""
+
+    # Create a drink type so the recipe is otherwise valid
+    drink_type = DrinkTypeSchema(name="coffee")
+    db.add(drink_type)
+    db.commit()
+
+    payload = {
+        "name": "Invalid Ingredient Drink",
+        "description": "Should fail due to bad ingredient ID",
+        "active": True,
+        "type": "coffee",
+        "ingredients": [
+            {
+                "id": 9999,  # <-- does not exist
+                "quantity_used": 10,
+                "unit_of_measure_used": "g"
+            }
+        ],
+        "production_cost": "1.00",
+        "markup_percentage": 20,
+        "sale_price": "1.20"
+    }
+
+    response = client.post("/drink_recipes/", json=payload)
+
+    assert response.status_code == 409
+    assert "ingredient id" in response.json()["detail"].lower()
+    assert "not found" in response.json()["detail"].lower()
+
 
 def test_get_drink_recipe_by_id(client, db):
     drink_type = DrinkTypeSchema(name="tea")
