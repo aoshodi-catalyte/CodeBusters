@@ -1,4 +1,5 @@
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from vendor.vendor_model import VendorBase
@@ -43,5 +44,13 @@ async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)
         HTTPException: If vendor creation fails due to database or validation issues.
     """
     repo = VendorRepository(db)
-    new_vendor = repo.create_new_vendor(vendor_data)
+    try:
+        new_vendor = repo.create_new_vendor(vendor_data)
+        return new_vendor
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vendor with this contact name or email already exists."
+        )
     return new_vendor
