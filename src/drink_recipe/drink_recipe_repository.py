@@ -1,10 +1,24 @@
 """
-Repository layer for drink recipe data access and manipulation.
+    Repository responsible for creating, retrieving, and managing drink recipe
+    records in the database.
 
-This module provides the DrinkRecipeRepository class which handles all database
-operations related to drink recipes, including creation, retrieval, and ingredient
-association. It also includes a utility function for mapping drink type enums
-to their corresponding database IDs.
+    This class encapsulates all persistence and data-access logic for drink
+    recipes. It coordinates ingredient lookup, unit conversion, cost calculation,
+    markup application, and association table creation. The repository ensures
+    that incoming DrinkRecipe models are transformed into fully populated
+    DrinkRecipeSchema ORM objects with accurate production cost and sale price.
+
+    Responsibilities:
+        • Validate and resolve the drink type enum into its database ID.
+        • Create new drink recipe records and persist them to the database.
+        • Convert recipe ingredient usage units into the ingredient's purchase
+          unit using the unit conversion system.
+        • Calculate production cost by summing the cost contribution of each
+          ingredient based on purchasing cost and converted usage amount.
+        • Apply markup percentage to compute the final sale price.
+        • Create association records linking recipes to their ingredient usage.
+        • Retrieve individual drink recipes by ID.
+        • Retrieve all drink recipes stored in the database.
 """
 
 from sqlalchemy.orm import Session
@@ -30,13 +44,29 @@ def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
 
 class DrinkRecipeRepository:
     """
-    Repository for managing drink recipe data access and persistence.
+    Parameters:
+        session (Session):
+            The SQLAlchemy session used for all database operations.
+
+    Methods:
+        create_drink_recipe(drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
+            Creates a new drink recipe, calculates its costs, persists it, and
+            returns the ORM representation.
+
+        get_drink_recipe_by_id(recipe_id: int) -> DrinkRecipeSchema | None:
+            Fetches a single drink recipe by its ID, or returns None if not found.
+
+        get_all_drink_recipes() -> list[DrinkRecipeSchema]:
+            Returns all drink recipes currently stored in the database.
     """
 
     def __init__(self, session: Session):
         self.session = session
 
     def create_drink_recipe(self, drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
+        """
+        Creates a new drink recipe, calculates its costs, persists it, and returns the ORM representation.
+        """
         drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
 
         recipe = DrinkRecipeSchema(

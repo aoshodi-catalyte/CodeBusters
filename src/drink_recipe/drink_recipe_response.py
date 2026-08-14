@@ -12,16 +12,29 @@ from src.constants.DRINK_TYPES import DrinkType
 
 class IngredientRef(BaseModel):
     """
-    Reference model for an ingredient in a drink recipe response.
+    Lightweight representation of an ingredient as it appears in a drink
+    recipe API response.
 
-    Provides minimal information about an ingredient as it appears in a
-    drink recipe response. This lightweight model is used within the
-    DrinkRecipeResponse to list ingredients without returning all
-    ingredient details.
+    This model provides recipe‑specific ingredient usage details without
+    exposing the full ingredient record. It is used inside
+    DrinkRecipeResponse to show which ingredients a recipe uses and in
+    what quantities.
 
-    Attributes:
-        id: The unique identifier of the ingredient.
-        name: The name of the ingredient.
+    Fields:
+        id (int):
+            The unique identifier of the ingredient.
+
+        name (str):
+            The human‑readable name of the ingredient.
+
+        quantity_used (float):
+            The amount of the ingredient used in the recipe, expressed in
+            the recipe's measurement unit.
+
+        unit_of_measure_used (str):
+            The unit describing how the recipe measures this ingredient
+            (e.g., "oz", "g", "ml"). This may differ from the ingredient's
+            purchase unit and is used during cost conversion.
     """
 
     id: int
@@ -32,23 +45,46 @@ class IngredientRef(BaseModel):
 
 class DrinkRecipeResponse(BaseModel):
     """
-    Response model for a drink recipe.
+    Serialized API response model for a drink recipe.
 
-    This model is used to serialize drink recipe data for API responses.
-    It includes all recipe information, pricing details, and a list of
-    associated ingredients. The response includes the database ID and
-    current active status of the recipe.
+    This model defines the structure of drink recipe data returned to
+    clients. It includes descriptive information, ingredient usage,
+    pricing details, and drink classification. All values are fully
+    validated and rounded before being sent in the response.
 
-    Attributes:
-        id: The unique identifier of the drink recipe in the database.
-        name: The name of the drink recipe.
-        description: A detailed description of the drink recipe.
-        active: Boolean flag indicating if the recipe is currently in use.
-        type: The type/category of drink (e.g., hot, cold, blended).
-        ingredients: List of ingredient references used in this recipe.
-        production_cost: The cost to produce this drink.
-        markup_percentage: The percentage markup applied to the production cost.
-        sale_price: The price at which the drink is sold to customers.
+    Fields:
+        id (int):
+            The unique identifier of the drink recipe in the database.
+
+        name (str):
+            The name of the drink recipe.
+
+        description (str):
+            A human‑readable description of the drink, such as flavor notes
+            or preparation details.
+
+        active (bool):
+            Indicates whether the recipe is currently available or in use.
+
+        type (DrinkType):
+            The drink category (e.g., "coffee", "tea", "latte"). This is
+            derived from the DrinkType enum.
+
+        ingredients (list[IngredientRef]):
+            A list of ingredient usage entries showing which ingredients
+            the recipe uses and in what quantities.
+
+        production_cost (float):
+            The calculated cost required to produce the drink, rounded to
+            two decimal places.
+
+        markup_percentage (float):
+            The percentage markup applied to the production cost when
+            determining the final sale price.
+
+        sale_price (float):
+            The final price of the drink after markup is applied, rounded
+            to two decimal places.
     """
 
     id: int

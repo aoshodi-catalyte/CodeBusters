@@ -12,27 +12,66 @@ from utils.validators import round_float
 
 
 class RecipeIngredient(BaseModel):
+    """
+    Represents a single ingredient used within a drink recipe.
+
+    This model describes how much of a specific ingredient is used and in
+    what unit of measurement. It does not define the ingredient itself—
+    only its usage within the context of a recipe.
+
+    Fields:
+        id (int):
+            The database ID of the ingredient being referenced. This must
+            correspond to an existing Ingredient record.
+
+        quantity_used (float):
+            The amount of the ingredient used in the recipe. Must be greater
+            than zero. This value is later converted into the ingredient's
+            purchase unit for cost calculation.
+
+        unit_of_measure_used (str):
+            The unit describing how the recipe measures this ingredient
+            (e.g., "oz", "g", "tsp"). Must be a non‑empty string between
+            1 and 50 characters. This unit is used during cost conversion
+            and must exist in the unit conversion table.
+    """
+
     id: int
     quantity_used: float = Field(gt=0)
     unit_of_measure_used: str = Field(min_length=1, max_length=50)
 
 class DrinkRecipe(BaseModel):
     """
-    Data model for a drink recipe.
+    Represents a drink recipe submitted through the API.
 
-    This model represents a drink recipe with its basic information, ingredients,
-    pricing details, and type. It includes validation for drink types and price
-    constraints.
+    This model defines the core data required to create a drink recipe,
+    including its descriptive information, ingredient usage, activity status,
+    drink category, and markup percentage. It is used for request validation
+    and passed into the repository layer where production cost and sale price
+    are calculated.
 
-    Attributes:
-        name: The name of the drink recipe (non-empty string).
-        description: A detailed description of the drink recipe.
-        ingredients: List of ingredient IDs that compose this recipe. Defaults to empty list.
-        active: Boolean flag indicating if the recipe is currently in use.
-        type: The type/category of drink (e.g., hot, cold, blended).
-        production_cost: The cost to produce this drink. Must be non-negative with 2 decimal places.
-        markup_percentage: The percentage markup applied to the production cost. Must be non-negative.
-        sale_price: The price at which the drink is sold. Must be non-negative with 2 decimal places.
+    Fields:
+        name (str):
+            The name of the drink recipe. Must be a non-empty string.
+
+        description (str):
+            A human-readable description of the drink, such as flavor notes
+            or preparation details.
+
+        ingredients (list[RecipeIngredient]):
+            A list of ingredient usage entries describing which ingredients
+            are used and in what quantities. Defaults to an empty list.
+
+        active (bool):
+            Indicates whether the recipe is currently available or in use.
+
+        type (str):
+            The drink category (e.g., "coffee", "tea", "latte"). Must match
+            a valid DrinkType enum value.
+
+        markup_percentage (float):
+            The percentage markup applied to the production cost when
+            calculating the final sale price. Must be non-negative.
     """
 
     name: str = Field(..., description="The name of the drink recipe")
