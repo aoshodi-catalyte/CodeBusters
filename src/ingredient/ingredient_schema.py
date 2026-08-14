@@ -2,7 +2,6 @@ from sqlalchemy import Boolean, CheckConstraint, Column, Enum, ForeignKey, Integ
 from sqlalchemy.orm import relationship
 from constants.INGREDIENT_TYPES import UnitOfMeasure
 from database import Base
-from constants.INGREDIENT_TYPES import UnitOfMeasure
 
 # ASSOCIATION TABLE
 ingredient_allergen = Table("ingredient_allergen",
@@ -34,7 +33,7 @@ class IngredientSchema(Base):
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     active = Column(Boolean, nullable=False, default=True)
-    name = Column(String(255), nullable=False, unique=True) 
+    name = Column(String(255), nullable=False) 
     purchasing_cost = Column(Numeric(10, 2), nullable=False) 
     unit_amount = Column(Numeric(10, 2), nullable=False) 
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)

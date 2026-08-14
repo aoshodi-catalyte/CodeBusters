@@ -67,10 +67,26 @@ class Ingredient(BaseModel):
     unit_amount: float = Field( gt=0, )
     unit_of_measure: UnitOfMeasure
     allergens: list[str] = Field(default_factory=list)
+    vendor_id: int = Field( gt=0,)
 
     @field_validator("allergens", mode="before")
     @classmethod
     def validate_allergens(cls, value):
+        """
+        Convert supplied allergen values into CafeAllergen values.
+        A single allergen value is converted into a list so that
+        the API accepts either one allergen or multiple allergens.
+        Each allergen is converted using CafeAllergen.from_string().
+        Args:
+            value: A single allergen or list of allergens supplied
+                by the client.
+        Returns:
+            A list of validated CafeAllergen values.
+
+        Raises:
+            ValueError: If an allergen cannot be converted into a
+                valid CafeAllergen value.
+        """    
         if value is None:
             return []
         if not isinstance(value, list):
@@ -83,24 +99,42 @@ class Ingredient(BaseModel):
             else CafeAllergen.from_string(allergen)
             for allergen in value
         ]
-    vendor_id: int = Field( gt=0,)
+
+    @field_validator("purchasing_cost", "unit_amount")
+    @classmethod
+    def validate_two_decimal_places(cls, value: float) -> float:
+        """
+        Validate that numeric ingredient values contain no more
+        than two decimal places.
+        This validation is applied to purchasing_cost and
+        unit_amount before the values are stored in the database.
+        It prevents values such as 4.999 from passing API validation
+        and being silently rounded by the database.
+        Args:
+            value: Numeric value supplied for purchasing_cost or
+                unit_amount.
+        Returns:
+            The validated numeric value.
+        Raises:
+            ValueError: If the value contains more than two decimal
+                places.
+        """ 
+        if round(value, 2) != value:
+            raise ValueError("Value must have no more than 2 decimal places")
+        return value
 
     @field_validator("unit_of_measure", mode="before")
     @classmethod
     def validate_unit_of_measure(cls, value):
         """
         Convert the supplied unit of measure into a UnitOfMeasure.
-
         The validator runs before Pydantic performs the normal
         field validation, allowing values such as strings to be
         converted using UnitOfMeasure.from_string().
-
         Args:
             value: The unit of measure supplied by the client.
-
         Returns:
             A valid UnitOfMeasure value.
-
         Raises:
             ValueError: If the supplied value cannot be converted
                 to a valid UnitOfMeasure.
