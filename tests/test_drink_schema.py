@@ -39,19 +39,18 @@ def test_nullable_constraints():
     assert columns["name"].nullable is False
     assert columns["description"].nullable is False
     assert columns["type_id"].nullable is False
-    assert columns["production_cost"].nullable is False
 
 
 def test_relationship_exists():
     # SQLAlchemy stores relationships in __mapper__.relationships
     relationships = DrinkRecipeSchema.__mapper__.relationships
 
-    assert "ingredients" in relationships
+    assert "recipe_ingredients" in relationships
 
-    rel = relationships["ingredients"]
+    rel = relationships["recipe_ingredients"]
 
     # Relationship points to IngredientSchema
-    assert rel.mapper.class_.__name__ == "IngredientSchema"
+    assert rel.mapper.class_.__name__ == "DrinkRecipeIngredientSchema"
 
     # Relationship is configured with back_populates
-    assert rel.back_populates == "drink_recipes"
+    assert rel.back_populates == "drink_recipe"

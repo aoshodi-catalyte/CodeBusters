@@ -6,12 +6,15 @@ rules for pricing and drink types. It handles conversion of drink type values
 from various formats (string, int) to the DrinkType enum.
 """
 
-from pydantic import BaseModel, Field, field_validator, condecimal
+from pydantic import BaseModel, Field, field_validator
 from constants.DRINK_TYPES import DrinkType
+from utils.validators import round_float
 
-# Type constraint: monetary values must be non-negative with 2 decimal places
-ConstrainedMoney = condecimal(ge=0, decimal_places=2)
 
+class RecipeIngredient(BaseModel):
+    id: int
+    quantity_used: float = Field(gt=0)
+    unit_of_measure_used: str = Field(min_length=1, max_length=50)
 
 class DrinkRecipe(BaseModel):
     """
@@ -34,15 +37,13 @@ class DrinkRecipe(BaseModel):
 
     name: str = Field(..., description="The name of the drink recipe")
     description: str = Field(..., description="A detailed description of the drink")
-    ingredients: list[int] = Field(
+    ingredients: list[RecipeIngredient] = Field(
         default_factory=list,
-        description="List of ingredient IDs used in this recipe"
+        description="List of ingredients used in this recipe"
     )
     active: bool = Field(..., description="Whether this recipe is currently active/in use")
     type: DrinkType = Field(..., description="The type/category of the drink")
-    production_cost: ConstrainedMoney # type: ignore
     markup_percentage: float = Field(ge=0)
-    sale_price: ConstrainedMoney # type: ignore
 
     @field_validator("type", mode="before")
     def validate_drink_type(cls, value):
@@ -69,3 +70,8 @@ class DrinkRecipe(BaseModel):
                 f"Invalid drink type: {value}. "
                 f"Valid types are: {[dt.value for dt in DrinkType]}"
             )
+
+
+    @field_validator("markup_percentage")
+    def round_values(cls, v):
+        return round_float(v)

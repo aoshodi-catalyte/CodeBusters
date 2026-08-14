@@ -6,8 +6,7 @@ pricing information, type, and associated ingredients. Drink recipes are
 linked to drink types via a foreign key relationship and to ingredients
 through a many-to-many association table.
 """
-
-from drink_recipe.drink_ingredients_schema import drink_recipe_ingredient
+from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
@@ -44,10 +43,10 @@ class DrinkRecipeSchema(Base):
     __tablename__ = "drink_recipe"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    name = Column(String, unique=True, nullable=False)
     description = Column(String, nullable=False)
     active = Column(Boolean, default=True)
-    production_cost = Column(Float, nullable=False)
+    production_cost = Column(Float)
     type_id = Column(
         Integer,
         ForeignKey("drink_type.id"),
@@ -58,8 +57,8 @@ class DrinkRecipeSchema(Base):
 
     drink_type = relationship(DrinkTypeSchema, back_populates="drink_recipes")
     # Many-to-many relationship with ingredients through association table
-    ingredients = relationship(
-        "IngredientSchema",
-        secondary=drink_recipe_ingredient,
-        back_populates="drink_recipes"
+    recipe_ingredients = relationship(
+        DrinkRecipeIngredientSchema,
+        back_populates="drink_recipe",
+        cascade="all, delete-orphan"
     )

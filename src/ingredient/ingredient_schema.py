@@ -4,6 +4,8 @@ from database import Base
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.orm import relationship
 
+from vendor.vendor_schema import Vendor
+
 # ==========================================
 # ASSOCIATION TABLE
 ingredient_allergen = Table("ingredient_allergen",
@@ -31,13 +33,11 @@ class IngredientSchema(Base):
     unit_amount = Column(Numeric(10, 2), nullable=False)
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
 
-    # NEW: many-to-many with drink recipes
-    drink_recipes = relationship(
-        "DrinkRecipeSchema",
-        secondary="drink_recipe_ingredient",
-        back_populates="ingredients"
+    ingredient_recipes = relationship(
+        "DrinkRecipeIngredientSchema",
+        back_populates="ingredient"
     )
     
     vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
-    vendor = relationship("Vendor", back_populates="ingredients")
+    vendor = relationship(Vendor, back_populates="ingredients")
     allergens = relationship("AllergenSchema", secondary=ingredient_allergen,backref="ingredients",)

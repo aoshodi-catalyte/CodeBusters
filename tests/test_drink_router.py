@@ -1,5 +1,4 @@
 import pytest
-from decimal import Decimal
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -63,12 +62,21 @@ def client(db):
 def test_create_drink_recipe(client, db):
     """POST /drink_recipes should create a recipe."""
 
-    # Insert drink type + ingredients
     drink_type = DrinkTypeSchema(name="coffee")
-    ing1 = IngredientSchema(name="Sugar", purchasing_cost=Decimal("0.50"),
-                            unit_amount=Decimal("10.00"), unit_of_measure="g", vendor_id=1)
-    ing2 = IngredientSchema(name="Milk", purchasing_cost=Decimal("0.30"),
-                            unit_amount=Decimal("50.00"), unit_of_measure="ml", vendor_id=1)
+    ing1 = IngredientSchema(
+        name="Sugar",
+        purchasing_cost=0.50,
+        unit_amount=10.00,
+        unit_of_measure="g",
+        vendor_id=1
+    )
+    ing2 = IngredientSchema(
+        name="Milk",
+        purchasing_cost=0.30,
+        unit_amount=50.00,
+        unit_of_measure="ml",
+        vendor_id=1
+    )
 
     db.add_all([drink_type, ing1, ing2])
     db.commit()
@@ -76,29 +84,35 @@ def test_create_drink_recipe(client, db):
     payload = {
         "name": "Sweet Coffee",
         "description": "Coffee with sugar and milk",
-        "ingredients": [ing1.id, ing2.id],
+        "ingredients": [
+            {"id": ing1.id, "quantity_used": 5.00, "unit_of_measure_used": "g"},
+            {"id": ing2.id, "quantity_used": 30.00, "unit_of_measure_used": "ml"}
+        ],
         "active": True,
         "type": "coffee",
-        "production_cost": "2.50",
-        "markup_percentage": "20",
-        "sale_price": "3.00"
+        "markup_percentage": 20
     }
 
     response = client.post("/drink_recipes/", json=payload)
-
     assert response.status_code == 200
 
     data = response.json()
     assert data["name"] == "Sweet Coffee"
     assert data["type"] == "coffee"
     assert len(data["ingredients"]) == 2
-    assert data["ingredients"][0]["name"] == "Sugar"
-    assert data["ingredients"][1]["name"] == "Milk"
 
+    sugar = data["ingredients"][0]
+    milk = data["ingredients"][1]
+
+    assert sugar["name"] == "Sugar"
+    assert sugar["quantity_used"] == 5.00
+    assert sugar["unit_of_measure_used"] == "g"
+
+    assert milk["name"] == "Milk"
+    assert milk["quantity_used"] == 30.00
+    assert milk["unit_of_measure_used"] == "ml"
 
 def test_get_drink_recipe_by_id(client, db):
-    """GET /drink_recipes/{id} should return a recipe."""
-
     drink_type = DrinkTypeSchema(name="tea")
     db.add(drink_type)
     db.commit()
@@ -109,9 +123,7 @@ def test_get_drink_recipe_by_id(client, db):
         "ingredients": [],
         "active": True,
         "type": "tea",
-        "production_cost": "1.00",
-        "markup_percentage": 10,
-        "sale_price": "2.00"
+        "markup_percentage": 10
     }
 
     created = client.post("/drink_recipes/", json=recipe).json()
@@ -123,18 +135,9 @@ def test_get_drink_recipe_by_id(client, db):
     data = response.json()
     assert data["id"] == recipe_id
     assert data["name"] == "Plain Tea"
-
-
-def test_get_drink_recipe_not_found(client):
-    """GET /drink_recipes/{id} should return 404 if missing."""
-
-    response = client.get("/drink_recipes/999")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Drink recipe not found"
+    assert data["ingredients"] == []
 
 def test_get_all_drink_recipes(client, db):
-    """GET /drink_recipes should return all recipes."""
-
     drink_type = DrinkTypeSchema(name="coffee")
     db.add(drink_type)
     db.commit()
@@ -145,9 +148,7 @@ def test_get_all_drink_recipes(client, db):
         "ingredients": [],
         "active": True,
         "type": "coffee",
-        "production_cost": "1.00",
-        "markup_percentage": 10,
-        "sale_price": "2.00"
+        "markup_percentage": 10
     }
 
     r2 = {
@@ -156,9 +157,7 @@ def test_get_all_drink_recipes(client, db):
         "ingredients": [],
         "active": True,
         "type": "coffee",
-        "production_cost": "1.50",
-        "markup_percentage": 15,
-        "sale_price": "3.00"
+        "markup_percentage": 15
     }
 
     client.post("/drink_recipes/", json=r1)

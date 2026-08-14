@@ -6,7 +6,6 @@ in API responses. These models shape the JSON responses returned to clients
 and include all relevant recipe information and associated ingredient details.
 """
 
-from decimal import Decimal
 from pydantic import BaseModel
 from src.constants.DRINK_TYPES import DrinkType
 
@@ -27,6 +26,8 @@ class IngredientRef(BaseModel):
 
     id: int
     name: str
+    quantity_used: float
+    unit_of_measure_used: str
 
 
 class DrinkRecipeResponse(BaseModel):
@@ -56,6 +57,6 @@ class DrinkRecipeResponse(BaseModel):
     active: bool
     type: DrinkType
     ingredients: list[IngredientRef]
-    production_cost: Decimal 
+    production_cost: float 
     markup_percentage: float 
-    sale_price: Decimal
+    sale_price: float

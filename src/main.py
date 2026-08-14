@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from sqlalchemy import engine
 from constants.DRINK_TYPES import DrinkType
-from database import Base, SessionLocal
+from database import SessionLocal
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from vendor.vendor_router import router as vendor_router
