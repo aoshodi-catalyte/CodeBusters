@@ -96,6 +96,12 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
 
     except Exception:
         db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while creating the drink recipe."
+        )
+
+
 
 
 @router.get("/{recipe_id}", response_model=DrinkRecipeResponse)

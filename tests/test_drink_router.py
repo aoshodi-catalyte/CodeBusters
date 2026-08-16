@@ -65,16 +65,16 @@ def test_create_drink_recipe(client, db):
     drink_type = DrinkTypeSchema(name="coffee")
     ing1 = IngredientSchema(
         name="Sugar",
-        purchasing_cost=0.50,
+        purchasing_cost=5.50,
         unit_amount=10.00,
-        unit_of_measure="g",
+        unit_of_measure="lb",
         vendor_id=1
     )
     ing2 = IngredientSchema(
         name="Milk",
-        purchasing_cost=0.30,
-        unit_amount=50.00,
-        unit_of_measure="ml",
+        purchasing_cost=7.30,
+        unit_amount=1.00,
+        unit_of_measure="gal",
         vendor_id=1
     )
 
@@ -86,11 +86,11 @@ def test_create_drink_recipe(client, db):
         "description": "Coffee with sugar and milk",
         "ingredients": [
             {"id": ing1.id, "quantity_used": 5.00, "unit_of_measure_used": "g"},
-            {"id": ing2.id, "quantity_used": 30.00, "unit_of_measure_used": "ml"}
+            {"id": ing2.id, "quantity_used": 16.00, "unit_of_measure_used": "oz"}
         ],
         "active": True,
         "type": "coffee",
-        "markup_percentage": 20
+        "markup_percentage": 100
     }
 
     response = client.post("/drink_recipes/", json=payload)
@@ -109,8 +109,11 @@ def test_create_drink_recipe(client, db):
     assert sugar["unit_of_measure_used"] == "g"
 
     assert milk["name"] == "Milk"
-    assert milk["quantity_used"] == 30.00
-    assert milk["unit_of_measure_used"] == "ml"
+    assert milk["quantity_used"] == 16.00
+    assert milk["unit_of_measure_used"] == "oz"
+
+    assert data["production_cost"] == 0.92
+    assert data["sale_price"] == 1.84
 
 
 def test_duplicate_drink_name_rejected(client, db):
@@ -126,9 +129,7 @@ def test_duplicate_drink_name_rejected(client, db):
         "ingredients": [],
         "active": True,
         "type": "coffee",
-        "production_cost": "2.00",
-        "markup_percentage": 20,
-        "sale_price": "2.40"
+        "markup_percentage": 20
     }
 
     # First creation should succeed
