@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
-
+import pytest
 from database import get_db
 from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
@@ -25,6 +25,10 @@ import ingredient.ingredient_router as ingredient_router
 app = FastAPI()
 app.include_router(router)
 
+
+@pytest.fixture
+def client():
+    return TestClient(app)
 
 # ============================================================
 # DATABASE OVERRIDE
@@ -111,7 +115,7 @@ def test_create_ingredient_success(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -150,7 +154,7 @@ def test_create_ingredient_vendor_not_found(monkeypatch):
     payload["vendor_id"] = 999
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -182,7 +186,7 @@ def test_create_ingredient_already_exists(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -215,7 +219,7 @@ def test_create_ingredient_constraint_error(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -246,7 +250,7 @@ def test_create_ingredient_database_error(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -275,7 +279,7 @@ def test_create_ingredient_invalid_vendor_id(monkeypatch):
     payload["vendor_id"] = 0
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -295,7 +299,7 @@ def test_create_ingredient_negative_purchasing_cost(monkeypatch):
     payload["purchasing_cost"] = "-5.00"
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -315,7 +319,7 @@ def test_create_ingredient_zero_unit_amount(monkeypatch):
     payload["unit_amount"] = "0"
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -335,7 +339,7 @@ def test_create_ingredient_missing_name(monkeypatch):
     del payload["name"]
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -355,8 +359,68 @@ def test_create_ingredient_empty_name(monkeypatch):
     payload["name"] = ""
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
     assert response.status_code == 422
+# ============================================================
+# TEST 11
+# READ ALL INGREDIENTS RETURNS 200
+# ============================================================
+
+def test_read_all_ingredients_returns_200(monkeypatch):
+    response = client.get("/ingredients/all")
+
+    assert response.status_code == 200
+
+
+# ============================================================
+# TEST 12
+# READ ALL INGREDIENTS RETURNS EMPTY LIST
+# ============================================================
+
+def test_read_all_ingredients_returns_empty_list(monkeypatch):
+    response = client.get("/ingredients/all")
+
+    assert response.status_code == 200
+    assert response.json()["ingredients"] == []
+
+
+# ============================================================
+# TEST 13
+# READ ALL INGREDIENTS RETURNS INGREDIENTS
+# ============================================================
+
+def test_read_all_ingredients_returns_ingredients(
+    monkeypatch,
+):
+    ingredients = [
+        {
+            "id": 1,
+            "name": "Flour",
+            "active": True,
+            "purchasing_cost": 10.00,
+            "unit_amount": 25.00,
+            "unit_of_measure": VALID_UNIT_OF_MEASURE,
+            "allergens": [
+                {"name": VALID_ALLERGEN}
+            ],
+            "vendor_id": 1,
+        }
+    ]
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "get_all_ingredients",
+        lambda db: ingredients,
+    )
+
+    response = client.get("/ingredients/all")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == (
+        "These are all the ingredients in your inventory!"
+    )
+    assert len(response.json()["ingredients"]) == 1
+    assert response.json()["ingredients"][0]["name"] == "Flour"

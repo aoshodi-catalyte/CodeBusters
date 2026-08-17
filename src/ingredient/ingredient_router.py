@@ -6,12 +6,12 @@ from database import get_db
 
 from ingredient.ingredient_exceptions import IngredientAlreadyExistsError, IngredientConstraintError, VendorNotFoundError
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import create_ingredient
-from ingredient.ingredient_model import IngredientOut
+from ingredient.ingredient_repository import create_ingredient, get_all_ingredients
+from ingredient.ingredient_model import IngredientOut, IngredientListResponse
 
 
 router = APIRouter(
-    prefix="/ingredient",
+    prefix="/ingredients",
     tags=["ingredient"],
 )
 
@@ -22,10 +22,7 @@ router = APIRouter(
 
 
 @router.post("/", response_model=IngredientOut, status_code=status.HTTP_201_CREATED,)
-def create(
-    ingredient: Ingredient,
-    db: Session = Depends(get_db),
-):
+def create(ingredient: Ingredient,db: Session = Depends(get_db),):
     """Create a new ingredient.
     Args:
         ingredient: Validated ingredient information.
@@ -75,3 +72,11 @@ def create(
                 "message": ("An unexpected database error occurred while creating the ingredient.")
             },
         ) from exc
+@router.get("/all", response_model=IngredientListResponse)
+def read_all_ingredients(db: Session = Depends(get_db)):
+    ingredients = get_all_ingredients(db)
+
+    return {
+        "message": "These are all the ingredients in your inventory!",
+        "ingredients": ingredients
+    }

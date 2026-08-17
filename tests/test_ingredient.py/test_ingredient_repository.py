@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_repository import (
     create_ingredient,
+    get_all_ingredients,
     get_or_create_allergen,
 )
 from ingredient.ingredient_schema import (
@@ -33,21 +34,6 @@ def make_ingredient(
     unit_of_measure="lb",
     allergens=None,
 ):
-    """
-    Create valid ingredient test data.
-
-    Args:
-        name: Ingredient name.
-        vendor_id: ID of the vendor.
-        purchasing_cost: Cost of the ingredient.
-        unit_amount: Amount purchased.
-        unit_of_measure: Unit used to measure the ingredient.
-        allergens: List of allergen names.
-
-    Returns:
-        A validated Ingredient Pydantic model.
-    """
-
     if allergens is None:
         allergens = ["Wheat"]
 
@@ -81,14 +67,12 @@ def test_create_ingredient_success(db):
     db.commit()
     db.refresh(vendor)
 
-    ingredient_data = make_ingredient(
-        name="Flour",
-        vendor_id=vendor.id,
-    )
-
     result = create_ingredient(
-        db=db,
-        ingredient_data=ingredient_data,
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
     )
 
     assert result.id is not None
@@ -99,7 +83,7 @@ def test_create_ingredient_success(db):
 
 # ============================================================
 # TEST 2
-# INGREDIENT IS ASSOCIATED WITH THE CORRECT VENDOR
+# INGREDIENT IS ASSOCIATED WITH CORRECT VENDOR
 # ============================================================
 
 def test_create_ingredient_with_vendor(db):
@@ -116,14 +100,12 @@ def test_create_ingredient_with_vendor(db):
     db.commit()
     db.refresh(vendor)
 
-    ingredient_data = make_ingredient(
-        name="Sugar",
-        vendor_id=vendor.id,
-    )
-
     result = create_ingredient(
-        db=db,
-        ingredient_data=ingredient_data,
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
     )
 
     assert result.vendor_id == vendor.id
@@ -137,15 +119,13 @@ def test_create_ingredient_with_vendor(db):
 # ============================================================
 
 def test_create_ingredient_vendor_not_found(db):
-    ingredient_data = make_ingredient(
-        name="Flour",
-        vendor_id=9999,
-    )
-
     with pytest.raises(VendorNotFoundError):
         create_ingredient(
-            db=db,
-            ingredient_data=ingredient_data,
+            db,
+            make_ingredient(
+                name="Flour",
+                vendor_id=9999,
+            ),
         )
 
 
@@ -155,10 +135,7 @@ def test_create_ingredient_vendor_not_found(db):
 # ============================================================
 
 def test_get_or_create_allergen_creates_new_allergen(db):
-    result = get_or_create_allergen(
-        db=db,
-        allergen_name="Milk",
-    )
+    result = get_or_create_allergen(db, "Milk")
 
     assert result.id is not None
     assert result.name == "Milk"
@@ -170,18 +147,13 @@ def test_get_or_create_allergen_creates_new_allergen(db):
 # ============================================================
 
 def test_get_or_create_allergen_returns_existing_allergen(db):
-    allergen = AllergenSchema(
-        name="Milk",
-    )
+    allergen = AllergenSchema(name="Milk")
 
     db.add(allergen)
     db.commit()
     db.refresh(allergen)
 
-    result = get_or_create_allergen(
-        db=db,
-        allergen_name="Milk",
-    )
+    result = get_or_create_allergen(db, "Milk")
 
     assert result.id == allergen.id
     assert result.name == "Milk"
@@ -206,29 +178,16 @@ def test_create_ingredient_with_allergens(db):
     db.commit()
     db.refresh(vendor)
 
-    ingredient_data = make_ingredient(
-        name="Chocolate",
-        vendor_id=vendor.id,
-        allergens=[
-            "Milk",
-            "Soy",
-        ],
-    )
-
     result = create_ingredient(
-        db=db,
-        ingredient_data=ingredient_data,
+        db,
+        make_ingredient(
+            name="Chocolate",
+            vendor_id=vendor.id,
+            allergens=["Milk", "Soy"],
+        ),
     )
 
-    allergen_names = {
-        allergen.name
-        for allergen in result.allergens
-    }
-
-    assert allergen_names == {
-        "Milk",
-        "Soy",
-    }
+    assert {a.name for a in result.allergens} == {"Milk", "Soy"}
 
 
 # ============================================================
@@ -250,19 +209,13 @@ def test_duplicate_allergens_are_removed(db):
     db.commit()
     db.refresh(vendor)
 
-    ingredient_data = make_ingredient(
-        name="Butter",
-        vendor_id=vendor.id,
-        allergens=[
-            "Milk",
-            "Milk",
-            "Milk",
-        ],
-    )
-
     result = create_ingredient(
-        db=db,
-        ingredient_data=ingredient_data,
+        db,
+        make_ingredient(
+            name="Butter",
+            vendor_id=vendor.id,
+            allergens=["Milk", "Milk", "Milk"],
+        ),
     )
 
     assert len(result.allergens) == 1
@@ -288,27 +241,21 @@ def test_duplicate_ingredient_raises_error(db):
     db.commit()
     db.refresh(vendor)
 
-    first_ingredient = make_ingredient(
-        name="Flour",
-        vendor_id=vendor.id,
-    )
-
     create_ingredient(
-        db=db,
-        ingredient_data=first_ingredient,
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
     )
 
-    second_ingredient = make_ingredient(
-        name="Flour",
-        vendor_id=vendor.id,
-    )
-
-    with pytest.raises(
-        IngredientAlreadyExistsError
-    ):
+    with pytest.raises(IngredientAlreadyExistsError):
         create_ingredient(
-            db=db,
-            ingredient_data=second_ingredient,
+            db,
+            make_ingredient(
+                name="Flour",
+                vendor_id=vendor.id,
+            ),
         )
 
 
@@ -331,8 +278,6 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
     db.commit()
     db.refresh(vendor)
 
-    # Create the SQLAlchemy model directly so that
-    # Pydantic validation does not stop the test first.
     ingredient = IngredientSchema(
         active=True,
         name="Invalid Flour",
@@ -349,9 +294,6 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
             db.commit()
         except Exception as exc:
             db.rollback()
-
-            # This test is primarily checking that
-            # the database rejects invalid data.
             raise IngredientConstraintError(
                 "ck_ingredient_purchasing_cost_non_negative"
             ) from exc
@@ -359,7 +301,7 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
 
 # ============================================================
 # TEST 10
-# UNEXPECTED SQLALCHEMY ERROR IS RERAISED
+# UNEXPECTED SQLALCHEMY ERROR
 # ============================================================
 
 def test_unexpected_sqlalchemy_error_is_reraised():
@@ -369,14 +311,95 @@ def test_unexpected_sqlalchemy_error_is_reraised():
         "Unexpected database failure"
     )
 
-    ingredient_data = make_ingredient(
-        vendor_id=1,
-    )
-
     with pytest.raises(SQLAlchemyError):
         create_ingredient(
-            db=db,
-            ingredient_data=ingredient_data,
+            db,
+            make_ingredient(),
         )
 
     db.rollback.assert_called_once()
+
+
+# ============================================================
+# TEST 11
+# RETURN EMPTY LIST
+# ============================================================
+
+def test_get_all_ingredients_returns_empty_list(db):
+    result = get_all_ingredients(db)
+
+    assert result == []
+
+
+# ============================================================
+# TEST 12
+# RETURN ONE INGREDIENT
+# ============================================================
+
+def test_get_all_ingredients_returns_one_ingredient(db):
+    vendor = Vendor(
+        name="Test Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="test@vendor.com",
+        phone="3125556666",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    result = get_all_ingredients(db)
+
+    assert len(result) == 1
+    assert result[0].name == "Flour"
+
+
+# ============================================================
+# TEST 13
+# RETURN MULTIPLE INGREDIENTS
+# ============================================================
+
+def test_get_all_ingredients_returns_multiple_ingredients(db):
+    vendor = Vendor(
+        name="Test Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="test2@vendor.com",
+        phone="3125557777",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    result = get_all_ingredients(db)
+
+    assert len(result) == 2
+    assert {i.name for i in result} == {"Flour", "Sugar"}

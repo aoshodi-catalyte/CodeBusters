@@ -116,3 +116,14 @@ def create_ingredient(
     except SQLAlchemyError as exc:
         db.rollback()
         raise exc
+
+def get_all_ingredients(db: Session):
+    """Return all ingredients.
+
+    Args:
+        db: Active SQLAlchemy database session.
+
+    Returns:
+        A list of all ingredients.
+    """
+    return db.query(IngredientSchema).all()

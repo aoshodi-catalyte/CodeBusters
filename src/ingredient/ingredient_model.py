@@ -68,6 +68,30 @@ class Ingredient(BaseModel):
     allergens: list[str] = Field(default_factory=list)
     vendor_id: int = Field( gt=0,)
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        """
+        Remove leading and trailing whitespace from the ingredient name.
+
+        Args:
+            value: The ingredient name supplied by the client.
+
+        Returns:
+            The ingredient name with leading and trailing whitespace
+            removed.
+
+        Raises:
+            ValueError: If the supplied value is not a string or is
+                empty after whitespace is removed.
+        """
+        if not isinstance(value, str):
+            raise ValueError("Ingredient name must be a string")
+        value = value.strip()
+        if not value:
+            raise ValueError("Ingredient name cannot be blank")
+        return value
+
     @field_validator("allergens", mode="before")
     @classmethod
     def validate_allergens(cls, value):
@@ -138,3 +162,6 @@ class Ingredient(BaseModel):
                 to a valid UnitOfMeasure.
         """   
         return UnitOfMeasure.from_string(value)
+class IngredientListResponse(BaseModel):
+    message: str
+    ingredients: list[IngredientOut]  
