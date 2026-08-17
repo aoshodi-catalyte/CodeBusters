@@ -1,6 +1,6 @@
 import re
 
-from pydantic import BaseModel, Field, condecimal, field_validator
+from pydantic import BaseModel, Field, condecimal, field_validator, model_validator
 from constants.EMPLOYEE_ROLES import EmployeeRole
 from datetime import date, datetime
 
@@ -14,7 +14,7 @@ class Employee(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
     email: str
-    role: str
+    role: EmployeeRole
     hourly_rate: ConstrainedMoney # type: ignore 
     hire_date: date
     term_date: date | None = None
@@ -59,3 +59,9 @@ class Employee(BaseModel):
             return datetime.strptime(value, "%m/%d/%Y").date()
         except ValueError:
             raise ValueError("Date must be in MM/DD/YYYY format")
+        
+    @model_validator(mode="after")
+    def check_term_date_required(self):
+        if not self.active and self.term_date is None:
+            raise ValueError("Inactive employees must have a term_date.")
+        return self
