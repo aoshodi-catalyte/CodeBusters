@@ -38,3 +38,11 @@ class DrinkType(str, Enum):
     TEA = "tea"
     SODA = "soda"
     OTHER = "other"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.lower()
+            if value in cls._value2member_map_:
+                return cls._value2member_map_[value]
+        return None

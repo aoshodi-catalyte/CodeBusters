@@ -143,6 +143,36 @@ def test_duplicate_drink_name_rejected(client, db):
     assert "already exists" in response2.json()["detail"].lower()
 
 
+def test_negative_quantity_used(client, db):
+    """POST /drink_recipes should rejcet ingredients with a negative quantity_used."""
+    drink_type = DrinkTypeSchema(name="tea")
+    ing2 = IngredientSchema(
+        name="Milk",
+        purchasing_cost=7.30,
+        unit_amount=1.00,
+        unit_of_measure="gal",
+        vendor_id=1
+    )
+
+    db.add_all([drink_type, ing2])
+    db.commit()
+
+    payload = {
+        "name": "Negative Quantity Used",
+        "description": "Should fail due to negative quantity",
+        "active": True,
+        "type": "tea",
+        "ingredients": [ {"id": ing2.id, "quantity_used": -16.00, "unit_of_measure_used": "oz"} ],
+        "markup_percentage": 20
+    }
+
+    response = client.post("/drink_recipes/", json=payload)
+
+    assert response.status_code == 422
+    assert any("input should be greater than 0" in err["msg"].lower()
+           for err in response.json()["detail"])
+
+
 def test_create_recipe_invalid_ingredient_id(client, db):
     """POST /drink_recipes should reject recipes containing invalid ingredient IDs."""
 
@@ -163,9 +193,7 @@ def test_create_recipe_invalid_ingredient_id(client, db):
                 "unit_of_measure_used": "g"
             }
         ],
-        "production_cost": "1.00",
-        "markup_percentage": 20,
-        "sale_price": "1.20"
+        "markup_percentage": 20
     }
 
     response = client.post("/drink_recipes/", json=payload)
@@ -199,6 +227,91 @@ def test_get_drink_recipe_by_id(client, db):
     assert data["id"] == recipe_id
     assert data["name"] == "Plain Tea"
     assert data["ingredients"] == []
+
+@pytest.fixture
+def drink_types(db):
+    types = [
+        DrinkTypeSchema(name="coffee"),
+        DrinkTypeSchema(name="tea"),
+        DrinkTypeSchema(name="soda"),
+        DrinkTypeSchema(name="other"),
+    ]
+    db.add_all(types)
+    db.commit()
+    return types
+
+def test_invalid_drink_type(client, db, drink_types):
+    r1 = {
+        "name": "A",
+        "description": "desc",
+        "ingredients": [],
+        "active": True,
+        "type": "not valid",
+        "markup_percentage": 10
+    }
+
+    response = client.post("/drink_recipes/", json=r1)
+    assert response.status_code == 422
+    assert any("Invalid drink type: not valid. Valid types are: ['coffee', 'tea', 'soda', 'other']" in err["msg"]
+           for err in response.json()["detail"])
+
+
+def test_all_valid_drink_types(client, db, drink_types):
+    r1 = {
+        "name": "A",
+        "description": "desc",
+        "ingredients": [],
+        "active": True,
+        "type": "Coffee",
+        "markup_percentage": 10
+    }
+
+    r2 = {
+        "name": "B",
+        "description": "desc",
+        "ingredients": [],
+        "active": True,
+        "type": "tea",
+        "markup_percentage": 15
+    }
+
+    r3 = {
+            "name": "C",
+            "description": "desc",
+            "ingredients": [],
+            "active": True,
+            "type": "Soda",
+            "markup_percentage": 20
+        }
+
+    r4 = {
+            "name": "D",
+            "description": "desc",
+            "ingredients": [],
+            "active": True,
+            "type": "other",
+            "markup_percentage": 25
+        }
+
+    client.post("/drink_recipes/", json=r1)
+    client.post("/drink_recipes/", json=r2)
+    client.post("/drink_recipes/", json=r3)
+    client.post("/drink_recipes/", json=r4)
+
+    response = client.get("/drink_recipes/")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert len(data) == 4
+    assert data[0]["name"] == "A"
+    assert data[1]["name"] == "B"
+    assert data[2]["name"] == "C"
+    assert data[3]["name"] == "D"
+
+    assert data[0]["type"] == "coffee"
+    assert data[1]["type"] == "tea"
+    assert data[2]["type"] == "soda"
+    assert data[3]["type"] == "other"
 
 def test_get_all_drink_recipes(client, db):
     drink_type = DrinkTypeSchema(name="coffee")
