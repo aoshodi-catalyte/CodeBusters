@@ -18,10 +18,58 @@ def test_valid_customer_create():
 
     assert customer.first_name == "John"
     assert customer.last_name == "Smith"
-    assert customer.email == "john.smith@example.com"
+    assert str(customer.email) == "john.smith@example.com"
     assert customer.phone_number == "3125551234"
     assert customer.active is True
     assert customer.loyalty_points == 100
+
+
+def test_first_name_strips_surrounding_whitespace():
+    """CustomerCreate should remove surrounding whitespace from first names."""
+
+    customer = CustomerCreate(
+        first_name="  Adeyemi  ",
+        email="john@example.com",
+        phone_number="312-555-1234"
+    )
+
+    assert customer.first_name == "Adeyemi"
+
+
+def test_last_name_strips_surrounding_whitespace():
+    """CustomerCreate should remove surrounding whitespace from last names."""
+
+    customer = CustomerCreate(
+        first_name="John",
+        last_name="  Smith  ",
+        email="john@example.com",
+        phone_number="312-555-1234"
+    )
+
+    assert customer.last_name == "Smith"
+
+
+def test_first_name_rejects_whitespace_only():
+    """CustomerCreate should reject a whitespace-only first name."""
+
+    with pytest.raises(ValidationError):
+        CustomerCreate(
+            first_name="   ",
+            email="john@example.com",
+            phone_number="312-555-1234"
+        )
+
+
+def test_last_name_rejects_whitespace_only():
+    """CustomerCreate should reject a whitespace-only last name."""
+
+    with pytest.raises(ValidationError):
+        CustomerCreate(
+            first_name="John",
+            last_name="   ",
+            email="john@example.com",
+            phone_number="312-555-1234"
+        )
 
 
 def test_phone_number_normalizes_hyphens():
@@ -60,6 +108,17 @@ def test_phone_number_accepts_digits_only():
     assert customer.phone_number == "3125551234"
 
 
+def test_phone_number_rejects_invalid_characters():
+    """CustomerCreate should reject unexpected characters in phone numbers."""
+
+    with pytest.raises(ValidationError):
+        CustomerCreate(
+            first_name="John",
+            email="john@example.com",
+            phone_number="abc312-555-1234"
+        )
+
+
 def test_phone_number_rejects_invalid_length():
     """CustomerCreate should reject phone numbers that are not 10 digits."""
 
@@ -91,6 +150,18 @@ def test_invalid_email():
             email="not-an-email",
             phone_number="3125551234"
         )
+
+
+def test_email_is_normalized():
+    """CustomerCreate should strip whitespace and lowercase email addresses."""
+
+    customer = CustomerCreate(
+        first_name="John",
+        email="  TEST@EXAMPLE.COM  ",
+        phone_number="3125551234"
+    )
+
+    assert str(customer.email) == "test@example.com"
 
 
 def test_empty_first_name():
