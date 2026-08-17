@@ -1,8 +1,7 @@
 import pytest
 from pydantic import ValidationError
-from unittest.mock import MagicMock
 from ingredient.ingredient_model import Allergen, Ingredient
-from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
+from constants.INGREDIENT_TYPES import UnitOfMeasure
 
 
 def test_allergen():

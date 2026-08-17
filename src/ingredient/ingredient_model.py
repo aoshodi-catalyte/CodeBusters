@@ -1,4 +1,3 @@
-from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
@@ -91,7 +90,6 @@ class Ingredient(BaseModel):
             return []
         if not isinstance(value, list):
             value = [value]
-        validated_allergens = []
        
         return [
             allergen
