@@ -31,9 +31,12 @@ app.include_router(baked_good_router)
 
 @pytest.fixture(scope="function")
 def client():
-    # 🔥 Reset DB before each test
+    """
+    Creates a test client using a temporary in-memory database.
+    """
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
+    
 
     def override_get_db():
         db = TestingSessionLocal()

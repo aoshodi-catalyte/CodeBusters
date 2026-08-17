@@ -32,6 +32,7 @@ def db():
     finally:
         session.close()
         Base.metadata.drop_all(bind=test_engine)
+        
 def test_create_baked_good_repository(db):
     """
     Tests that a baked good can be created and stored in the repository.
