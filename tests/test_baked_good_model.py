@@ -17,7 +17,6 @@ def test_valid_baked_good():
         None
     """
     baked_good = BakedGood(
-        id=1,
         active=True,
         name="Chocolate Cake",
         description="A chocolate cake",
@@ -49,12 +48,12 @@ def test_name_cannot_be_empty():
 
     with pytest.raises(ValidationError):
         BakedGood(
-            id=1,
             active=True,
             name="",
             description="A chocolate cake",
             purchasing_cost=10.0,
             retail_price=15.0,
+            vendor_id=1
         )
 
 def test_description_cannot_be_empty():
@@ -72,12 +71,12 @@ def test_description_cannot_be_empty():
         """
     with pytest.raises(ValidationError):
         BakedGood(
-            id=1,
             active=True,
             name="Chocolate Cake",
             description="",
             purchasing_cost=10.0,
             retail_price=15.0,
+            vendor_id=1
         )
 
 def test_purchasing_cost_cannot_be_negative():
@@ -96,12 +95,27 @@ def test_purchasing_cost_cannot_be_negative():
 
     with pytest.raises(ValidationError):
         BakedGood(
-            id=1,
             active=True,
             name="Chocolate Cake",
             description="A chocolate cake",
             purchasing_cost=-10.0,
             retail_price=15.0,
+            vendor_id=1
+        )
+
+def test_purchasing_cost_must_be_greater_than_zero():
+    """
+    Tests that the purchasing cost cannot be zero.
+    """
+
+    with pytest.raises(ValidationError):
+        BakedGood(
+            active=True,
+            name="Chocolate Cake",
+            description="A chocolate cake",
+            purchasing_cost=0,
+            retail_price=15.0,
+            vendor_id=1
         )
 
 def test_retail_price_cannot_be_negative():
@@ -119,12 +133,12 @@ def test_retail_price_cannot_be_negative():
     """
     with pytest.raises(ValidationError):
         BakedGood(
-            id=1,
             active=True,
             name="Chocolate Cake",
             description="A chocolate cake",
             purchasing_cost=10.0,
             retail_price=-15.0,
+            vendor_id=1
         )   
 
 def test_retail_price_must_be_greater_than_purchasing_cost():
@@ -144,12 +158,36 @@ def test_retail_price_must_be_greater_than_purchasing_cost():
 
     with pytest.raises(ValidationError):
         BakedGood(
-            id=1,
             active=True,
             name="Chocolate Cake",
             description="A chocolate cake",
             purchasing_cost=10.0,
             retail_price=10.0,
+            vendor_id=1
+        )
+
+def test_retail_price_must_be_greater_than_zero():
+    """
+    Tests that the retail price cannot be zero.
+
+    Attempts to create a BakedGood object with a retail price of zero
+    and verifies that Pydantic raises a ValidationError.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+
+    with pytest.raises(ValidationError):
+        BakedGood(
+            active=True,
+            name="Chocolate Cake",
+            description="A chocolate cake",
+            purchasing_cost=10.0,
+            retail_price=0,
+            vendor_id=1
         )
 
 def test_retail_price_cannot_be_less_than_purchasing_cost():
@@ -168,10 +206,10 @@ def test_retail_price_cannot_be_less_than_purchasing_cost():
     """
     with pytest.raises(ValidationError):
         BakedGood(
-            id=1,
             active=True,
             name="Chocolate Cake",
             description="A chocolate cake",
             purchasing_cost=10.0,
             retail_price=5.0,
+            vendor_id=1
         )

@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
+
 from database import Base
 from baked_good.baked_good_router import router as baked_good_router
 from baked_good.baked_good_router import get_db as baked_good_get_db
@@ -14,7 +15,7 @@ from vendor.vendor_router import get_db as vendor_get_db
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
-engine = create_engine(
+test_engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
@@ -23,7 +24,7 @@ engine = create_engine(
 TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=test_engine
 )
 
 app = FastAPI()
@@ -36,7 +37,7 @@ def client():
     Creates a test client using a temporary in-memory database.
     """
 
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=test_engine)
 
     def override_get_db():
         """
@@ -56,7 +57,8 @@ def client():
             yield test_client
     finally:
         app.dependency_overrides.clear()
-        Base.metadata.drop_all(bind=engine)
+        Base.metadata.drop_all(bind=test_engine)
+
 def test_post_baked_good(client):
     """
     Tests that a valid baked good can be created through the API.
@@ -99,6 +101,7 @@ def test_post_baked_good(client):
 
     data = baked_good_response.json()
 
+    assert data["id"] is not None
     assert data["active"] is True
     assert data["name"] == "Chocolate Chip Cookie"
     assert data["description"] == "A cookie with chocolate chips."
@@ -114,12 +117,16 @@ def test_post_baked_good_missing_description(client):
     baked_good = {
         "active": True,
         "name": "Chocolate Chip Cookie",
+        "description": "",
         "purchasing_cost": 1.00,
         "retail_price": 2.50,
         "vendor_id": 1
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    response = client.post(
+        "/baked_goods/",
+        json=baked_good
+    )
 
     assert response.status_code == 422
 
@@ -138,9 +145,12 @@ def test_post_baked_good_invalid_retail_price(client):
         "vendor_id": 1
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    response = client.post(
+        "/baked_goods/",
+        json=baked_good
+    )
 
-    assert response.status_code == 422    
+    assert response.status_code == 422
 
 def test_post_baked_good_empty_name(client):
     """
@@ -156,9 +166,13 @@ def test_post_baked_good_empty_name(client):
         "vendor_id": 1
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    response = client.post(
+        "/baked_goods/",
+        json=baked_good
+    )
 
     assert response.status_code == 422
+
 
 def test_get_baked_goods_empty(client):
     """
@@ -191,17 +205,21 @@ def test_get_baked_goods(client):
     Returns:
         None
     """
+
     vendor = {
         "active": True,
         "name": "Test Vendor",
         "contact_name": "Christian Robinson",
         "contact_role": "Manager",
         "email": "Christian@Robinsonvendor.com",
-        "phone": "5551234567",
-        "vendor_id": 1
+        "phone": "5551234567"
     }
 
-    vendor_response = client.post("/vendor", json=vendor)
+    vendor_response = client.post(
+        "/vendor",
+        json=vendor
+    )
+
     assert vendor_response.status_code == 201
 
     baked_good = {
@@ -223,6 +241,32 @@ def test_get_baked_goods(client):
     response = client.get("/baked_goods/")
 
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["name"] == "Chocolate Cake"
-    assert response.json()[0]["vendor_id"] == 1
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["id"] is not None
+    assert data[0]["name"] == "Chocolate Cake"
+    assert data[0]["vendor_id"] == 1
+
+def test_post_baked_good_invalid_vendor(client):
+    """
+    Tests that a baked good cannot be created when the vendor
+    does not exist.
+    """
+
+    baked_good = {
+        "active": True,
+        "name": "Chocolate Cake",
+        "description": "A chocolate cake",
+        "purchasing_cost": 5.0,
+        "retail_price": 10.0,
+        "vendor_id": 9999
+    }
+
+    response = client.post(
+        "/baked_goods/",
+        json=baked_good
+    )
+
+    assert response.status_code == 404
