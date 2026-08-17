@@ -4,10 +4,8 @@ Provides the database engine, SQLAlchemy session, base class,
 database initialization function, and database session dependency.
 """
 
-from typing import Generator
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
-
+from sqlalchemy.orm import declarative_base, sessionmaker
 from config import settings
 
 
