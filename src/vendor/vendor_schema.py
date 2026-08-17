@@ -1,3 +1,4 @@
+from ingredient.ingredient_schema import IngredientSchema
 from vendor.vendor_model import VendorBase
 from database import Base
 from sqlalchemy import Column, Boolean, String, Integer
@@ -35,5 +36,5 @@ class Vendor(Base):
     contact_role = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String, index=True, nullable=False)
-    ingredients = relationship("IngredientSchema", back_populates="vendor")
+    ingredients = relationship(IngredientSchema, back_populates="vendor")
     baked_goods = relationship("BakedGoodSchema", back_populates="vendor")

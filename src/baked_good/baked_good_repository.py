@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
+from vendor.vendor_schema import Vendor
 
 class BakedGoodRepository:
     """
@@ -46,21 +47,29 @@ class BakedGoodRepository:
 
     def create_baked_good(self, baked_good: BakedGood) -> BakedGoodSchema:
         """
-        Adds a baked good to the database.
-
-        Converts the BakedGood Pydantic object into a BakedGoodSchema
-        SQLAlchemy object, adds it to the database, commits the
-        transaction, and refreshes the object with its generated values.
+        Creates and stores a new baked good in the database.
 
         Args:
-            baked_good: The BakedGood object to add to the database.
+            baked_good: The validated baked good to create.
+
+        Raises:
+            ValueError: If the vendor associated with the baked good
+                does not exist.
 
         Returns:
-            The newly created BakedGoodSchema object.
+            BakedGoodSchema: The newly created baked good.
         """
+        
+        vendor = self.session.query(Vendor).filter(
+            Vendor.id == baked_good.vendor_id
+        ).first()
+
+        if vendor is None:
+            raise ValueError("Vendor not found")
         
         new_baked_good = BakedGoodSchema(**baked_good.model_dump())
         self.session.add(new_baked_good)
         self.session.commit()
         self.session.refresh(new_baked_good)
+
         return new_baked_good

@@ -93,3 +93,41 @@ def test_id_is_unique_primary_key():
     columns = inspect(BakedGoodSchema).columns
 
     assert columns["id"].primary_key is True
+
+def test_vendor_relationship_exists():
+    relationships = inspect(BakedGoodSchema).relationships
+
+    assert "vendor" in relationships
+
+    relationship = relationships["vendor"]
+
+    assert relationship.mapper.class_.__name__ == "Vendor"
+    assert relationship.back_populates == "baked_goods"
+
+def test_vendor_id_foreign_key():
+    columns = inspect(BakedGoodSchema).columns
+
+    foreign_keys = columns["vendor_id"].foreign_keys
+
+    assert any(
+        fk.target_fullname == "vendor.id"
+        for fk in foreign_keys
+    )
+
+def test_vendor_id_is_required():
+    """
+    Tests that the baked good vendor ID is required.
+
+    Inspects the vendor_id column and verifies that it does not allow
+    NULL values in the database.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+
+    columns = inspect(BakedGoodSchema).columns
+
+    assert columns["vendor_id"].nullable is False

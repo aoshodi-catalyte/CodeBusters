@@ -1,40 +1,48 @@
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from sqlalchemy import create_engine
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_model import BakedGood
+from database import Base
 import pytest
-
-from database import Base, engine
 from vendor.vendor_schema import Vendor
-from tests.test_customer_router import TestingSessionLocal
+
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+test_engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool
+)
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=test_engine
 )
 
 @pytest.fixture
 def db():
     """Creates a fresh database session for each test."""
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=test_engine)
     session = TestingSessionLocal()
-    
+
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
-
+        Base.metadata.drop_all(bind=test_engine)
 def test_create_baked_good_repository(db):
     """
     Tests that a baked good can be created and stored in the repository.
 
-    Creates a BakedGoodRepository and a valid BakedGood object, then adds
-    the baked good to the repository. Verifies that the baked good is
-    stored in the repository and that the repository contains one item.
+    Creates a BakedGoodRepository and a valid BakedGood object, then
+    creates the baked good through the repository. Verifies that the
+    returned database object has a generated ID and contains the
+    expected baked good data.
 
-    Args:
-        None
+      Args:
+        db: The SQLAlchemy database session used for the test.
 
     Returns:
         None
@@ -71,17 +79,18 @@ def test_create_baked_good_repository(db):
 
 def test_create_baked_good_returns_baked_good(db):
     """
-    Tests that creating a baked good returns the same BakedGood object.
+    Tests that creating a baked good returns the expected database object.
 
-    Creates a BakedGoodRepository and a valid BakedGood object, then passes
-    the baked good to the create_baked_good method. Verifies that the
-    returned object is equal to the baked good that was provided.
+    Creates a BakedGoodRepository and a valid BakedGood object, then
+    creates the baked good through the repository. Verifies that the
+    returned BakedGoodSchema contains the same data as the original
+    BakedGood object.
 
     Args:
-        None
+        db: The SQLAlchemy database session used for the test.
 
     Returns:
-        None
+        None.
     """
     vendor = Vendor(
         id=1,
@@ -115,3 +124,33 @@ def test_create_baked_good_returns_baked_good(db):
     assert result.retail_price == baked_good.retail_price
     assert result.vendor_id == baked_good.vendor_id
     assert result.active == baked_good.active
+
+def test_create_baked_good_invalid_vendor(db):
+    """
+    Tests that a baked good cannot be created when the vendor
+    does not exist.
+
+    Creates a BakedGood with a vendor_id that is not present in
+    the database and verifies that the repository raises a
+    ValueError.
+
+    Args:
+        db: The SQLAlchemy database session used for the test.
+
+    Returns:
+        None.
+    """
+
+    repository = BakedGoodRepository(db)
+
+    baked_good = BakedGood(
+        active=True,
+        name="Chocolate Cake",
+        description="A chocolate cake",
+        purchasing_cost=5.00,
+        retail_price=10.00,
+        vendor_id=9999
+    )
+
+    with pytest.raises(ValueError, match="Vendor not found"):
+        repository.create_baked_good(baked_good)
