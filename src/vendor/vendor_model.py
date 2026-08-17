@@ -14,6 +14,35 @@ class VendorBase(BaseModel):
     email: str 
     phone: str = Field(min_length=10)
 
+
+    @field_validator("name", "contact_name", "contact_role", "email", "phone", mode="before")
+    @classmethod
+    def strip_and_validate_no_trailing_spaces(cls, value: str) -> str:
+        """Ensure that string fields do not contain leading or trailing whitespace.
+
+        This validator runs before all other field validators and enforces strict
+        whitespace rules across multiple string fields.
+
+        Args:
+            value (str): The raw string value provided by the client before any
+                normalization or validation occurs.
+
+        Returns:
+            str: The cleaned string value with whitespace normalized, provided
+                it originally contained no leading or trailing spaces.
+
+        Raises:
+            ValueError: If the input contains leading or trailing whitespace,
+                such as " bob", "bob ", or any other non‑exact match.
+        """
+        if value is None:
+            return value
+
+        if value != value.strip():
+            raise ValueError("value must not contain leading or trailing spaces")
+
+        return value.strip()
+    
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:

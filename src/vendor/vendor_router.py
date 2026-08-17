@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 
-@router.post("/vendor", response_model=VendorResponse, status_code=201)
+@router.post("/vendors", response_model=VendorResponse, status_code=201)
 async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)):
     """Create a new vendor record and return the created vendor.
 
