@@ -79,11 +79,13 @@ def test_post_baked_good(client):
         "contact_role": "Manager",
         "email": "john@testvendor.com",
         "phone": "5551234567",
-        "vendor_id": 1
     }
 
     vendor_response = client.post("/vendor", json=vendor)
     assert vendor_response.status_code == 201
+
+    vendor_data = vendor_response.json()
+    vendor_id = vendor_data["id"]
 
     baked_good = {
         "active": True,
@@ -91,7 +93,7 @@ def test_post_baked_good(client):
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 1.00,
         "retail_price": 2.50,
-        "vendor_id": 1
+        "vendor_id": vendor_id
     }
     baked_good_response = client.post("/baked_goods/", json=baked_good)
     assert baked_good_response.status_code == 201
