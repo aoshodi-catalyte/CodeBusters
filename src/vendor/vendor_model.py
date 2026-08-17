@@ -35,13 +35,11 @@ class VendorBase(BaseModel):
             ValueError: If the input contains leading or trailing whitespace,
                 such as " bob", "bob ", or any other non‑exact match.
         """
-        if value is None:
-            return value
+        value = value.strip()
+        if not value:
+            raise ValueError("Must not be blank")
 
-        if value != value.strip():
-            raise ValueError("value must not contain leading or trailing spaces")
-
-        return value.strip()
+        return value
     
     @field_validator("email")
     @classmethod
