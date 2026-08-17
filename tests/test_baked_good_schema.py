@@ -113,3 +113,21 @@ def test_vendor_id_foreign_key():
         fk.target_fullname == "vendor.id"
         for fk in foreign_keys
     )
+
+def test_vendor_id_is_required():
+    """
+    Tests that the baked good vendor ID is required.
+
+    Inspects the vendor_id column and verifies that it does not allow
+    NULL values in the database.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+
+    columns = inspect(BakedGoodSchema).columns
+
+    assert columns["vendor_id"].nullable is False

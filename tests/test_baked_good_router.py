@@ -7,11 +7,9 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 
-from database import Base
+from database import Base, get_db
 from baked_good.baked_good_router import router as baked_good_router
-from baked_good.baked_good_router import get_db as baked_good_get_db
 from vendor.vendor_router import router as vendor_router
-from vendor.vendor_router import get_db as vendor_get_db
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
@@ -49,8 +47,7 @@ def client():
         finally:
             db.close()
 
-    app.dependency_overrides[baked_good_get_db] = override_get_db
-    app.dependency_overrides[vendor_get_db] = override_get_db
+    app.dependency_overrides[get_db] = override_get_db
 
     try:
         with TestClient(app) as test_client:

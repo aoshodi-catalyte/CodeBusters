@@ -1,29 +1,37 @@
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from sqlalchemy import create_engine
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_model import BakedGood
+from database import Base
 import pytest
-
-from database import Base, engine
 from vendor.vendor_schema import Vendor
+
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+test_engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool
+)
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=test_engine
 )
 
 @pytest.fixture
 def db():
     """Creates a fresh database session for each test."""
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=test_engine)
     session = TestingSessionLocal()
-    
+
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
-
+        Base.metadata.drop_all(bind=test_engine)
 def test_create_baked_good_repository(db):
     """
     Tests that a baked good can be created and stored in the repository.

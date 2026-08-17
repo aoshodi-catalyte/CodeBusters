@@ -1,4 +1,4 @@
-from datetime import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 class BakedGoodResponseModel(BaseModel):
     """
