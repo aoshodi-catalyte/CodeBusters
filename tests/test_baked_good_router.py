@@ -34,8 +34,9 @@ def client():
     """
     Creates a test client using a temporary in-memory database.
     """
-
+    Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
+    
 
     def override_get_db():
         """

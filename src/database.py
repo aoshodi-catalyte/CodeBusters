@@ -34,21 +34,6 @@ Base = declarative_base()
 #     Base.metadata.drop_all(bind=engine)
 #     Base.metadata.create_all(bind=engine)
 
-<<<<<<< HEAD
-
-# def get_db() -> Generator[Session, None, None]:
-#     """
-#     Provides a database session for FastAPI endpoints.
-
-#     The session is automatically closed after the request completes.
-#     """
-
-#     db = SessionLocal()
-
-# Base = declarative_base()
-
-=======
->>>>>>> b508af8247c59793b70b5ed82c452972f519c030
 def get_db():
     """Provide a database session for request scoped dependency injection.
 
