@@ -69,6 +69,17 @@ class DrinkRecipeRepository:
         """
         drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
 
+        # Reject duplicate recipe names (case-insensitive)
+        existing = (
+            self.session.query(DrinkRecipeSchema)
+            .filter(DrinkRecipeSchema.name.ilike(drink_recipe.name.strip()))
+            .first()
+        )
+
+        if existing:
+            raise ValueError(f"Drink recipe name '{drink_recipe.name}' already exists")
+
+
         recipe = DrinkRecipeSchema(
             name=drink_recipe.name,
             description=drink_recipe.description,

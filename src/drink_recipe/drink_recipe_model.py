@@ -74,8 +74,8 @@ class DrinkRecipe(BaseModel):
             calculating the final sale price. Must be non-negative.
     """
 
-    name: str = Field(..., description="The name of the drink recipe")
-    description: str = Field(..., description="A detailed description of the drink")
+    name: str = Field(min_length=1, description="The name of the drink recipe")
+    description: str = Field(min_length=1, description="A detailed description of the drink")
     ingredients: list[RecipeIngredient] = Field(
         default_factory=list,
         description="List of ingredients used in this recipe"
@@ -110,6 +110,15 @@ class DrinkRecipe(BaseModel):
                 f"Valid types are: {[dt.value for dt in DrinkType]}"
             )
 
+
+    @field_validator("name", "description")
+    @classmethod
+    def validate_not_blank(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("Must not be blank")
+
+        return value
 
     @field_validator("markup_percentage")
     def round_values(cls, v):
