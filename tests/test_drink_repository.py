@@ -12,6 +12,7 @@ from drink_recipe.drink_type_schema import DrinkTypeSchema
 from ingredient.ingredient_schema import IngredientSchema
 from constants.DRINK_TYPES import DrinkType
 from database import Base
+from constants.UNIT_CONVERSIONS import convert
 
 
 # ---------------------------
@@ -66,6 +67,9 @@ def test_map_enum_to_fk_missing_type(db):
     with pytest.raises(ValueError):
         map_enum_to_fk(DrinkType.TEA, db)
 
+def test_unsupported_unit_conversion():
+    with pytest.raises(ValueError):
+        convert(1, "kg", "fl_oz")
 
 def test_create_drink_recipe(repo, db):
     drink_type = DrinkTypeSchema(name="coffee")
@@ -103,7 +107,7 @@ def test_create_drink_recipe(repo, db):
         name="20oz Latte",
         description="Milk, espresso, sugar",
         ingredients=[
-            RecipeIngredient(id=milk.id, quantity_used=16.00, unit_of_measure_used="oz"),
+            RecipeIngredient(id=milk.id, quantity_used=16.00, unit_of_measure_used="fl_oz"),
             RecipeIngredient(id=espresso.id, quantity_used=4.00, unit_of_measure_used="oz"),
             RecipeIngredient(id=sugar.id, quantity_used=8.40, unit_of_measure_used="g"),
         ],

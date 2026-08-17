@@ -228,6 +228,11 @@ def test_get_drink_recipe_by_id(client, db):
     assert data["name"] == "Plain Tea"
     assert data["ingredients"] == []
 
+def test_get_drink_recipe_by_id_not_found(client, db):
+    response = client.get(f"/drink_recipes/{9999}")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Drink recipe not found"
+
 @pytest.fixture
 def drink_types(db):
     types = [
