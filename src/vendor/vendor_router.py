@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
-from database import Base, SessionLocal, engine
+from database import Base, SessionLocal, engine, get_db
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import VendorSchema
 from repositories.vendor_repository import VendorRepository
@@ -9,23 +9,23 @@ from baked_good.baked_good_schema import BakedGoodSchema
 
 router = APIRouter()
 
-def get_db():
-    """Provide a database session for request‑scoped dependency injection.
+# def get_db():
+#     """Provide a database session for request‑scoped dependency injection.
 
-    Creates a new SQLAlchemy session, yields it to the request handler, and
-    ensures the session is properly closed after the request completes.
+#     Creates a new SQLAlchemy session, yields it to the request handler, and
+#     ensures the session is properly closed after the request completes.
 
-    Yields:
-        Session: An active SQLAlchemy session used for database operations.
+#     Yields:
+#         Session: An active SQLAlchemy session used for database operations.
 
-    Raises:
-        SQLAlchemyError: If the session fails to initialize or close properly.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+#     Raises:
+#         SQLAlchemyError: If the session fails to initialize or close properly.
+#     """
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
 @router.post("/vendor", response_model=VendorSchema, status_code=201)
 async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)):

@@ -29,18 +29,13 @@ app = FastAPI()
 app.include_router(vendor_router)
 app.include_router(baked_good_router)
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def client():
-    """
-    Creates a test client using a temporary in-memory database.
-    """
-
+    # 🔥 Reset DB before each test
+    Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
 
     def override_get_db():
-        """
-        Provides a test database session for the client.
-        """
         db = TestingSessionLocal()
         try:
             yield db
@@ -49,12 +44,13 @@ def client():
 
     app.dependency_overrides[get_db] = override_get_db
 
-    try:
-        with TestClient(app) as test_client:
-            yield test_client
-    finally:
-        app.dependency_overrides.clear()
-        Base.metadata.drop_all(bind=test_engine)
+    with TestClient(app) as test_client:
+        yield test_client
+
+    # Optional cleanup (not required for in-memory SQLite)
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=test_engine)
+
 
 def test_post_baked_good(client):
     """
