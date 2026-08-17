@@ -18,10 +18,7 @@ from customer.customer_router import router as customer_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables (no drop_all — don't nuke data on every restart)
     Base.metadata.create_all(bind=engine)
-
-    # Seed lookup tables
     db = SessionLocal()
     try:
         for role in EmployeeRole:
@@ -33,7 +30,6 @@ async def lifespan(app: FastAPI):
         db.close()
 
     yield
-    # --- shutdown logic, if any, goes here ---
 
 
 app = FastAPI(title="Customer API", lifespan=lifespan)
@@ -50,7 +46,6 @@ def root():
     Health check endpoint.
     """
     return {"message": "Customer API is running"}
-# app.include_router(vendor_router)
 app.include_router(vendor_router)
 app.include_router(baked_good_router)
 app.include_router(ingredient_router)

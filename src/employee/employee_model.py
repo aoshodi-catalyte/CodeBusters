@@ -1,10 +1,7 @@
 import re
-
 from pydantic import BaseModel, Field, condecimal, field_validator, model_validator
 from constants.EMPLOYEE_ROLES import EmployeeRole
 from datetime import date, datetime
-
-# VALID_ROLES = {"employee", "manager", "admin"}
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -18,6 +15,16 @@ class Employee(BaseModel):
     hourly_rate: ConstrainedMoney # type: ignore 
     hire_date: date
     term_date: date | None = None
+
+    
+    @field_validator("first_name", "last_name", "email")
+    @classmethod
+    def validate_not_blank(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("Must not be blank")
+
+        return value
 
     @field_validator("email")
     @classmethod
@@ -41,8 +48,8 @@ class Employee(BaseModel):
         return value
 
     @field_validator("role")
-    # @classmethod
-    def validate_role(role_name: str) -> EmployeeRole:
+    @classmethod
+    def validate_role(cls, role_name: str) -> EmployeeRole:
         try:
             return EmployeeRole(role_name)
         except ValueError:
