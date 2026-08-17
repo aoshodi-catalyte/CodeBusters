@@ -1,51 +1,55 @@
 import pytest
+
+from fastapi import FastAPI
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker 
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
-from database import Base, engine, SessionLocal, get_db
-from main import app
 
+from database import Base
+from baked_good.baked_good_router import router as baked_good_router
+from baked_good.baked_good_router import get_db as baked_good_get_db
+from vendor.vendor_router import router as vendor_router
+from vendor.vendor_router import get_db as vendor_get_db
 
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool
+)
+
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+app = FastAPI()
+app.include_router(vendor_router)
+app.include_router(baked_good_router)
 
 @pytest.fixture
 def client():
     """
-    Creates a test client and prepares a clean database for each test.
-
-    Drops and recreates all database tables before each test. Overrides
-    the application's database dependency so that the test client uses
-    a test database session. The database session and dependency override
-    are cleaned up after the test is completed.
-
-    Args:
-        None
-
-    Yields:
-        TestClient: A FastAPI test client used to send requests to the API.
+    Creates a test client using a temporary in-memory database.
     """
-    
-    Base.metadata.drop_all(bind=engine)
+
     Base.metadata.create_all(bind=engine)
 
     def override_get_db():
         """
-        Provides a database session for the test client.
-
-        Creates a SQLAlchemy database session and closes the session after
-        the test request is completed.
-
-        Args:
-            None
-
-        Yields:
-            A SQLAlchemy database session for the test request.
+        Provides a test database session for the client.
         """
-
-        db = SessionLocal()
+        db = TestingSessionLocal()
         try:
             yield db
         finally:
             db.close()
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[baked_good_get_db] = override_get_db
+    app.dependency_overrides[vendor_get_db] = override_get_db
 
     try:
         with TestClient(app) as test_client:
@@ -53,7 +57,6 @@ def client():
     finally:
         app.dependency_overrides.clear()
         Base.metadata.drop_all(bind=engine)
-
 def test_post_baked_good(client):
     """
     Tests that a valid baked good can be created through the API.
@@ -191,9 +194,9 @@ def test_get_baked_goods(client):
     vendor = {
         "active": True,
         "name": "Test Vendor",
-        "contact_name": "John Doe",
+        "contact_name": "Christian Robinson",
         "contact_role": "Manager",
-        "email": "john@testvendor.com",
+        "email": "Christian@Robinsonvendor.com",
         "phone": "5551234567",
         "vendor_id": 1
     }
