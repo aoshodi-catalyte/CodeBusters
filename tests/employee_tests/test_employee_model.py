@@ -3,7 +3,6 @@ from constants.EMPLOYEE_ROLES import EmployeeRole
 from datetime import date
 
 def test_employee_model():
-    # Create an instance of EmployeeModel
     employee = Employee(
         active=True,
         first_name="John",
