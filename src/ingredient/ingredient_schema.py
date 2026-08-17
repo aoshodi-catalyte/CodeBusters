@@ -6,17 +6,21 @@ from sqlalchemy.orm import relationship
 
 from vendor.vendor_schema import Vendor
 
+
 # ==========================================
 # ASSOCIATION TABLE
+# ==========================================
+
 ingredient_allergen = Table("ingredient_allergen",
     Base.metadata,
     Column( "ingredient_id", ForeignKey("ingredient.id"), primary_key=True,),
     Column( "allergen_id",  ForeignKey("allergen.id"), primary_key=True,),
 )
 
-
 # ==========================================
 # SQLALCHEMY MODEL
+# ==========================================
+
 class AllergenSchema(Base):
     __tablename__ = "allergen"
 

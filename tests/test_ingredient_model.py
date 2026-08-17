@@ -26,7 +26,6 @@ def test_ingredient():
         unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.liters,
         allergens=["milk"],
-        vendor_id=("1")
     )
 
     assert ingredient.active is True
@@ -39,12 +38,10 @@ def test_ingredient():
 
 def test_ingredient_active_defaults_to_true():
     ingredient = Ingredient(
-        active=True,
         name="Whole Milk",
         purchasing_cost=Decimal("4.50"),
         unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
     )
 
     assert ingredient.active is True
@@ -56,7 +53,6 @@ def test_ingredient_allergens_default_to_empty_list():
         purchasing_cost=Decimal("4.50"),
         unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
     )
 
     assert ingredient.allergens == []
@@ -65,32 +61,29 @@ def test_ingredient_allergens_default_to_empty_list():
 def test_purchasing_cost_cannot_be_negative():
     with pytest.raises(ValidationError):
         Ingredient(
-        name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
-        unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+            name="Whole Milk",
+            purchasing_cost=Decimal("-1.00"),
+            unit_amount=Decimal("1.00"),
+            unit_of_measure=UnitOfMeasure.liters,
         )
 
 
 def test_unit_amount_must_be_greater_than_zero():
     with pytest.raises(ValidationError):
         Ingredient(
-        name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
-        unit_amount=Decimal("1.00"),
-        unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+            name="Whole Milk",
+            purchasing_cost=Decimal("4.50"),
+            unit_amount=Decimal("0"),
+            unit_of_measure=UnitOfMeasure.liters,
         )
 
 
 def test_unit_of_measure():
     ingredient = Ingredient(
-        name="Whole Milk",
-        purchasing_cost=Decimal("4.50"),
+        name="Coffee",
+        purchasing_cost=Decimal("15.00"),
         unit_amount=Decimal("1.00"),
-        unit_of_measure=UnitOfMeasure.liters,
-        vendor_id=("1")
+        unit_of_measure=UnitOfMeasure.kilograms,
     )
 
     assert ingredient.unit_of_measure == UnitOfMeasure.kilograms
