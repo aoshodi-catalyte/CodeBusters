@@ -7,7 +7,6 @@ from ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingr
 from ingredient.ingredient_router import router as ingredient_router
 
 from database import create_db
-from customer.customer_schema import CustomerSchema
 from customer.customer_router import router as customer_router
 
 
@@ -33,7 +32,5 @@ app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 app.include_router(customer_router)
 
-# Create database tables
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
+
 
