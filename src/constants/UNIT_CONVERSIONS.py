@@ -26,61 +26,73 @@ convert(amount, from_unit, to_unit):
 """
 
 
-UNIT_CONVERSIONS = {
-    ("lb", "g"): 453.592,
-    ("g", "lb"): 1 / 453.592,
+UNIT_CATEGORY = {
+    "g": "weight",
+    "kg": "weight",
+    "oz": "weight",
+    "lb": "weight",
+    "scoop": "weight",
 
-    ("oz", "g"): 28.3495,
-    ("g", "oz"): 1 / 28.3495,
+    "ml": "volume",
+    "l": "volume",
+    "fl_oz": "volume",
+    "gal": "volume",
+    "pump": "volume",
+    "shot": "volume",
+    "dash": "volume",
+}
 
-    ("tsp", "g"): 4.2,
-    ("tbsp", "g"): 12.6,
+BASE_UNIT = {
+    "weight": "g",
+    "volume": "ml",
+}
 
-    ("cup", "ml"): 240,
-    ("ml", "cup"): 1 / 240,
+# Conversion factors into base units (g or ml)
+TO_BASE = {
+    # Weight → grams
+    "g": 1,
+    "kg": 1000,
+    "oz": 28.3495,
+    "lb": 453.592,
+    "scoop": 5,       # customize per your café
 
-    # --- Gallon conversions ---
-    ("gal", "ml"): 3785.41,
-    ("ml", "gal"): 1 / 3785.41,
-
-    ("gal", "l"): 3.78541,
-    ("l", "gal"): 1 / 3.78541,
-
-    ("gal", "oz"): 128,
-    ("oz", "gal"): 1 / 128,
-
-    ("gal", "cup"): 16,
-    ("cup", "gal"): 1 / 16,
-
-    # --- Pound ↔ Ounce conversions (required for espresso beans) ---
-    ("lb", "oz"): 16,
-    ("oz", "lb"): 1 / 16,
+    # Volume → milliliters
+    "ml": 1,
+    "l": 1000,
+    "fl_oz": 29.5735,
+    "gal": 3785.41,
+    "pump": 10,       # customize per your café
+    "shot": 30,       # espresso shot
+    "dash": 0.9,      # bitters dash
 }
 
 
 def convert(amount: float, from_unit: str, to_unit: str) -> float:
     """
-    Args:
-        amount (float):
-            The numeric quantity to convert.
-
-        from_unit (str):
-            The unit of measurement the amount is currently expressed in
-            (e.g., "oz", "g", "tsp").
-
-        to_unit (str):
-            The unit of measurement to convert the amount into.
-
-    Returns:
-        float: The converted quantity expressed in the target unit.
-
-    Raises:
-        ValueError: If no conversion exists between the specified units.
+    Normalized unit conversion for drink measurements.
+    Converts weight units via grams and volume units via milliliters.
     """
-    
+
     if from_unit == to_unit:
         return amount
-    key = (from_unit, to_unit)
-    if key not in UNIT_CONVERSIONS:
-        raise ValueError(f"No conversion from {from_unit} to {to_unit}")
-    return amount * float(str(UNIT_CONVERSIONS[key]))
+
+    if from_unit not in UNIT_CATEGORY:
+        raise ValueError(f"Unsupported unit: {from_unit}")
+
+    if to_unit not in UNIT_CATEGORY:
+        raise ValueError(f"Unsupported unit: {to_unit}")
+
+    from_cat = UNIT_CATEGORY[from_unit]
+    to_cat = UNIT_CATEGORY[to_unit]
+
+    # Prevent weight ↔ volume conversions
+    if from_cat != to_cat:
+        raise ValueError(
+            f"Cannot convert between weight ({from_unit}) and volume ({to_unit})"
+        )
+
+    # Step 1: convert to base (g or ml)
+    base_amount = amount * TO_BASE[from_unit]
+
+    # Step 2: convert base → target
+    return base_amount / TO_BASE[to_unit]

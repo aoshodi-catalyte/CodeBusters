@@ -88,11 +88,16 @@ class DrinkRecipeRepository:
                 raise ValueError(f"Ingredient ID {ing.id} not found")
 
             # Convert recipe usage → ingredient purchase unit
-            recipe_amount_in_purchase_unit = convert(
-                ing.quantity_used,
-                ing.unit_of_measure_used,
-                ingredient.unit_of_measure
-            )
+            try:
+                recipe_amount_in_purchase_unit = convert(
+                    ing.quantity_used,
+                    ing.unit_of_measure_used,
+                    ingredient.unit_of_measure
+                )
+            except ValueError as e:
+                raise ValueError(
+                    f"Unit conversion failed for ingredient {ingredient.name}: {e}"
+                )
 
             # Cost per unit of ingredient
             cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount

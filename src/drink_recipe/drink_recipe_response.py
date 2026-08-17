@@ -7,7 +7,7 @@ and include all relevant recipe information and associated ingredient details.
 """
 
 from pydantic import BaseModel
-from src.constants.DRINK_TYPES import DrinkType
+from constants.DRINK_TYPES import DrinkType
 
 
 class IngredientRef(BaseModel):

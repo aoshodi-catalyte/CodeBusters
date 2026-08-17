@@ -86,7 +86,7 @@ def test_create_drink_recipe(client, db):
         "description": "Coffee with sugar and milk",
         "ingredients": [
             {"id": ing1.id, "quantity_used": 5.00, "unit_of_measure_used": "g"},
-            {"id": ing2.id, "quantity_used": 16.00, "unit_of_measure_used": "oz"}
+            {"id": ing2.id, "quantity_used": 16.00, "unit_of_measure_used": "fl_oz"}
         ],
         "active": True,
         "type": "coffee",
@@ -110,7 +110,7 @@ def test_create_drink_recipe(client, db):
 
     assert milk["name"] == "Milk"
     assert milk["quantity_used"] == 16.00
-    assert milk["unit_of_measure_used"] == "oz"
+    assert milk["unit_of_measure_used"] == "fl_oz"
 
     assert data["production_cost"] == 0.92
     assert data["sale_price"] == 1.84
