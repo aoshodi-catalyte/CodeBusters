@@ -13,7 +13,6 @@ class EmployeeSchema(Base):
     last_name = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
 
-    # role = Column(String, nullable=False)
     role_id = Column(Integer, ForeignKey("employee_role.id"), nullable=False)
     
 

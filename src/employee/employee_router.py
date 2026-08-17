@@ -9,7 +9,7 @@ from repositories.employee_repository import EmployeeRepository
 
 router = APIRouter()
 
-@router.post("/employee", response_model=EmployeeResponse, status_code=201)
+@router.post("/employees", response_model=EmployeeResponse, status_code=201)
 async def post_new_employee(employee_data: Employee, db: Session = Depends(get_db)):
     """
     Create a new employee record and return the created employee.

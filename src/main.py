@@ -1,8 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from constants.EMPLOYEE_ROLES import EmployeeRole
+from employee.employee_role_schema import EmployeeRoleSchema
 from vendor.vendor_router import router as vendor_router
 from baked_good.baked_good_router import router as baked_good_router
 from employee.employee_router import router as employee_router
-from database import Base, engine
+from database import Base, SessionLocal, engine
 # Import models so SQLAlchemy knows about the tables
 from ingredient.ingredient_schema import (IngredientSchema, AllergenSchema, ingredient_allergen)
 from ingredient.ingredient_router import router as ingredient_router
@@ -12,9 +16,27 @@ from customer.customer_schema import CustomerSchema
 from customer.customer_router import router as customer_router
 
 
-app = FastAPI(
-    title="Customer API"
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create tables (no drop_all — don't nuke data on every restart)
+    Base.metadata.create_all(bind=engine)
+
+    # Seed lookup tables
+    db = SessionLocal()
+    try:
+        for role in EmployeeRole:
+            existing = db.query(EmployeeRoleSchema).filter_by(role=role.value).first()
+            if not existing:
+                db.add(EmployeeRoleSchema(role=role.value))
+        db.commit()
+    finally:
+        db.close()
+
+    yield
+    # --- shutdown logic, if any, goes here ---
+
+
+app = FastAPI(title="Customer API", lifespan=lifespan)
 
 
 # Importing the SQLAlchemy model above registers it with

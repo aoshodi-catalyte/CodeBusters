@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, condecimal, field_validator, model_valida
 from constants.EMPLOYEE_ROLES import EmployeeRole
 from datetime import date, datetime
 
-VALID_ROLES = {"employee", "manager", "admin"}
+# VALID_ROLES = {"employee", "manager", "admin"}
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -40,13 +40,13 @@ class Employee(BaseModel):
             raise ValueError("email must be a valid email address")
         return value
 
-    @field_validator("role", mode="before")
-    @classmethod
-    def validate_role(cls, value):
-        value = str(value).lower()
-        if value not in VALID_ROLES:
-            raise ValueError(f"Invalid role: {value}. Valid roles are: {list(VALID_ROLES)}")
-        return value
+    @field_validator("role")
+    # @classmethod
+    def validate_role(role_name: str) -> EmployeeRole:
+        try:
+            return EmployeeRole(role_name)
+        except ValueError:
+            raise ValueError(f"Invalid role: {role_name}. Valid roles are: {[rn.value for rn in EmployeeRole]}")
         
         
     @field_validator("hire_date", "term_date", mode="before")
