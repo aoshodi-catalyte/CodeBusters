@@ -71,6 +71,10 @@ def test_unsupported_unit_conversion():
     with pytest.raises(ValueError):
         convert(1, "kg", "fl_oz")
 
+def test_unexisting_unit_conversion():
+    with pytest.raises(ValueError):
+        convert(1, "banana", "fl_oz")
+
 def test_create_drink_recipe(repo, db):
     drink_type = DrinkTypeSchema(name="coffee")
     db.add(drink_type)
