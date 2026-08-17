@@ -13,9 +13,7 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: root
-          POSTGRES_DB: gardendb
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         ports:
           - 5432:5432
         options: >-
