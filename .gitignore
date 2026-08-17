@@ -9,6 +9,7 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
 
 # OS & Editor Cruft
 .DS_Store
@@ -19,3 +20,6 @@ __pycache__/
 # SQLite dev DB
 dev.db
 *.db
+
+.coverage
+.coverage.*

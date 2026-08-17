@@ -4,20 +4,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
 from database import Base
 from customer.customer_schema import CustomerSchema
 
 
-# Separate SQLite database used only for tests.
 TEST_DATABASE_URL = "sqlite:///:memory:"
-
 
 engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
 )
-
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,
@@ -48,13 +46,15 @@ def test_create_customer(db):
     """
     Tests that a customer can be created and persisted
     in the database.
+
+    The phone number should be stored without formatting.
     """
 
     customer = CustomerSchema(
         first_name="John",
         last_name="Smith",
         email="john@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     db.add(customer)
@@ -65,7 +65,10 @@ def test_create_customer(db):
     assert customer.first_name == "John"
     assert customer.last_name == "Smith"
     assert customer.email == "john@example.com"
-    assert customer.phone_number == "312-555-1234"
+
+    # Database should store the normalized phone number.
+    assert customer.phone_number == "3125551234"
+
     assert customer.loyalty_points == 0
     assert customer.active is True
     assert customer.created_at is not None
@@ -79,13 +82,13 @@ def test_email_must_be_unique(db):
     customer1 = CustomerSchema(
         first_name="John",
         email="john@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     customer2 = CustomerSchema(
         first_name="Jane",
         email="john@example.com",
-        phone_number="773-555-1234"
+        phone_number="7735551234"
     )
 
     db.add(customer1)
@@ -107,13 +110,13 @@ def test_phone_number_must_be_unique(db):
     customer1 = CustomerSchema(
         first_name="John",
         email="john@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     customer2 = CustomerSchema(
         first_name="Jane",
         email="jane@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     db.add(customer1)
@@ -135,7 +138,7 @@ def test_last_name_is_optional(db):
     customer = CustomerSchema(
         first_name="John",
         email="john@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     db.add(customer)
@@ -153,7 +156,7 @@ def test_active_defaults_to_true(db):
     customer = CustomerSchema(
         first_name="John",
         email="john@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     db.add(customer)
@@ -171,7 +174,7 @@ def test_loyalty_points_default_to_zero(db):
     customer = CustomerSchema(
         first_name="John",
         email="john@example.com",
-        phone_number="312-555-1234"
+        phone_number="3125551234"
     )
 
     db.add(customer)
@@ -179,4 +182,3 @@ def test_loyalty_points_default_to_zero(db):
     db.refresh(customer)
 
     assert customer.loyalty_points == 0
-

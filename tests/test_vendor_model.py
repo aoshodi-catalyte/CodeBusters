@@ -1,5 +1,7 @@
 import pytest
-from vendor.vendor_schema import Vendor, VendorSchema
+from vendor.vendor_schema import Vendor
+from ingredient.ingredient_schema import IngredientSchema
+from baked_good.baked_good_schema import BakedGoodSchema
 
 
 def test_vendor_information():
