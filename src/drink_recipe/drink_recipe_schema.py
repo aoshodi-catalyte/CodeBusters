@@ -12,7 +12,6 @@ The schema is used by the repository layer to persist recipe data, compute
 production cost and sale price, and manage ingredient associations.
 """
 
-from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
@@ -87,7 +86,7 @@ class DrinkRecipeSchema(Base):
     drink_type = relationship(DrinkTypeSchema, back_populates="drink_recipes")
     # Many-to-many relationship with ingredients through association table
     recipe_ingredients = relationship(
-        DrinkRecipeIngredientSchema,
+        "DrinkRecipeIngredientSchema",
         back_populates="drink_recipe",
         cascade="all, delete-orphan"
     )

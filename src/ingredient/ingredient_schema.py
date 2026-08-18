@@ -1,31 +1,49 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Table, Enum
+from sqlalchemy import (
+    Boolean,
+    Column,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Table,
+    Enum,
+)
 from constants.INGREDIENT_TYPES import UnitOfMeasure
 from database import Base
 from sqlalchemy import ForeignKey, Table
 from sqlalchemy.orm import relationship
-
-from vendor.vendor_schema import Vendor
-
+from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 
 # ==========================================
 # ASSOCIATION TABLE
 # ==========================================
 
-ingredient_allergen = Table("ingredient_allergen",
+ingredient_allergen = Table(
+    "ingredient_allergen",
     Base.metadata,
-    Column( "ingredient_id", ForeignKey("ingredient.id"), primary_key=True,),
-    Column( "allergen_id",  ForeignKey("allergen.id"), primary_key=True,),
+    Column(
+        "ingredient_id",
+        ForeignKey("ingredient.id"),
+        primary_key=True,
+    ),
+    Column(
+        "allergen_id",
+        ForeignKey("allergen.id"),
+        primary_key=True,
+    ),
 )
 
 # ==========================================
 # SQLALCHEMY MODEL
 # ==========================================
 
+
 class AllergenSchema(Base):
     __tablename__ = "allergen"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
+
 
 class IngredientSchema(Base):
     __tablename__ = "ingredient"
@@ -38,10 +56,13 @@ class IngredientSchema(Base):
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
 
     ingredient_recipes = relationship(
-        "DrinkRecipeIngredientSchema",
-        back_populates="ingredient"
+        DrinkRecipeIngredientSchema, back_populates="ingredient"
     )
-    
+
     vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
-    vendor = relationship(Vendor, back_populates="ingredients")
-    allergens = relationship("AllergenSchema", secondary=ingredient_allergen,backref="ingredients",)
+    vendor = relationship("Vendor", back_populates="ingredients")
+    allergens = relationship(
+        "AllergenSchema",
+        secondary=ingredient_allergen,
+        backref="ingredients",
+    )

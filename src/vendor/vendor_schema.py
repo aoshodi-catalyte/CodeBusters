@@ -4,7 +4,8 @@ from database import Base
 from sqlalchemy import Column, Boolean, String, Integer
 from sqlalchemy.orm import relationship
 from pydantic import ConfigDict, field_serializer
-from baked_good.baked_good_schema import BakedGoodSchema
+
+# from baked_good.baked_good_schema import BakedGoodSchema
 
 
 class VendorSchema(VendorBase):
@@ -37,5 +38,5 @@ class Vendor(Base):
     contact_role = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String, index=True, nullable=False)
-    ingredients = relationship("IngredientSchema", back_populates="vendor")
-    baked_goods = relationship(BakedGoodSchema, back_populates="vendor")
+    ingredients = relationship(IngredientSchema, back_populates="vendor")
+    baked_goods = relationship("BakedGoodSchema", back_populates="vendor")

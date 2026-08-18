@@ -16,7 +16,9 @@ Association table linking drink recipes to the specific ingredients they use.
 from sqlalchemy import Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 from database import Base
-from ingredient.ingredient_schema import IngredientSchema
+
+# from ingredient.ingredient_schema import IngredientSchema
+
 
 class DrinkRecipeIngredientSchema(Base):
     """
@@ -48,6 +50,7 @@ class DrinkRecipeIngredientSchema(Base):
             SQLAlchemy relationship to IngredientSchema, allowing access to
             ingredient details such as name, cost, and purchase unit.
     """
+
     __tablename__ = "drink_recipe_ingredient"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -60,4 +63,7 @@ class DrinkRecipeIngredientSchema(Base):
     unit_of_measure_used = Column(String(50), nullable=False)
 
     drink_recipe = relationship("DrinkRecipeSchema", back_populates="recipe_ingredients")
-    ingredient = relationship(IngredientSchema, back_populates="ingredient_recipes")
+    ingredient = relationship("IngredientSchema", back_populates="ingredient_recipes")
+
+
+from drink_recipe import drink_recipe_schema  # noqa: F401
