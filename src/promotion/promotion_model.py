@@ -59,6 +59,30 @@ class Promotion(BaseModel):
 
         return value
 
+    @field_validator("discount_percentage")
+    @classmethod
+    def validate_discount_percentage(cls, value: float) -> float:
+        """
+        Validates that the discount percentage is within the
+        allowed range.
+
+        The discount must be greater than zero and cannot exceed
+        100 percent.
+
+        Args:
+            value (float): The discount percentage to validate.
+
+        Raises:
+            ValueError: If the discount percentage exceeds 100.
+
+        Returns:
+            float: The validated discount percentage.
+        """
+        if value > 100:
+            raise ValueError("Discount percentage cannot exceed 100%.")
+
+        return value
+
     @field_validator("start_datetime", "end_datetime", mode="before")
     @classmethod
     def convert_datetimes(cls, value):
