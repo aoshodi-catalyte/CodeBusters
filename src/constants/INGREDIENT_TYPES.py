@@ -122,7 +122,12 @@ class CafeAllergen(str, Enum):
     
     @classmethod
     def from_string(cls, value: str):
-        normalized = value.lower().replace(" ", "").replace("-", "")
+        normalized = (
+            value.strip()
+            .lower()
+            .replace(" ", "")
+            .replace("-", "")
+        )
         for allergen in cls:
             allergen_normalized = (
                 allergen.value.lower()
@@ -131,3 +136,5 @@ class CafeAllergen(str, Enum):
             )
             if allergen_normalized == normalized:
                 return allergen
+
+        raise ValueError(f"Unknown allergen: {value}")

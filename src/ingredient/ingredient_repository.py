@@ -1,36 +1,63 @@
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 
+from ingredient.ingredient_exceptions import IngredientAlreadyExistsError, IngredientConstraintError, VendorNotFoundError
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from vendor.vendor_schema import Vendor
 
-class VendorNotFoundError(Exception):
-    pass
 
 def get_or_create_allergen(
     db: Session,
     allergen_name: str,
 ):
-    # Find an existing allergen by name
+    """Return an existing allergen or create a new one.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        allergen_name: Name of the allergen.
+
+    Returns:
+        The existing or newly created allergen.
+    """
+
     allergen = (
         db.query(AllergenSchema)
         .filter(AllergenSchema.name == allergen_name)
         .first()
     )
-    # If the allergen does not exist, create it
     if allergen is None:
-        allergen = AllergenSchema(
-            name=allergen_name
-        )
+        allergen = AllergenSchema( name=allergen_name)
+
         db.add(allergen)
         db.flush()
+
     return allergen
+
 
 def create_ingredient(
     db: Session,
     ingredient_data: Ingredient,
 ):
+    """Create an ingredient and associate its allergens.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_data: Validated ingredient data.
+
+    Returns:
+        The newly created ingredient.
+
+    Raises:
+        VendorNotFoundError:
+            If the specified vendor does not exist.
+        IngredientAlreadyExistsError:
+            If an ingredient with the same name already exists.
+        IngredientConstraintError:
+            If the ingredient violates a database constraint.
+        SQLAlchemyError:
+            If an unexpected database error occurs.
+    """
     try:
         # Check vendor exists
         vendor = (
@@ -39,14 +66,9 @@ def create_ingredient(
             .first()
         )
         if vendor is None:
-            raise VendorNotFoundError(
-                f"Vendor with ID {ingredient_data.vendor_id} does not exist."
-            )
+            raise VendorNotFoundError(ingredient_data.vendor_id)
         # Remove duplicate allergens
-        unique_allergens = list(
-            dict.fromkeys(ingredient_data.allergens)
-        )
-        # Create the SQLAlchemy ingredient (Pydantic Validation)
+        unique_allergens = list(dict.fromkeys(ingredient_data.allergens))
         ingredient = IngredientSchema(
             active=ingredient_data.active,
             name=ingredient_data.name,
@@ -55,27 +77,73 @@ def create_ingredient(
             unit_of_measure=ingredient_data.unit_of_measure,
             vendor_id=ingredient_data.vendor_id,
         )
-        # Find or create each allergen
+
+        # Add ingredient to the session BEFORE working
+        # with the allergen relationship.
+        db.add(ingredient)
+
         for allergen_name in unique_allergens:
             allergen = get_or_create_allergen(
                 db=db,
                 allergen_name=allergen_name,
             )
 
-            # Connect allergen to ingredient
             ingredient.allergens.append(allergen)
 
-        # Save ingredient
-        db.add(ingredient)
         db.commit()
         db.refresh(ingredient)
 
         return ingredient
-    
     except VendorNotFoundError:
         db.rollback()
         raise
-    
-    except SQLAlchemyError:
+
+    except IntegrityError as exc:
         db.rollback()
-        raise
+        constraint = getattr(getattr(exc.orig, "diag", None),"constraint_name",None,)
+        # PostgreSQL
+        if constraint == "uq_ingredient_name":
+            raise IngredientAlreadyExistsError(ingredient_data.name) from exc
+        # SQLite
+        error_message = str(exc.orig).lower()
+        if ("unique constraint failed: ingredient.name" in error_message or "uq_ingredient_name" in error_message):
+            raise IngredientAlreadyExistsError(
+                ingredient_data.name
+            ) from exc
+        raise IngredientConstraintError(
+            constraint
+        ) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise exc
+
+def get_all_ingredients(db: Session):
+    """Return all ingredients.
+
+    Args:
+        db: Active SQLAlchemy database session.
+
+    Returns:
+        A list of all ingredients.
+    """
+    return db.query(IngredientSchema).all()
+
+def get_ingredient_by_id(
+    db: Session,
+    ingredient_id: int,
+):
+    """
+    Retrieve an ingredient by its ID.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_id: ID of the ingredient to retrieve.
+
+    Returns:
+        The ingredient if it exists, otherwise None.
+    """
+    return (
+        db.query(IngredientSchema)
+        .filter(IngredientSchema.id == ingredient_id)
+        .first()
+    )
