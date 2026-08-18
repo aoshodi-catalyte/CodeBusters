@@ -30,9 +30,9 @@ def post_promotion(promotion_model: Promotion, db: Session = Depends(get_db)) ->
         PromotionResponseModel: The newly created promotion.
     """
     repo = PromotionRepository(db)
-    create_promotions = repo.create_promotion(promotion_model)
+    post_promotions = repo.create_promotion(promotion_model)
 
-    return create_promotions
+    return post_promotions
     
 @router.get("/", response_model= List[PromotionResponseModel], status_code=200)
 def get_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseModel]:

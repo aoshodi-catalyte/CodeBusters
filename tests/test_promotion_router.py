@@ -50,3 +50,94 @@ def client():
     # Optional cleanup (not required for in-memory SQLite)
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=test_engine)
+
+def test_post_promotion(client):
+    """
+    Test that a valid promotion can be created successfully.
+    """
+    promotion = {
+        "active": True,
+        "promo_code": "SUMMER2026",
+        "discount_percentage": 20.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM"
+    }
+
+    response = client.post("/promotions/", json=promotion)
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["id"] is not None
+    assert data["active"] is True
+    assert data["promo_code"] == "SUMMER2026"
+    assert data["discount_percentage"] == 20.0
+    assert data["start_datetime"] is not None
+    assert data["end_datetime"] is not None
+
+def test_post_promotion_returns_created_id(client):
+    """
+    Test that a newly created promotion receives a database ID.
+    """
+    promotion = {
+        "active": True,
+        "promo_code": "ID2026",
+        "discount_percentage": 15.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM"
+    }
+
+    response = client.post("/promotions/", json=promotion)
+
+    assert response.status_code == 201
+    assert response.json()["id"] == 1
+
+def test_post_inactive_promotion(client):
+    """
+    Test that an inactive promotion can be created successfully.
+    """
+    promotion = {
+        "active": False,
+        "promo_code": "INACTIVE2026",
+        "discount_percentage": 25.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM"
+    }
+
+    response = client.post("/promotions/", json=promotion)
+
+    assert response.status_code == 201
+    assert response.json()["active"] is False
+
+def test_post_promotion_rejects_lowercase_promo_code(client):
+    """
+    Test that a promo code containing lowercase letters is rejected.
+    """
+    promotion = {
+        "active": True,
+        "promo_code": "summer2026",
+        "discount_percentage": 20.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM"
+    }
+
+    response = client.post("/promotions/", json=promotion)
+
+    assert response.status_code == 422
+
+
+def test_post_promotion_requires_promo_code(client):
+    """
+    Test that promo_code is required.
+    """
+    promotion = {
+        "active": True,
+        "discount_percentage": 20.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM"
+    }
+
+    response = client.post("/promotions/", json=promotion)
+
+    assert response.status_code == 422
