@@ -103,7 +103,6 @@ def test_role_fk_lookup_failure():
         repo.create_new_employee(employee_model)
         
 def test_term_date_validation_propagates_to_repository():
-
     future_date = (date.today() + timedelta(days=3)).strftime("%m/%d/%Y")
 
     with pytest.raises(ValidationError):
@@ -117,4 +116,41 @@ def test_term_date_validation_propagates_to_repository():
             hire_date="01/01/2023",
             term_date=future_date
         )
+        
+def test_repository_does_not_mutate_input():
+    db, repo, role_row = run_db()
+
+    employee_model = Employee(
+        active=True,
+        first_name="  John  ", 
+        last_name="  Doe  ",
+        email="john@doe.com",
+        role=EmployeeRole.MANAGER,
+        hourly_rate="10.50",
+        hire_date="01/01/2023"
+    )
+
+    original_data = employee_model.model_dump()
+
+    repo.create_new_employee(employee_model)
     
+    assert employee_model.model_dump() == original_data
+    db.close()
+    
+def test_repository_stores_trimmed_fields():
+    db, repo, role_row = run_db()
+
+    employee_model = Employee(
+        active=True,
+        first_name="  John  ",
+        last_name="  Doe  ",
+        email="john@doe.com",
+        role=EmployeeRole.MANAGER,
+        hourly_rate="10.50",
+        hire_date="01/01/2023"
+    )
+
+    created = repo.create_new_employee(employee_model)
+
+    assert created.first_name == "John"
+    assert created.last_name == "Doe"
