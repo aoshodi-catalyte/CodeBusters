@@ -149,7 +149,7 @@ class Promotion(BaseModel):
             The validated Promotion object.
         """
 
-        if self.end_datetime < self.start_datetime:
-            raise ValueError("End datetime must be the same as or after start datetime.")
+        if self.end_datetime <= self.start_datetime:
+            raise ValueError("End datetime must be after start datetime.")
 
         return self
