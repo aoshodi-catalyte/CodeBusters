@@ -1,39 +1,62 @@
-from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi import Depends, status, APIRouter, HTTPException
 from sqlalchemy.orm import Session
-from database import Base, engine, SessionLocal
-from typing import Generator, List
+from database import get_db
+from typing import List
 from baked_good.baked_good_model import BakedGood
-from baked_good.baked_good_schema import BakedGoodSchema
+from baked_good.baked_good_repository import BakedGoodRepository
+from baked_good.baked_good_response_model import BakedGoodResponseModel
 
-# def create_db() -> None:
-#     Base.metadata.drop_all(bind=engine)
-#     Base.metadata.create_all(bind=engine)
+router = APIRouter(
+    prefix="/baked_goods", 
+    tags=["baked_goods"]
+)
 
-# create_db()
-
-router = APIRouter()
-
-def get_db() -> Generator[Session, None, None]:
-    """Provide a SQLAlchemy session for the duration of a request.
-
-    Yields:
-        A database session that is closed when the request completes.
+@router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel])
+def get_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
     """
-    db = SessionLocal()
+    Retrieves all baked goods from the database.
+
+    Args:
+        db: The SQLAlchemy database session used to access the
+            baked goods stored in the database.
+
+    Returns:
+        A list of BakedGood objects representing all baked
+        goods stored in the database.
+    """
+
+    repo = BakedGoodRepository(db)
+    baked_goods = repo.get_baked_goods()
+
+    return baked_goods
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel)
+def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodResponseModel:
+    """
+    Creates and stores a new baked good in the database.
+
+    Passes the validated BakedGood Pydantic model to the repository,
+    which converts it into a BakedGoodSchema SQLAlchemy model,
+    adds it to the database, commits the transaction, and refreshes
+    the object with its database-generated values.
+    
+    Args:
+        baked_good: The validated baked good data received from the request.
+        db: The SQLAlchemy database session provided by the get_db dependency.
+
+    Returns:
+        BakedGoodResponseModel: The newly created baked good, 
+            including its database-generated ID.
+    """     
+    repo = BakedGoodRepository(db)
     try:
-        yield db
-    finally:
-        db.close()
+        created_baked_good = repo.create_baked_good(baked_good)
 
-@router.get("/")
-def home_page() -> dict[str, str]:
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cannot create baked good because the vendor does not exist."
+        )
 
-    return {"message": "Hello! You are in Baked Goods. Baked Goods table is currently empty."}
-
-@router.post("/bakedgood", status_code=status.HTTP_201_CREATED, response_model=BakedGood)
-def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodSchema:
-        new_baked_good = BakedGoodSchema(**baked_good.model_dump())
-        db.add(new_baked_good)
-        db.commit()
-        db.refresh(new_baked_good)
-        return new_baked_good
+    return created_baked_good
