@@ -115,8 +115,11 @@ def test_get_customers(client):
         "loyalty_points": 200
     }
 
-    client.post("/customers", json=customer1)
-    client.post("/customers", json=customer2)
+    response1 = client.post("/customers", json=customer1)
+    response2 = client.post("/customers", json=customer2)
+
+    assert response1.status_code == 201
+    assert response2.status_code == 201
 
     response = client.get("/customers")
 
@@ -135,16 +138,13 @@ def test_get_customers(client):
 
 def test_get_customers_when_empty(client):
     """
-    Verifies that the API returns 404 when no customers exist.
+    Verifies that the API returns an empty list when no customers exist.
     """
 
     response = client.get("/customers")
 
-    assert response.status_code == 404
-
-    assert response.json() == {
-        "detail": "No customers found."
-    }
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_create_duplicate_customer(client):

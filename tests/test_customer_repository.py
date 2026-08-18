@@ -123,7 +123,9 @@ def test_get_customers(repository, db):
 
 
 def test_get_customers_returns_empty_list(repository):
-    """Repository should return an empty list when no customers exist."""
+    """
+    Repository should return an empty list when no customers exist.
+    """
 
     customers = repository.get_customers()
 

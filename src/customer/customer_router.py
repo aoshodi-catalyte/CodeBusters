@@ -20,6 +20,7 @@ router = APIRouter()
 
 # DEVELOPMENT ONLY:
 # Reset the customer table whenever the application reloads.
+
 def reset_customer_table() -> None:
     """
     Drop and recreate the customer table.
@@ -52,10 +53,6 @@ def create_customer(
 ):
     """
     Create a new customer and persist it to the database.
-
-    The incoming phone number is validated and normalized by the
-    CustomerCreate Pydantic model before being passed to the repository.
-    The CustomerResponse model formats the phone number for the API response.
 
     Args:
         customer: Customer data provided by the API client.
@@ -108,6 +105,8 @@ def get_customers(
     """
     Retrieve all customers from the database.
 
+    An empty list is returned when no customers exist.
+
     Args:
         db: SQLAlchemy database session.
 
@@ -115,26 +114,15 @@ def get_customers(
         list[CustomerResponse]: A list of all customers.
 
     Raises:
-        HTTPException 404:
-            If no customers are found.
-
         HTTPException 500:
             If an unexpected database error occurs.
     """
     try:
         repo = CustomerRepository(db)
-        customers = repo.get_customers()
+        return repo.get_customers()
 
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving customers."
         )
-
-    if not customers:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No customers found."
-        )
-
-    return customers
