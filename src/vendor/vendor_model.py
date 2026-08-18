@@ -18,24 +18,29 @@ class VendorBase(BaseModel):
     @field_validator("name", "contact_name", "contact_role", "email", "phone", mode="before")
     @classmethod
     def strip_and_validate_no_trailing_spaces(cls, value: str) -> str:
-        """Ensure that string fields do not contain leading or trailing whitespace.
+        """Normalize and validate string fields by enforcing consistent formatting rules.
 
-        This validator runs before all other field validators and enforces strict
-        whitespace rules across multiple string fields.
+        This validator:
+        - Removes all leading and trailing whitespace using `strip()`
+        - Converts the value to lowercase for consistent storage and comparison
+        - Ensures the resulting value is not blank after trimming
+        - Runs before all other validators to guarantee normalized input
+
+        This prevents issues such as:
+        - Duplicate records caused by trailing spaces (e.g., "bob" vs "bob ")
+        - Case‑sensitive mismatches (e.g., "Manager" vs "manager")
+        - Invalid blank values created by whitespace-only input
 
         Args:
-            value (str): The raw string value provided by the client before any
-                normalization or validation occurs.
+            value (str): The raw string value provided by the client.
 
         Returns:
-            str: The cleaned string value with whitespace normalized, provided
-                it originally contained no leading or trailing spaces.
+            str: The normalized string value with whitespace removed and lowercased.
 
         Raises:
-            ValueError: If the input contains leading or trailing whitespace,
-                such as " bob", "bob ", or any other non‑exact match.
+            ValueError: If the trimmed value is empty.
         """
-        value = value.strip()
+        value = value.strip().lower()
         if not value:
             raise ValueError("Must not be blank")
 
@@ -58,6 +63,7 @@ class VendorBase(BaseModel):
         Raises:
             ValueError: If the email does not match the required pattern.
         """
+        value = value.strip().lower()
         if not EMAIL_PATTERN.match(value):
             raise ValueError("email must be a valid email address")
         return value
