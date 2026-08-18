@@ -1,6 +1,7 @@
 from promotion.promotion_model import Promotion
 from promotion.promotion_schema import PromotionSchema
 from sqlalchemy.orm import Session
+from typing import List
 
 
 class PromotionRepository():
@@ -47,3 +48,7 @@ class PromotionRepository():
         self.session.refresh(new_promotion)
 
         return new_promotion
+
+    def get_all_promotions(self) -> List[PromotionSchema]:
+        
+        return self.session.query(PromotionSchema).all()
