@@ -398,3 +398,108 @@ def test_get_all_ingredients_returns_multiple_ingredients(db):
 
     assert len(result) == 2
     assert {i.name for i in result} == {"Flour", "Sugar"}
+# ============================================================
+# TEST 14
+# GET INGREDIENT BY ID
+# ============================================================
+
+def test_get_ingredient_by_id_returns_ingredient(db):
+    """
+    Test that an ingredient can be retrieved by its ID.
+    """
+    vendor = Vendor(
+        name="Test Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="byid@test.com",
+        phone="3125559999",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    result = get_ingredient_by_id(
+        db,
+        ingredient.id,
+    )
+
+    assert result is not None
+    assert result.id == ingredient.id
+    assert result.name == "Flour"
+
+
+# ============================================================
+# TEST 15
+# INGREDIENT ID DOES NOT EXIST
+# ============================================================
+
+def test_get_ingredient_by_id_returns_none(db):
+    """
+    Test that None is returned when the ingredient ID does not exist.
+    """
+    result = get_ingredient_by_id(
+        db,
+        9999,
+    )
+
+    assert result is None
+
+
+# ============================================================
+# TEST 16
+# GET CORRECT INGREDIENT WHEN MULTIPLE EXIST
+# ============================================================
+
+def test_get_ingredient_by_id_returns_correct_ingredient(db):
+    """
+    Test that the correct ingredient is returned when multiple
+    ingredients exist.
+    """
+    vendor = Vendor(
+        name="Test Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="multiple@test.com",
+        phone="3125550000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    flour = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    sugar = create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    result = get_ingredient_by_id(
+        db,
+        sugar.id,
+    )
+
+    assert result is not None
+    assert result.id == sugar.id
+    assert result.name == "Sugar"
+    assert result.id != flour.id
