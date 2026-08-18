@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, tzinfo
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from promotion.promotion_model import Promotion
 from pydantic import ValidationError
