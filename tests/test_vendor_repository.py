@@ -32,7 +32,7 @@ def test_create_new_vendor(db_session):
         contact_name="Bob Belcher",
         contact_role="CEO",
         email="bestburgers@burger.com",
-        phone="1234567896"
+        phone="1234567896",
     )
 
     created_vendor = repo.create_new_vendor(vendor_data)
@@ -41,16 +41,19 @@ def test_create_new_vendor(db_session):
     assert created_vendor.name == "Bob's Burgers"
     assert created_vendor.email == "bestburgers@burger.com"
 
+
 def test_vendor_ingredients_relationship(db_session):
     repo = VendorRepository(db_session)
-    vendor = repo.create_new_vendor(VendorBase(
-        active=True,
-        name="Bob's Burgers Supply Co",
-        contact_name="Bob Belcher",
-        contact_role="CEO",
-        email="supplyco@burger.com",
-        phone="1234567896"
-    ))
+    vendor = repo.create_new_vendor(
+        VendorBase(
+            active=True,
+            name="Bob's Burgers Supply Co",
+            contact_name="Bob Belcher",
+            contact_role="CEO",
+            email="supplyco@burger.com",
+            phone="1234567896",
+        )
+    )
 
     ingredient = IngredientSchema(
         active=True,
@@ -58,7 +61,7 @@ def test_vendor_ingredients_relationship(db_session):
         purchasing_cost=12.50,
         unit_amount=5,
         unit_of_measure="lb",
-        vendor_id=vendor.id
+        vendor_id=vendor.id,
     )
     db_session.add(ingredient)
     db_session.commit()

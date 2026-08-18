@@ -10,7 +10,7 @@ def test_vendor_information():
         contact_name="Bob Belcher",
         contact_role="CEO",
         email="bestBurgers@burger.com",
-        phone="1234567896"
+        phone="1234567896",
     )
 
     assert vendor_example.active == True
@@ -28,7 +28,7 @@ def test_vendor_inactive_status():
         contact_name="Linda Belcher",
         contact_role="Owner",
         email="linda@bakery.com",
-        phone="9876543210"
+        phone="9876543210",
     )
 
     assert vendor_example.active == False
@@ -42,7 +42,7 @@ def test_vendor_different_contact_role():
         contact_name="Teddy",
         contact_role="Manager",
         email="teddy@repairs.com",
-        phone="5551234567"
+        phone="5551234567",
     )
 
     assert vendor_example.contact_role == "Manager"

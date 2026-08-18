@@ -20,7 +20,6 @@ class VendorBase(BaseModel):
 
         This validator:
         - Removes all leading and trailing whitespace using `strip()`
-        - Converts the value to lowercase for consistent storage and comparison
         - Ensures the resulting value is not blank after trimming
         - Runs before all other validators to guarantee normalized input
 
