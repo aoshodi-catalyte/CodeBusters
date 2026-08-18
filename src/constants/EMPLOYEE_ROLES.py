@@ -1,10 +1,11 @@
 from enum import Enum
 
+
 class EmployeeRole(str, Enum):
     EMPLOYEE = "employee"
     MANAGER = "manager"
     ADMIN = "admin"
-    
+
     @classmethod
     def _missing_(cls, value):
         if isinstance(value, str):
