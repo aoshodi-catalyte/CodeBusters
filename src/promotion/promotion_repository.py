@@ -50,5 +50,17 @@ class PromotionRepository():
         return new_promotion
 
     def get_all_promotions(self) -> List[PromotionSchema]:
-        
+        """
+        Retrieve all promotions from the database.
+
+        Queries the PromotionSchema table and returns all promotion records
+        currently stored in the database.
+
+        Args:
+            None.
+
+        Returns:
+            List[PromotionSchema]: A list containing all promotion records
+            retrieved from the database.
+        """
         return self.session.query(PromotionSchema).all()
