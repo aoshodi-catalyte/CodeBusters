@@ -1,3 +1,12 @@
+"""
+Pydantic model for validating baked good data.
+
+This module defines the BakedGood model, which validates baked good
+information before it is stored in the database. It ensures that
+required fields are provided and that pricing and text fields meet
+the application's validation requirements.
+"""
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 class BakedGood(BaseModel):
@@ -27,6 +36,7 @@ class BakedGood(BaseModel):
     vendor_id: int
 
     @field_validator("name")
+    @classmethod
     def validate_name(cls, value):
         """
         Validates that the baked good name is not empty and does not
@@ -52,6 +62,7 @@ class BakedGood(BaseModel):
         return value
 
     @field_validator("description")
+    @classmethod
     def validate_description(cls, value):
         """
         Validates that the baked good description is not empty.
