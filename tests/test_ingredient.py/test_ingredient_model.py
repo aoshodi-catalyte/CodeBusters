@@ -104,3 +104,31 @@ def test_create_ingredient_with_empty_allergens():
     )
 
     assert ingredient.allergens == []
+def test_invalid_allergen_raises_validation_error():
+    """
+    Test that an invalid allergen value raises a Pydantic
+    validation error.
+    """
+    with pytest.raises(ValidationError):
+        Ingredient(
+            name="Mystery Item",
+            purchasing_cost=4.50,
+            unit_amount=1.00,
+            unit_of_measure=UnitOfMeasure.liters,
+            allergens=["Kryptonite"],
+            vendor_id=1,
+        )
+def test_invalid_unit_of_measure_raises_validation_error():
+    """
+    Test that an invalid unit of measure raises a Pydantic
+    validation error.
+    """
+    with pytest.raises(ValidationError):
+        Ingredient(
+            name="Mystery Item",
+            purchasing_cost=4.50,
+            unit_amount=1.00,
+            unit_of_measure="parsecs",
+            allergens=[],
+            vendor_id=1,
+        )

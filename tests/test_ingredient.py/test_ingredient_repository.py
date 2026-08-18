@@ -278,25 +278,20 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
     db.commit()
     db.refresh(vendor)
 
-    ingredient = IngredientSchema(
-        active=True,
+    ingredient_data = make_ingredient(
         name="Invalid Flour",
-        purchasing_cost=Decimal("-5.00"),
-        unit_amount=Decimal("25.00"),
-        unit_of_measure="lb",
         vendor_id=vendor.id,
     )
 
-    db.add(ingredient)
+    # Bypass Pydantic validation so the database
+    # constraint is responsible for rejecting the value.
+    ingredient_data.purchasing_cost = Decimal("-5.00")
 
     with pytest.raises(IngredientConstraintError):
-        try:
-            db.commit()
-        except Exception as exc:
-            db.rollback()
-            raise IngredientConstraintError(
-                "ck_ingredient_purchasing_cost_non_negative"
-            ) from exc
+        create_ingredient(
+            db,
+            ingredient_data,
+        )
 
 
 # ============================================================

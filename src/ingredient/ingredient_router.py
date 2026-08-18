@@ -74,9 +74,18 @@ def create(ingredient: Ingredient,db: Session = Depends(get_db),):
         ) from exc
 @router.get("/all", response_model=IngredientListResponse)
 def read_all_ingredients(db: Session = Depends(get_db)):
+    """
+    Retrieve all ingredients in the inventory.
+
+    Args:
+        db: Database session provided by FastAPI.
+
+    Returns:
+        A response containing a message and a list of all ingredients.
+    """
     ingredients = get_all_ingredients(db)
 
     return {
         "message": "These are all the ingredients in your inventory!",
-        "ingredients": ingredients
+        "ingredients": ingredients,
     }
