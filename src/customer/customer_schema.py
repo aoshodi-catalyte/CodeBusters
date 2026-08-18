@@ -50,7 +50,7 @@ class CustomerSchema(Base):
     # Phone number is required, must be unique,
     # and accommodates the xxx-xxx-xxxx format.
     phone_number = Column(
-        String(12),
+        String(10),
         unique=True,
         nullable=False
     )
