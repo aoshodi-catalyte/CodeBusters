@@ -147,7 +147,6 @@ def test_create_ingredient_success(monkeypatch):
         "/ingredients/",
         json=valid_ingredient_payload(),
     )
-
     assert response.status_code == 201
 
     data = response.json()
@@ -627,3 +626,114 @@ def test_read_all_ingredients_integration():
 
         Base.metadata.drop_all(bind=engine)
         engine.dispose()
+    # ============================================================
+# TEST 17
+# UPDATE INGREDIENT SUCCESSFULLY
+# ============================================================
+
+def test_update_ingredient_success(monkeypatch):
+    """
+    Test that a valid ingredient update returns HTTP 200
+    and the updated ingredient.
+    """
+    updated_ingredient = valid_ingredient_response()
+    updated_ingredient["name"] = "Updated Flour"
+    updated_ingredient["purchasing_cost"] = Decimal("12.50")
+
+    mock_update = MagicMock(return_value=updated_ingredient)
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "update_ingredient",
+        mock_update,
+    )
+
+    payload = valid_ingredient_payload()
+    payload["name"] = "Updated Flour"
+    payload["purchasing_cost"] = "12.50"
+
+    response = client.put(
+        "/ingredients/1",
+        json=payload,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == 1
+    assert data["name"] == "Updated Flour"
+    assert data["purchasing_cost"] == 12.50
+    assert data["vendor_id"] == 1
+
+    mock_update.assert_called_once()
+
+
+# ============================================================
+# TEST 18
+# UPDATE INGREDIENT NOT FOUND
+# ============================================================
+
+def test_update_ingredient_not_found(monkeypatch):
+    """
+    Test that updating an ingredient that does not exist
+    returns HTTP 404.
+    """
+    mock_update = MagicMock(return_value=None)
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "update_ingredient",
+        mock_update,
+    )
+
+    response = client.put(
+        "/ingredients/999",
+        json=valid_ingredient_payload(),
+    )
+
+    assert response.status_code == 404
+
+    data = response.json()
+
+    assert data["detail"]["error"] == "ingredient_not_found"
+
+    mock_update.assert_called_once()
+
+
+# ============================================================
+# TEST 19
+# UPDATE INGREDIENT CONSTRAINT ERROR
+# ============================================================
+
+def test_update_ingredient_constraint_error(monkeypatch):
+    """
+    Test that a database constraint violation during an
+    ingredient update returns HTTP 409.
+    """
+    mock_update = MagicMock(
+        side_effect=IngredientConstraintError(
+            "ck_ingredient_purchasing_cost_non_negative"
+        )
+    )
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "update_ingredient",
+        mock_update,
+    )
+
+    response = client.put(
+        "/ingredients/1",
+        json=valid_ingredient_payload(),
+    )
+
+    assert response.status_code == 409
+
+    data = response.json()
+
+    assert data["detail"]["error"] == (
+        "database_constraint_violation"
+    )
+
+    mock_update.assert_called_once()

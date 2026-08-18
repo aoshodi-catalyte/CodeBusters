@@ -9,7 +9,8 @@ from ingredient.ingredient_repository import (
     create_ingredient,
     get_all_ingredients,
     get_or_create_allergen, 
-    get_ingredient_by_id
+    get_ingredient_by_id,
+    update_ingredient
 )
 from ingredient.ingredient_schema import (
     AllergenSchema,
@@ -503,3 +504,108 @@ def test_get_ingredient_by_id_returns_correct_ingredient(db):
     assert result.id == sugar.id
     assert result.name == "Sugar"
     assert result.id != flour.id
+    # ============================================================
+# TEST 17
+# UPDATE INGREDIENT SUCCESSFULLY
+# ============================================================
+
+def test_update_ingredient_success(db):
+    """
+    Test that an existing ingredient is updated successfully.
+    """
+    vendor = Vendor(
+        name="Update Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="update@test.com",
+        phone="3125551234",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    updated = update_ingredient(
+        db,
+        ingredient.id,
+        make_ingredient(
+            name="Bread Flour",
+            vendor_id=vendor.id,
+            purchasing_cost=Decimal("15.00"),
+        ),
+    )
+
+    assert updated.id == ingredient.id
+    assert updated.name == "Bread Flour"
+    assert updated.purchasing_cost == Decimal("15.00")
+
+
+# ============================================================
+# TEST 18
+# UPDATE INGREDIENT NOT FOUND
+# ============================================================
+
+def test_update_ingredient_returns_none_when_not_found(db):
+    """
+    Test that None is returned when the ingredient does not exist.
+    """
+    result = update_ingredient(
+        db,
+        9999,
+        make_ingredient(),
+    )
+
+    assert result is None
+
+
+# ============================================================
+# TEST 19
+# UPDATE INGREDIENT ALLERGENS
+# ============================================================
+
+def test_update_ingredient_updates_allergens(db):
+    """
+    Test that an ingredient's allergens are replaced during update.
+    """
+    vendor = Vendor(
+        name="Allergen Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="allergen@test.com",
+        phone="3125555678",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Chocolate",
+            vendor_id=vendor.id,
+            allergens=["Milk"],
+        ),
+    )
+
+    updated = update_ingredient(
+        db,
+        ingredient.id,
+        make_ingredient(
+            name="Chocolate",
+            vendor_id=vendor.id,
+            allergens=["Soy"],
+        ),
+    )
+
+    assert {a.name for a in updated.allergens} == {"Soy"}

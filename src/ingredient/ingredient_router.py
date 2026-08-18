@@ -6,7 +6,7 @@ from database import get_db
 
 from ingredient.ingredient_exceptions import IngredientAlreadyExistsError, IngredientConstraintError, VendorNotFoundError
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import create_ingredient, get_all_ingredients, get_ingredient_by_id
+from ingredient.ingredient_repository import create_ingredient, get_all_ingredients, get_ingredient_by_id, update_ingredient
 from ingredient.ingredient_model import IngredientOut, IngredientListResponse
 
 
@@ -120,3 +120,92 @@ def read_ingredient(
         )
 
     return ingredient
+    
+@router.put(
+    "/{ingredient_id}",
+    response_model=IngredientOut,
+)
+def update(
+    ingredient_id: int,
+    ingredient: Ingredient,
+    db: Session = Depends(get_db),
+):
+    """
+    Update an existing ingredient.
+
+    Args:
+        ingredient_id: ID of the ingredient to update.
+        ingredient: Validated ingredient information.
+        db: Database session provided by FastAPI.
+
+    Returns:
+        The updated ingredient.
+
+    Raises:
+        HTTPException:
+            404 if the ingredient does not exist or the vendor
+            does not exist.
+        HTTPException:
+            409 if the update violates a database constraint.
+        HTTPException:
+            500 if an unexpected database error occurs.
+    """
+    try:
+        result = update_ingredient(
+            db=db,
+            ingredient_id=ingredient_id,
+            ingredient_data=ingredient,
+        )
+
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "ingredient_not_found",
+                    "message": (
+                        f"Ingredient with ID {ingredient_id} "
+                        "was not found."
+                    ),
+                },
+            )
+
+        return result
+
+    except VendorNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "vendor_not_found",
+                "message": str(exc),
+            },
+        ) from exc
+
+    except IngredientAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "ingredient_already_exists",
+                "message": str(exc),
+            },
+        ) from exc
+
+    except IngredientConstraintError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "database_constraint_violation",
+                "message": str(exc),
+            },
+        ) from exc
+
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "database_error",
+                "message": (
+                    "An unexpected database error occurred "
+                    "while updating the ingredient."
+                ),
+            },
+        ) from exc
