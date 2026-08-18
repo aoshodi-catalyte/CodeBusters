@@ -3,6 +3,7 @@ from vendor.vendor_model import VendorBase
 from database import Base
 from sqlalchemy import Column, Boolean, String, Integer
 from sqlalchemy.orm import relationship
+# from baked_good.baked_good_schema import BakedGoodSchema
 from pydantic import ConfigDict, field_serializer
 
 # from baked_good.baked_good_schema import BakedGoodSchema
