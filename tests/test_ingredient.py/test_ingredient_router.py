@@ -393,3 +393,63 @@ def test_create_ingredient_empty_name(monkeypatch):
     )
 
     assert response.status_code == 422
+# ============================================================
+# TEST 11
+# READ ALL INGREDIENTS RETURNS 200
+# ============================================================
+
+def test_read_all_ingredients_returns_200(monkeypatch):
+    response = client.get("/ingredients/all")
+
+    assert response.status_code == 200
+
+
+# ============================================================
+# TEST 12
+# READ ALL INGREDIENTS RETURNS EMPTY LIST
+# ============================================================
+
+def test_read_all_ingredients_returns_empty_list(monkeypatch):
+    response = client.get("/ingredients/all")
+
+    assert response.status_code == 200
+    assert response.json()["ingredients"] == []
+
+
+# ============================================================
+# TEST 13
+# READ ALL INGREDIENTS RETURNS INGREDIENTS
+# ============================================================
+
+def test_read_all_ingredients_returns_ingredients(
+    monkeypatch,
+):
+    ingredients = [
+        {
+            "id": 1,
+            "name": "Flour",
+            "active": True,
+            "purchasing_cost": 10.00,
+            "unit_amount": 25.00,
+            "unit_of_measure": VALID_UNIT_OF_MEASURE,
+            "allergens": [
+                {"name": VALID_ALLERGEN}
+            ],
+            "vendor_id": 1,
+        }
+    ]
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "get_all_ingredients",
+        lambda db: ingredients,
+    )
+
+    response = client.get("/ingredients/all")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == (
+        "These are all the ingredients in your inventory!"
+    )
+    assert len(response.json()["ingredients"]) == 1
+    assert response.json()["ingredients"][0]["name"] == "Flour"
