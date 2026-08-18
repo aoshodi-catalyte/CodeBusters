@@ -14,7 +14,6 @@ class EmployeeSchema(Base):
     email = Column(String, unique=True, index=True, nullable=False)
 
     role_id = Column(Integer, ForeignKey("employee_role.id"), nullable=False)
-    
 
     hourly_rate = Column(Float, index=True)
     hire_date = Column(Date, index=True)

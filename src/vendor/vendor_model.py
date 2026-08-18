@@ -1,7 +1,6 @@
 import re
 from pydantic import BaseModel, field_validator, Field
 
-
 PHONE_DIGITS_PATTERN = re.compile(r"^\d{10}$")
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -11,7 +10,7 @@ class VendorBase(BaseModel):
     name: str = Field(min_length=1)
     contact_name: str = Field(min_length=1)
     contact_role: str = Field(min_length=1)
-    email: str 
+    email: str
     phone: str = Field(min_length=10)
 
     @field_validator("email")

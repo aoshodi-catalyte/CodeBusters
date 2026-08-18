@@ -9,16 +9,15 @@ def map_role_enum_to_fk(enum_value: EmployeeRole, db: Session) -> int:
     """
     Map an EmployeeRole enum to its corresponding foreign key ID in the database.
     """
-    role_row = (
-        db.query(EmployeeRoleSchema)
-        .filter_by(role=enum_value.value)
-        .first()
-    )
+    role_row = db.query(EmployeeRoleSchema).filter_by(role=enum_value.value).first()
 
     if not role_row:
-        raise ValueError(f"EmployeeRole '{enum_value.value}' not found in employee_role table")
+        raise ValueError(
+            f"EmployeeRole '{enum_value.value}' not found in employee_role table"
+        )
 
     return role_row.id
+
 
 class EmployeeRepository:
     def __init__(self, db: Session):
@@ -36,7 +35,7 @@ class EmployeeRepository:
             role_id=role_id,
             hourly_rate=employee_data.hourly_rate,
             hire_date=employee_data.hire_date,
-            term_date=employee_data.term_date
+            term_date=employee_data.term_date,
         )
 
         self.db.add(db_employee)

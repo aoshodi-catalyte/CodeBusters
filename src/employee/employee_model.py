@@ -6,17 +6,18 @@ from datetime import date, datetime
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 ConstrainedMoney = condecimal(gt=0, decimal_places=2)
+
+
 class Employee(BaseModel):
     active: bool
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
     email: str
     role: EmployeeRole
-    hourly_rate: ConstrainedMoney # type: ignore 
+    hourly_rate: ConstrainedMoney  # type: ignore
     hire_date: date
     term_date: date | None = None
 
-    
     @field_validator("first_name", "last_name", "email")
     @classmethod
     def validate_not_blank(cls, value):
@@ -30,16 +31,16 @@ class Employee(BaseModel):
     @classmethod
     def validate_email(cls, value: str) -> str:
         """Validate that the email field contains a properly formatted email address.
-    
+
         Uses a regular expression to ensure the email contains one '@' symbol,
         no whitespace, and a valid domain structure.
-    
+
         Args:
             value (str): The email address provided by the user or client.
-    
+
         Returns:
             str: The validated email address.
-    
+
         Raises:
             ValueError: If the email does not match the required pattern.
         """
@@ -60,8 +61,7 @@ class Employee(BaseModel):
         except ValueError:
             valid = [r.value for r in EmployeeRole]
             raise ValueError(f"Invalid role: {role_name}. Valid roles are: {valid}")
-        
-        
+
     @field_validator("hire_date", "term_date", mode="before")
     @classmethod
     def validate_date(cls, value):
@@ -72,7 +72,7 @@ class Employee(BaseModel):
             return datetime.strptime(value, "%m/%d/%Y").date()
         except ValueError:
             raise ValueError("Date must be in MM/DD/YYYY format")
-        
+
     @model_validator(mode="after")
     def check_term_date_rules(self):
         if self.active and self.term_date is not None:

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator
 
+
 class EmployeeResponse(BaseModel):
     id: int
     active: bool
@@ -7,7 +8,7 @@ class EmployeeResponse(BaseModel):
     last_name: str
     email: str
     role: str
-    
+
     @field_validator("role", mode="before")
     @classmethod
     def extract_role_name(cls, value):
