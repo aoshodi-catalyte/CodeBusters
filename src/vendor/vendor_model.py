@@ -58,7 +58,7 @@ class VendorBase(BaseModel):
             value (str): The email address provided by the user or client.
 
         Returns:
-            str: The validated email address.
+            str: The validated email address to all lowercase.
 
         Raises:
             ValueError: If the email does not match the required pattern.
