@@ -37,6 +37,10 @@ class IngredientSchema(Base):
     purchasing_cost = Column(Numeric(10, 2), nullable=False) 
     unit_amount = Column(Numeric(10, 2), nullable=False) 
     unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
+
+    ingredient_recipes = relationship(
+        "DrinkRecipeIngredientSchema", back_populates="ingredient"
+    )
     allergens = relationship("AllergenSchema", secondary=ingredient_allergen, back_populates="ingredients")
     vendor_id = Column(Integer, ForeignKey("vendor.id", ondelete="RESTRICT",), nullable=False)
     vendor = relationship("Vendor", back_populates="ingredients")
