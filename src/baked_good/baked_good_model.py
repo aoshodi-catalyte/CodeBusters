@@ -42,7 +42,7 @@ class BakedGood(BaseModel):
         Returns:
             The validated baked good name.
         """
-        
+
         if not value.strip():
             raise ValueError("Name cannot be empty")
 
@@ -50,7 +50,7 @@ class BakedGood(BaseModel):
             raise ValueError("Name cannot begin or end with a space")
 
         return value
-       
+
     @field_validator("description")
     def validate_description(cls, value):
         """
@@ -89,5 +89,3 @@ class BakedGood(BaseModel):
         if self.retail_price <= self.purchasing_cost:
             raise ValueError("Retail price must be greater than purchasing cost")
         return self
-
-
