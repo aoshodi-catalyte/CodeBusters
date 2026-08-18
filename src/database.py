@@ -4,23 +4,16 @@ Provides the database engine, SQLAlchemy session, base class,
 database initialization function, and database session dependency.
 """
 
-from typing import Generator
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from config import settings
+
 
 DATABASE_URL = settings.DATABASE_URL
 
-engine = create_engine(
-    DATABASE_URL,
-    echo=True
-)
+engine = create_engine(DATABASE_URL, echo=True)
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
@@ -35,18 +28,18 @@ def create_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_db() -> Generator[Session, None, None]:
-    """
-    Provides a database session for FastAPI endpoints.
-
-    The session is automatically closed after the request completes.
-    """
-
-    db = SessionLocal()
-
-Base = declarative_base()
-
 def get_db():
+    """Provide a database session for request scoped dependency injection.
+
+    Creates a new SQLAlchemy session, yields it to the request handler, and
+    ensures the session is properly closed after the request completes.
+
+    Yields:
+        Session: An active SQLAlchemy session used for database operations.
+
+    Raises:
+        SQLAlchemyError: If the session fails to initialize or close properly.
+    """
     db = SessionLocal()
     try:
         yield db
