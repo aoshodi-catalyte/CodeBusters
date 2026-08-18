@@ -6,7 +6,7 @@ from database import get_db
 
 from ingredient.ingredient_exceptions import IngredientAlreadyExistsError, IngredientConstraintError, VendorNotFoundError
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import create_ingredient, get_all_ingredients
+from ingredient.ingredient_repository import create_ingredient, get_all_ingredients, get_ingredient_by_id
 from ingredient.ingredient_model import IngredientOut, IngredientListResponse
 
 
@@ -14,11 +14,6 @@ router = APIRouter(
     prefix="/ingredients",
     tags=["ingredient"],
 )
-
-
-# ==========================================
-# CREATE INGREDIENT
-# ==========================================
 
 
 @router.post("/", response_model=IngredientOut, status_code=status.HTTP_201_CREATED,)
@@ -72,6 +67,7 @@ def create(ingredient: Ingredient,db: Session = Depends(get_db),):
                 "message": ("An unexpected database error occurred while creating the ingredient.")
             },
         ) from exc
+
 @router.get("/all", response_model=IngredientListResponse)
 def read_all_ingredients(db: Session = Depends(get_db)):
     """
@@ -89,3 +85,38 @@ def read_all_ingredients(db: Session = Depends(get_db)):
         "message": "These are all the ingredients in your inventory!",
         "ingredients": ingredients,
     }
+
+@router.get("/{ingredient_id}", response_model=IngredientOut)
+def read_ingredient(
+    ingredient_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve a single ingredient by its ID.
+
+    Args:
+        ingredient_id: ID of the ingredient to retrieve.
+        db: Database session provided by FastAPI.
+
+    Returns:
+        The ingredient matching the specified ID.
+
+    Raises:
+        HTTPException:
+            404 if the ingredient does not exist.
+    """
+    ingredient = get_ingredient_by_id(
+        db=db,
+        ingredient_id=ingredient_id,
+    )
+
+    if ingredient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "ingredient_not_found",
+                "message": f"Ingredient with ID {ingredient_id} was not found.",
+            },
+        )
+
+    return ingredient

@@ -127,3 +127,23 @@ def get_all_ingredients(db: Session):
         A list of all ingredients.
     """
     return db.query(IngredientSchema).all()
+
+def get_ingredient_by_id(
+    db: Session,
+    ingredient_id: int,
+):
+    """
+    Retrieve an ingredient by its ID.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_id: ID of the ingredient to retrieve.
+
+    Returns:
+        The ingredient if it exists, otherwise None.
+    """
+    return (
+        db.query(IngredientSchema)
+        .filter(IngredientSchema.id == ingredient_id)
+        .first()
+    )

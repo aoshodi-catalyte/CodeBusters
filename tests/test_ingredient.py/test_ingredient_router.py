@@ -4,16 +4,20 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 import pytest
-from database import get_db
+from database import Base, get_db
 from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
-
+from vendor.vendor_schema import Vendor
+from ingredient.ingredient_schema import IngredientSchema
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
 )
-
+from ingredient.ingredient_repository import get_ingredient_by_id
 from ingredient.ingredient_router import router
 import ingredient.ingredient_router as ingredient_router
 
@@ -29,6 +33,31 @@ app.include_router(router)
 @pytest.fixture
 def client():
     return TestClient(app)
+
+# ============================================================
+# TEST HELPERS
+# ============================================================
+
+@pytest.fixture
+def client_with_real_db():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    # Import models so they are registered with Base.metadata
+    from vendor.vendor_schema import Vendor
+    from ingredient.ingredient_model import Ingredient
+
+    Base.metadata.create_all(bind=engine)
+
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+    )
+
 
 # ============================================================
 # DATABASE OVERRIDE
@@ -424,3 +453,177 @@ def test_read_all_ingredients_returns_ingredients(
     )
     assert len(response.json()["ingredients"]) == 1
     assert response.json()["ingredients"][0]["name"] == "Flour"
+    # ============================================================
+# TEST 14
+# READ INGREDIENT BY ID SUCCESSFULLY
+# ============================================================
+
+def test_read_ingredient_returns_ingredient(monkeypatch):
+    """
+    Test that a valid ingredient ID returns the ingredient.
+    """
+    ingredient = valid_ingredient_response()
+
+    mock_get = MagicMock(
+        return_value=ingredient
+    )
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "get_ingredient_by_id",
+        mock_get,
+    )
+
+    response = client.get("/ingredients/1")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == 1
+    assert data["name"] == "Flour"
+    assert data["vendor_id"] == 1
+
+    mock_get.assert_called_once()
+
+
+# ============================================================
+# TEST 15
+# INGREDIENT NOT FOUND
+# ============================================================
+
+def test_read_ingredient_not_found(monkeypatch):
+    """
+    Test that a nonexistent ingredient ID returns HTTP 404.
+    """
+    mock_get = MagicMock(
+        return_value=None
+    )
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "get_ingredient_by_id",
+        mock_get,
+    )
+
+    response = client.get("/ingredients/999")
+
+    assert response.status_code == 404
+
+    data = response.json()
+
+    assert data["detail"]["error"] == "ingredient_not_found"
+
+    mock_get.assert_called_once()
+
+
+# ============================================================
+# TEST 16
+# INVALID INGREDIENT ID
+# ============================================================
+
+def test_read_ingredient_invalid_id():
+    """
+    Test that a non-integer ingredient ID returns HTTP 422.
+    """
+    response = client.get("/ingredients/abc")
+
+    assert response.status_code == 422
+
+def test_read_all_ingredients_integration():
+    """
+    Test the complete GET /ingredients/all request flow.
+
+    This test uses a real in-memory SQLite database and exercises
+    the FastAPI router, repository, database query, and response.
+    """
+
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    Base.metadata.create_all(bind=engine)
+
+    TestingSessionLocal = sessionmaker(bind=engine)
+
+    def override_real_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    # Tell FastAPI to use the real test database.
+    app.dependency_overrides[get_db] = override_real_db
+
+    try:
+        # Create a database session for seeding test data.
+        db = TestingSessionLocal()
+
+        # --------------------------------------------
+        # Create vendor
+        # --------------------------------------------
+
+        vendor = Vendor(
+            name="Integration Vendor",
+            contact_name="Test Person",
+            contact_role="Sales",
+            email="integration@test.com",
+            phone="3125559999",
+            active=True,
+        )
+
+        db.add(vendor)
+        db.commit()
+        db.refresh(vendor)
+
+        # --------------------------------------------
+        # Create ingredient
+        # --------------------------------------------
+
+        ingredient = IngredientSchema(
+            active=True,
+            name="Integration Flour",
+            purchasing_cost=10.00,
+            unit_amount=25.00,
+            unit_of_measure="lb",
+            vendor_id=vendor.id,
+        )
+
+        db.add(ingredient)
+        db.commit()
+
+        # --------------------------------------------
+        # Make real HTTP request
+        # --------------------------------------------
+
+        test_client = TestClient(app)
+
+        response = test_client.get("/ingredients/all")
+
+        # --------------------------------------------
+        # Assertions
+        # --------------------------------------------
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["message"] == (
+            "These are all the ingredients in your inventory!"
+        )
+
+        assert len(data["ingredients"]) == 1
+
+        assert data["ingredients"][0]["name"] == "Integration Flour"
+
+    finally:
+        app.dependency_overrides.clear()
+
+        if "db" in locals():
+            db.close()
+
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
