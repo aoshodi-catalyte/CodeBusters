@@ -49,11 +49,17 @@ class Employee(BaseModel):
 
     @field_validator("role")
     @classmethod
-    def validate_role(cls, role_name: str) -> EmployeeRole:
+    def validate_role(cls, role_name):
+        if isinstance(role_name, EmployeeRole):
+            return role_name
+
+        normalized = str(role_name).lower()
+
         try:
-            return EmployeeRole(role_name)
+            return EmployeeRole(normalized)
         except ValueError:
-            raise ValueError(f"Invalid role: {role_name}. Valid roles are: {[rn.value for rn in EmployeeRole]}")
+            valid = [r.value for r in EmployeeRole]
+            raise ValueError(f"Invalid role: {role_name}. Valid roles are: {valid}")
         
         
     @field_validator("hire_date", "term_date", mode="before")
@@ -68,7 +74,17 @@ class Employee(BaseModel):
             raise ValueError("Date must be in MM/DD/YYYY format")
         
     @model_validator(mode="after")
-    def check_term_date_required(self):
+    def check_term_date_rules(self):
+        if self.active and self.term_date is not None:
+            raise ValueError("Active employees cannot have a term_date.")
+
         if not self.active and self.term_date is None:
             raise ValueError("Inactive employees must have a term_date.")
+
+        if self.term_date is not None and self.term_date > date.today():
+            raise ValueError("term_date cannot be in the future.")
+
+        if self.term_date is not None and self.term_date < self.hire_date:
+            raise ValueError("term_date cannot be before hire_date.")
+
         return self

@@ -1,5 +1,5 @@
 from vendor.vendor_model import VendorBase
-from vendor.vendor_schema import Vendor
+from vendor.vendor_schema import Vendor, VendorSchema
 from sqlalchemy.orm import Session
 
 class VendorRepository:
@@ -12,7 +12,7 @@ class VendorRepository:
         """
         self.db = db
 
-    def create_new_vendor(self, vendor_data: VendorBase) -> Vendor:
+    def create_new_vendor(self, vendor_data: VendorBase) -> VendorSchema:
         """Create and persist a new vendor record in the database.
 
         Constructs a new Vendor ORM instance using the provided vendor data,
@@ -44,7 +44,7 @@ class VendorRepository:
 
         return db_vendor
 
-    def get_all_vendors(self) -> list[Vendor]:
+    def get_all_vendors(self) -> list[VendorSchema]:
         """Retrieve all vendor records from the database.
 
         Executes a SELECT query on the Vendor table and returns all results.
@@ -55,7 +55,7 @@ class VendorRepository:
         """
         return self.db.query(Vendor).all()
 
-    def get_vendor_by_id(self, vendor_id: int) -> Vendor | None:
+    def get_vendor_by_id(self, vendor_id: int) -> VendorSchema | None:
         """Retrieve a single vendor record by its unique ID.
 
         Performs a filtered SELECT query using the vendor's primary key. If the
