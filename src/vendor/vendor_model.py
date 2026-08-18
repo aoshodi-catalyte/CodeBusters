@@ -1,7 +1,6 @@
 import re
 from pydantic import BaseModel, field_validator, Field
 
-
 PHONE_DIGITS_PATTERN = re.compile(r"^\d{10}$")
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -11,11 +10,10 @@ class VendorBase(BaseModel):
     name: str = Field(min_length=1)
     contact_name: str = Field(min_length=1)
     contact_role: str = Field(min_length=1)
-    email: str 
+    email: str
     phone: str = Field(min_length=10)
 
-
-    @field_validator("name", "contact_name", "contact_role", "email", "phone", mode="before")
+    @field_validator("name", "contact_name", "contact_role", "phone", mode="before")
     @classmethod
     def strip_and_validate_no_trailing_spaces(cls, value: str) -> str:
         """Normalize and validate string fields by enforcing consistent formatting rules.
@@ -40,13 +38,13 @@ class VendorBase(BaseModel):
         Raises:
             ValueError: If the trimmed value is empty.
         """
-        value = value.strip().lower()
+        value = value.strip()
         if not value:
             raise ValueError("Must not be blank")
 
         return value
-    
-    @field_validator("email")
+
+    @field_validator("email", mode="before")
     @classmethod
     def validate_email(cls, value: str) -> str:
         """Validate that the email field contains a properly formatted email address.
@@ -64,8 +62,13 @@ class VendorBase(BaseModel):
             ValueError: If the email does not match the required pattern.
         """
         value = value.strip().lower()
-        if not EMAIL_PATTERN.match(value):
+
+        if not value:
+            raise ValueError("Must not be blank")
+
+        if not EMAIL_PATTERN.fullmatch(value):
             raise ValueError("email must be a valid email address")
+
         return value
 
     @field_validator("phone")
