@@ -1,7 +1,15 @@
+"""
+Pydantic schemas for ingredient data validation and API responses.
+
+This module defines request and response models for ingredients, including
+allergen handling, unit‑of‑measure validation, decimal precision checks, and
+normalization of user‑supplied values. These schemas ensure that ingredient
+data entering or leaving the API is fully validated, structured, and ready
+for use by repository and service layers.
+"""
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 from constants.ingredient_types import CafeAllergen, UnitOfMeasure
-
 
 class AllergenOut(BaseModel):
     """Response schema representing an ingredient allergen."""

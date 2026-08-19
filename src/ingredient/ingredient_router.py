@@ -1,3 +1,12 @@
+"""
+FastAPI router for ingredient management endpoints.
+
+This module exposes API routes for creating, retrieving, and listing
+ingredients. It coordinates request validation, repository operations,
+and domain‑specific exception handling to ensure consistent and meaningful
+HTTP responses for ingredient‑related actions.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session

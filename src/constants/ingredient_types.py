@@ -6,18 +6,18 @@ from enum import Enum
 class UnitOfMeasure(str, Enum):
     """Supported units of measure for ingredients."""
 
-    grams = "g"
-    kilograms = "kg"
-    ounces = "oz"
-    pounds = "lb"
-    fluid_ounces = "fl_oz"
-    milliliters = "ml"
-    liters = "l"
-    gallons = "gal"
-    pumps = "pump"
-    scoops = "scoop"
-    shots = "shot"
-    dashes = "dash"
+    GRAMS = "g"
+    KILOGRAMS = "kg"
+    OUNCES = "oz"
+    POUNDS = "lb"
+    FLUID_OUNCES = "fl_oz"
+    MILLILITERS = "ml"
+    LITERS = "l"
+    GALLONS = "gal"
+    PUMPS = "pump"
+    SCOOPS = "scoop"
+    SHOTS = "shot"
+    DASHES = "dash"
 
     @classmethod
     def from_string(cls, value: str) -> "UnitOfMeasure":
@@ -41,22 +41,22 @@ class UnitOfMeasure(str, Enum):
         )
 
         aliases = {
-            cls.grams: ["g", "gram", "grams"],
-            cls.kilograms: [
+            cls.GRAMS: ["g", "gram", "grams"],
+            cls.KILOGRAMS: [
                 "kg",
                 "kilo",
                 "kilos",
                 "kilogram",
                 "kilograms",
             ],
-            cls.ounces: ["oz", "ounce", "ounces"],
-            cls.pounds: [
+            cls.OUNCES: ["oz", "ounce", "ounces"],
+            cls.POUNDS: [
                 "lb",
                 "lbs",
                 "pound",
                 "pounds",
             ],
-            cls.fluid_ounces: [
+            cls.FLUID_OUNCES: [
                 "fl oz",
                 "floz",
                 "fluid ounce",
@@ -64,29 +64,29 @@ class UnitOfMeasure(str, Enum):
                 "fluid_ounce",
                 "fluid_ounces",
             ],
-            cls.milliliters: [
+            cls.MILLILITERS: [
                 "ml",
                 "milliliter",
                 "milliliters",
                 "millilitre",
                 "millilitres",
             ],
-            cls.liters: [
+            cls.LITERS: [
                 "l",
                 "liter",
                 "liters",
                 "litre",
                 "litres",
             ],
-            cls.gallons: [
+            cls.GALLONS: [
                 "gal",
                 "gallon",
                 "gallons",
             ],
-            cls.pumps: ["pump", "pumps"],
-            cls.scoops: ["scoop", "scoops"],
-            cls.shots: ["shot", "shots"],
-            cls.dashes: ["dash", "dashes"],
+            cls.PUMPS: ["pump", "pumps"],
+            cls.SCOOPS: ["scoop", "scoops"],
+            cls.SHOTS: ["shot", "shots"],
+            cls.DASHES: ["dash", "dashes"],
         }
 
         for unit, unit_aliases in aliases.items():
