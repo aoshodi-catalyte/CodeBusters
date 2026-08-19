@@ -1,4 +1,9 @@
-# src/utils/validators.py
+"""
+Utility functions for numeric validation and rounding.
+
+Provides helpers such as `round_float`, which performs precise rounding of
+float values using Decimal to avoid binary floating‑point inaccuracies.
+"""
 
 from decimal import Decimal, ROUND_HALF_UP
 

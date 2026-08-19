@@ -1,11 +1,18 @@
+"""
+FastAPI application entry point.
+
+Initializes the API, seeds required database values, and registers all routers.
+"""
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from constants.employee_roles import EmployeeRole
 from employee.employee_role_schema import EmployeeRoleSchema
 from database import SessionLocal, create_db
 
 from constants.drink_types import DrinkType
-from database import SessionLocal
+
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from vendor.vendor_router import router as vendor_router
@@ -16,7 +23,12 @@ from employee.employee_router import router as employee_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
+    """
+    Application startup and shutdown lifecycle handler.
+
+    Seeds initial drink type data and ensures database tables exist.
+    """
     # --- Startup logic ---
     db = SessionLocal()
     create_db()  # Ensure tables are created before seeding data
