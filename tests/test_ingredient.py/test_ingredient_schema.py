@@ -1,4 +1,4 @@
-"""Tests for the SQLAlchemy ingredient schema."""
+"""Tests for the SQLAlchemy ingredient database schema."""
 
 from decimal import Decimal
 
@@ -7,8 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from constants.INGREDIENT_TYPES import UnitOfMeasure
 from database import Base
+from constants.INGREDIENT_TYPES import UnitOfMeasure
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from vendor.vendor_schema import Vendor
 
@@ -17,37 +17,37 @@ from vendor.vendor_schema import Vendor
 # TEST DATABASE
 # ============================================================
 
-engine = create_engine(
+ENGINE = create_engine(
     "sqlite:///:memory:",
     connect_args={"check_same_thread": False},
 )
 
-TESTING_SESSION_LOCAL = sessionmaker(
+TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine,
+    bind=ENGINE,
 )
 
 
 @pytest.fixture
-def session():
+def db_session():
     """Create a fresh database session for each test."""
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=ENGINE)
 
-    database_session = TESTING_SESSION_LOCAL()
+    session = TestingSessionLocal()
 
     try:
-        yield database_session
+        yield session
     finally:
-        database_session.close()
-        Base.metadata.drop_all(bind=engine)
+        session.close()
+        Base.metadata.drop_all(bind=ENGINE)
 
 
 # ============================================================
 # TEST DATA HELPERS
 # ============================================================
 
-def create_vendor(session, vendor_id=1):
+def create_vendor(db_session, vendor_id=1):
     """Create a vendor that can be used by an ingredient."""
     vendor = Vendor(
         id=vendor_id,
@@ -59,15 +59,15 @@ def create_vendor(session, vendor_id=1):
         phone="3125551234",
     )
 
-    session.add(vendor)
-    session.commit()
-    session.refresh(vendor)
+    db_session.add(vendor)
+    db_session.commit()
+    db_session.refresh(vendor)
 
     return vendor
 
 
 def create_ingredient(
-    session,
+    db_session,
     vendor_id=1,
     name="Flour",
     purchasing_cost=Decimal("10.00"),
@@ -83,9 +83,9 @@ def create_ingredient(
         vendor_id=vendor_id,
     )
 
-    session.add(ingredient)
-    session.commit()
-    session.refresh(ingredient)
+    db_session.add(ingredient)
+    db_session.commit()
+    db_session.refresh(ingredient)
 
     return ingredient
 
@@ -94,11 +94,11 @@ def create_ingredient(
 # 1. INGREDIENT CAN BE CREATED
 # ============================================================
 
-def test_create_ingredient(session):
-    """Test that a valid ingredient can be stored in the database."""
-    create_vendor(session)
+def test_create_ingredient(db_session):
+    """Test that a valid ingredient can be stored."""
+    create_vendor(db_session)
 
-    ingredient = create_ingredient(session)
+    ingredient = create_ingredient(db_session)
 
     assert ingredient.id is not None
     assert ingredient.name == "Flour"
@@ -112,9 +112,9 @@ def test_create_ingredient(session):
 # 2. ACTIVE DEFAULTS TO TRUE
 # ============================================================
 
-def test_ingredient_active_defaults_to_true(session):
-    """Test that active defaults to True when no value is provided."""
-    create_vendor(session)
+def test_ingredient_active_defaults_to_true(db_session):
+    """Test that active defaults to True."""
+    create_vendor(db_session)
 
     ingredient = IngredientSchema(
         name="Sugar",
@@ -124,9 +124,9 @@ def test_ingredient_active_defaults_to_true(session):
         vendor_id=1,
     )
 
-    session.add(ingredient)
-    session.commit()
-    session.refresh(ingredient)
+    db_session.add(ingredient)
+    db_session.commit()
+    db_session.refresh(ingredient)
 
     assert ingredient.active is True
 
@@ -135,9 +135,9 @@ def test_ingredient_active_defaults_to_true(session):
 # 3. INGREDIENT NAME CANNOT BE NULL
 # ============================================================
 
-def test_ingredient_name_cannot_be_null(session):
+def test_ingredient_name_cannot_be_null(db_session):
     """Test that the ingredient name cannot be NULL."""
-    create_vendor(session)
+    create_vendor(db_session)
 
     ingredient = IngredientSchema(
         name=None,
@@ -147,21 +147,21 @@ def test_ingredient_name_cannot_be_null(session):
         vendor_id=1,
     )
 
-    session.add(ingredient)
+    db_session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        session.commit()
+        db_session.commit()
 
-    session.rollback()
+    db_session.rollback()
 
 
 # ============================================================
 # 4. INGREDIENT NAME CANNOT BE BLANK
 # ============================================================
 
-def test_ingredient_name_cannot_be_blank(session):
-    """Test that blank ingredient names violate the database constraint."""
-    create_vendor(session)
+def test_ingredient_name_cannot_be_blank(db_session):
+    """Test that blank ingredient names are rejected."""
+    create_vendor(db_session)
 
     ingredient = IngredientSchema(
         name="   ",
@@ -171,21 +171,21 @@ def test_ingredient_name_cannot_be_blank(session):
         vendor_id=1,
     )
 
-    session.add(ingredient)
+    db_session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        session.commit()
+        db_session.commit()
 
-    session.rollback()
+    db_session.rollback()
 
 
 # ============================================================
 # 5. PURCHASING COST CANNOT BE NEGATIVE
 # ============================================================
 
-def test_purchasing_cost_cannot_be_negative(session):
+def test_purchasing_cost_cannot_be_negative(db_session):
     """Test that purchasing_cost cannot be less than zero."""
-    create_vendor(session)
+    create_vendor(db_session)
 
     ingredient = IngredientSchema(
         name="Butter",
@@ -195,21 +195,21 @@ def test_purchasing_cost_cannot_be_negative(session):
         vendor_id=1,
     )
 
-    session.add(ingredient)
+    db_session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        session.commit()
+        db_session.commit()
 
-    session.rollback()
+    db_session.rollback()
 
 
 # ============================================================
 # 6. UNIT AMOUNT MUST BE GREATER THAN ZERO
 # ============================================================
 
-def test_unit_amount_must_be_positive(session):
+def test_unit_amount_must_be_positive(db_session):
     """Test that unit_amount must be greater than zero."""
-    create_vendor(session)
+    create_vendor(db_session)
 
     ingredient = IngredientSchema(
         name="Milk",
@@ -219,24 +219,24 @@ def test_unit_amount_must_be_positive(session):
         vendor_id=1,
     )
 
-    session.add(ingredient)
+    db_session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        session.commit()
+        db_session.commit()
 
-    session.rollback()
+    db_session.rollback()
 
 
 # ============================================================
 # 7. INGREDIENT NAME MUST BE UNIQUE
 # ============================================================
 
-def test_ingredient_name_must_be_unique(session):
+def test_ingredient_name_must_be_unique(db_session):
     """Test that two ingredients cannot have the same name."""
-    create_vendor(session)
+    create_vendor(db_session)
 
     create_ingredient(
-        session,
+        db_session,
         name="Flour",
     )
 
@@ -249,19 +249,19 @@ def test_ingredient_name_must_be_unique(session):
         vendor_id=1,
     )
 
-    session.add(duplicate)
+    db_session.add(duplicate)
 
     with pytest.raises(IntegrityError):
-        session.commit()
+        db_session.commit()
 
-    session.rollback()
+    db_session.rollback()
 
 
 # ============================================================
 # 8. INGREDIENT MUST HAVE A VALID VENDOR
 # ============================================================
 
-def test_ingredient_vendor_id_is_required(session):
+def test_ingredient_vendor_id_is_required(db_session):
     """Test that vendor_id cannot be NULL."""
     ingredient = IngredientSchema(
         active=True,
@@ -272,24 +272,24 @@ def test_ingredient_vendor_id_is_required(session):
         vendor_id=None,
     )
 
-    session.add(ingredient)
+    db_session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        session.commit()
+        db_session.commit()
 
-    session.rollback()
+    db_session.rollback()
 
 
 # ============================================================
 # 9. INGREDIENT AND ALLERGEN MANY-TO-MANY RELATIONSHIP
 # ============================================================
 
-def test_ingredient_can_have_multiple_allergens(session):
+def test_ingredient_can_have_multiple_allergens(db_session):
     """Test that an ingredient can have multiple allergens."""
-    create_vendor(session)
+    create_vendor(db_session)
 
     ingredient = create_ingredient(
-        session,
+        db_session,
         name="Peanut Flour",
     )
 
@@ -299,8 +299,8 @@ def test_ingredient_can_have_multiple_allergens(session):
     ingredient.allergens.append(peanut)
     ingredient.allergens.append(gluten)
 
-    session.commit()
-    session.refresh(ingredient)
+    db_session.commit()
+    db_session.refresh(ingredient)
 
     assert len(ingredient.allergens) == 2
 
@@ -319,17 +319,17 @@ def test_ingredient_can_have_multiple_allergens(session):
 # 10. VENDOR AND INGREDIENT RELATIONSHIP
 # ============================================================
 
-def test_vendor_has_ingredients_relationship(session):
+def test_vendor_has_ingredients_relationship(db_session):
     """Test that a vendor can access its associated ingredients."""
-    vendor = create_vendor(session)
+    vendor = create_vendor(db_session)
 
     ingredient = create_ingredient(
-        session,
+        db_session,
         vendor_id=vendor.id,
         name="Flour",
     )
 
-    session.refresh(vendor)
+    db_session.refresh(vendor)
 
     assert len(vendor.ingredients) == 1
     assert vendor.ingredients[0].id == ingredient.id
