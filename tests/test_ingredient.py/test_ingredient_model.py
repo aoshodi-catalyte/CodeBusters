@@ -1,21 +1,27 @@
+"""Tests for ingredient Pydantic models."""
+
 import pytest
 from pydantic import ValidationError
-from ingredient.ingredient_model import Allergen, Ingredient
+
 from constants.INGREDIENT_TYPES import UnitOfMeasure
+from ingredient.ingredient_model import Allergen, Ingredient
 
 
 def test_allergen():
+    """Test that an allergen can be created successfully."""
     allergen = Allergen(name="milk")
 
     assert allergen.name == "milk"
 
 
 def test_allergen_name_cannot_be_empty():
+    """Test that an allergen name cannot be empty."""
     with pytest.raises(ValidationError):
         Allergen(name="")
 
 
 def test_ingredient():
+    """Test that an ingredient can be created successfully."""
     ingredient = Ingredient(
         active=True,
         name="Whole Milk",
@@ -36,8 +42,8 @@ def test_ingredient():
 
 
 def test_ingredient_active_defaults_to_true():
+    """Test that active defaults to True."""
     ingredient = Ingredient(
-        active=True,
         name="Whole Milk",
         purchasing_cost=4.50,
         unit_amount=1.00,
@@ -49,6 +55,7 @@ def test_ingredient_active_defaults_to_true():
 
 
 def test_ingredient_allergens_default_to_empty_list():
+    """Test that allergens default to an empty list."""
     ingredient = Ingredient(
         name="Whole Milk",
         purchasing_cost=4.50,
@@ -61,6 +68,7 @@ def test_ingredient_allergens_default_to_empty_list():
 
 
 def test_purchasing_cost_cannot_be_negative():
+    """Test that purchasing cost cannot be negative."""
     with pytest.raises(ValidationError):
         Ingredient(
             name="Whole Milk",
@@ -72,6 +80,7 @@ def test_purchasing_cost_cannot_be_negative():
 
 
 def test_unit_amount_must_be_greater_than_zero():
+    """Test that unit amount must be greater than zero."""
     with pytest.raises(ValidationError):
         Ingredient(
             name="Whole Milk",
@@ -83,6 +92,7 @@ def test_unit_amount_must_be_greater_than_zero():
 
 
 def test_unit_of_measure():
+    """Test that a valid unit of measure is accepted."""
     ingredient = Ingredient(
         name="Whole Milk",
         purchasing_cost=4.50,
@@ -93,7 +103,9 @@ def test_unit_of_measure():
 
     assert ingredient.unit_of_measure == UnitOfMeasure.liters
 
+
 def test_create_ingredient_with_empty_allergens():
+    """Test that an ingredient can have no allergens."""
     ingredient = Ingredient(
         name="Flour",
         purchasing_cost=4.50,
@@ -104,11 +116,10 @@ def test_create_ingredient_with_empty_allergens():
     )
 
     assert ingredient.allergens == []
+
+
 def test_invalid_allergen_raises_validation_error():
-    """
-    Test that an invalid allergen value raises a Pydantic
-    validation error.
-    """
+    """Test that an invalid allergen raises a validation error."""
     with pytest.raises(ValidationError):
         Ingredient(
             name="Mystery Item",
@@ -118,11 +129,10 @@ def test_invalid_allergen_raises_validation_error():
             allergens=["Kryptonite"],
             vendor_id=1,
         )
+
+
 def test_invalid_unit_of_measure_raises_validation_error():
-    """
-    Test that an invalid unit of measure raises a Pydantic
-    validation error.
-    """
+    """Test that an invalid unit raises a validation error."""
     with pytest.raises(ValidationError):
         Ingredient(
             name="Mystery Item",
