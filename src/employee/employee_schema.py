@@ -1,3 +1,8 @@
+"""
+SQLAlchemy ORM model representing the employee table and its relationship
+to employee roles.
+"""
+
 from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 

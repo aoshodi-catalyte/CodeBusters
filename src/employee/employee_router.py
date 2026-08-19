@@ -1,3 +1,8 @@
+"""
+FastAPI router for employee-related API endpoints, including creation of new
+employee records and validation of repository-level errors.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -48,12 +53,14 @@ async def post_new_employee(employee_data: Employee, db: Session = Depends(get_d
         new_employee = repo.create_new_employee(employee_data)
         return new_employee
 
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Employee with this email already exists.",
-        )
+        ) from exc
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
