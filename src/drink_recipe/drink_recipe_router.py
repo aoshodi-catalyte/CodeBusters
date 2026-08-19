@@ -99,7 +99,7 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
 
     except ValueError as e:
         db.rollback()
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
     except IntegrityError as e:
         db.rollback()

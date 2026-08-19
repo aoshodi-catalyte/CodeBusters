@@ -88,13 +88,13 @@ def create_customer(
             )
         )
 
-    except Exception:
+    except Exception as exc:
         db.rollback()
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while creating the customer."
-        )
+        ) from exc
 
 
 @router.get(
@@ -125,11 +125,11 @@ def get_customers(
         repo = CustomerRepository(db)
         customers = repo.get_customers()
 
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving customers."
-        )
+        ) from exc
 
     if not customers:
         raise HTTPException(

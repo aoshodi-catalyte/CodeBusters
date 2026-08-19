@@ -1,3 +1,11 @@
+"""
+SQLAlchemy ORM model for customer records.
+
+Defines the database table structure, column types, defaults, and constraints
+used to persist customer information such as contact details, activity status,
+loyalty points, and creation timestamps.
+"""
+
 from datetime import datetime, UTC
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from database import Base
