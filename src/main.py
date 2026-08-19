@@ -65,7 +65,7 @@ def root():
     """
     Health check endpoint.
     """
-    return {"message": "Customer API is running"}
+    return {"message": "API is running"}
 
 
 app.include_router(drink_recipe_router)
