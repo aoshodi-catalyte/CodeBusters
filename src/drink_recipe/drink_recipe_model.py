@@ -7,7 +7,7 @@ from various formats (string, int) to the DrinkType enum.
 """
 
 from pydantic import BaseModel, Field, field_validator
-from constants.drink_types import DrinkType
+from constants.DRINK_TYPES import DrinkType
 from utils.validators import round_float
 
 
@@ -39,6 +39,7 @@ class RecipeIngredient(BaseModel):
     id: int
     quantity_used: float = Field(gt=0)
     unit_of_measure_used: str = Field(min_length=1, max_length=50)
+
 
 class DrinkRecipe(BaseModel):
     """
@@ -75,12 +76,15 @@ class DrinkRecipe(BaseModel):
     """
 
     name: str = Field(min_length=1, description="The name of the drink recipe")
-    description: str = Field(min_length=1, description="A detailed description of the drink")
-    ingredients: list[RecipeIngredient] = Field(
-        default_factory=list,
-        description="List of ingredients used in this recipe"
+    description: str = Field(
+        min_length=1, description="A detailed description of the drink"
     )
-    active: bool = Field(..., description="Whether this recipe is currently active/in use")
+    ingredients: list[RecipeIngredient] = Field(
+        default_factory=list, description="List of ingredients used in this recipe"
+    )
+    active: bool = Field(
+        ..., description="Whether this recipe is currently active/in use"
+    )
     type: DrinkType = Field(..., description="The type/category of the drink")
     markup_percentage: float = Field(ge=0)
 
@@ -109,7 +113,6 @@ class DrinkRecipe(BaseModel):
                 f"Invalid drink type: {value}. "
                 f"Valid types are: {[dt.value for dt in DrinkType]}"
             )
-
 
     @field_validator("name", "description")
     @classmethod

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from constants.EMPLOYEE_ROLES import EmployeeRole
+from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema

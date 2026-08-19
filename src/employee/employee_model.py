@@ -1,6 +1,6 @@
 import re
 from pydantic import BaseModel, Field, condecimal, field_validator, model_validator
-from constants.EMPLOYEE_ROLES import EmployeeRole
+from constants.employee_roles import EmployeeRole
 from datetime import date, datetime
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")

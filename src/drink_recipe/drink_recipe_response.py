@@ -7,7 +7,7 @@ and include all relevant recipe information and associated ingredient details.
 """
 
 from pydantic import BaseModel
-from constants.drink_types import DrinkType
+from constants.DRINK_TYPES import DrinkType
 
 
 class IngredientRef(BaseModel):
@@ -93,6 +93,6 @@ class DrinkRecipeResponse(BaseModel):
     active: bool
     type: DrinkType
     ingredients: list[IngredientRef]
-    production_cost: float 
-    markup_percentage: float 
+    production_cost: float
+    markup_percentage: float
     sale_price: float
