@@ -1,3 +1,8 @@
+"""
+Pydantic base model for vendor input validation, including normalization and
+strict formatting rules for names, email, and phone fields.
+"""
+
 import re
 from pydantic import BaseModel, field_validator, Field
 
@@ -6,6 +11,11 @@ EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class VendorBase(BaseModel):
+    """
+    Defines the validated structure of vendor input data used for creation and
+    update operations throughout the application.
+    """
+
     active: bool
     name: str = Field(min_length=1)
     contact_name: str = Field(min_length=1)

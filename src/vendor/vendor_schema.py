@@ -1,13 +1,24 @@
-# from ingredient.ingredient_schema import IngredientSchema
-from vendor.vendor_model import VendorBase
-from database import Base
+"""
+SQLAlchemy and Pydantic schemas for vendor records, including ORM mapping and
+API response serialization helpers.
+"""
+
 from sqlalchemy import Column, Boolean, String, Integer
 from sqlalchemy.orm import relationship
-from baked_good.baked_good_schema import BakedGoodSchema
 from pydantic import ConfigDict, field_serializer
+
+from vendor.vendor_model import VendorBase
+from database import Base
+from baked_good.baked_good_schema import BakedGoodSchema
 
 
 class VendorSchema(VendorBase):
+    """
+    Pydantic response schema for vendor records.
+
+    Extends VendorBase with database-generated fields and serialization helpers.
+    """
+
     model_config = ConfigDict(from_attributes=True)
     id: int
 
@@ -28,6 +39,12 @@ class VendorSchema(VendorBase):
 
 
 class Vendor(Base):
+    """
+    SQLAlchemy ORM model representing a vendor record in the database.
+
+    Defines table structure and relationships to ingredients and baked goods.
+    """
+
     __tablename__ = "vendor"
 
     id = Column(Integer, primary_key=True, index=True, unique=True)

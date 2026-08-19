@@ -1,3 +1,8 @@
+"""
+FastAPI router for vendor-related API endpoints, including creation of new
+vendor records and handling of database integrity errors.
+"""
+
 from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -30,9 +35,9 @@ async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)
     try:
         new_vendor = repo.create_new_vendor(vendor_data)
         return new_vendor
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Vendor with this name or email already exists.",
-        )
+        ) from exc
