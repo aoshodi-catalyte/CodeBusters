@@ -24,11 +24,6 @@ Responsibilities:
 from sqlalchemy.orm import Session
 
 from ingredient.ingredient_schema import IngredientSchema
-<<<<<<< HEAD
-from utils.validators import round_float
-from constants.DRINK_TYPES import DrinkType
-=======
->>>>>>> 58318311b7115ca3a16d0451bb11fcf9bb6e0fcf
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema

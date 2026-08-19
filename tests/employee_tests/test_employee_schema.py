@@ -48,8 +48,8 @@ def test_nullable_constraints():
     assert columns["email"].nullable is False
     assert columns["role_id"].nullable is False
 
-    assert columns["hourly_rate"].nullable is True
-    assert columns["hire_date"].nullable is True
+    assert columns["hourly_rate"].nullable is False
+    assert columns["hire_date"].nullable is False
     assert columns["term_date"].nullable is True
 
 

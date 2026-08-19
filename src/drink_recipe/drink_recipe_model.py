@@ -7,7 +7,7 @@ from various formats (string, int) to the DrinkType enum.
 """
 
 from pydantic import BaseModel, Field, field_validator
-from constants.DRINK_TYPES import DrinkType
+from constants.drink_types import DrinkType
 from utils.validators import round_float
 
 
