@@ -1,10 +1,19 @@
+"""
+FastAPI router for baked good endpoints.
+
+This module defines API endpoints for retrieving and creating baked goods.
+It uses the BakedGoodRepository to interact with the database and
+provides validated request and response models for the baked good data.
+"""
+from typing import List
+
 from fastapi import Depends, status, APIRouter, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from typing import List
+
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_response_model import BakedGoodResponseModel
+from database import get_db
 
 router = APIRouter(
     prefix="/baked_goods", 
@@ -60,3 +69,4 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
         )
 
     return created_baked_good
+
