@@ -1,7 +1,16 @@
+"""
+Defines the EmployeeRole enum used throughout the application for role validation
+and normalization.
+"""
+
 from enum import Enum
 
 
 class EmployeeRole(str, Enum):
+    """
+    Enumeration of valid employee roles within the system.
+    """
+
     EMPLOYEE = "employee"
     MANAGER = "manager"
     ADMIN = "admin"
