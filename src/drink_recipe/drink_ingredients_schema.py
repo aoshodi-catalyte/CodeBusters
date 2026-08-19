@@ -17,8 +17,6 @@ from sqlalchemy import Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 from database import Base
 
-# from ingredient.ingredient_schema import IngredientSchema
-
 
 class DrinkRecipeIngredientSchema(Base):
     """
@@ -64,6 +62,3 @@ class DrinkRecipeIngredientSchema(Base):
 
     drink_recipe = relationship("DrinkRecipeSchema", back_populates="recipe_ingredients")
     ingredient = relationship("IngredientSchema", back_populates="ingredient_recipes")
-
-
-from drink_recipe import drink_recipe_schema  # noqa: F401
