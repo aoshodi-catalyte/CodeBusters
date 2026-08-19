@@ -27,7 +27,6 @@ def create_db() -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-
 def get_db():
     """Provide a database session for request scoped dependency injection.
 
