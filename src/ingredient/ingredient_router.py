@@ -1,3 +1,5 @@
+"""FastAPI routes for ingredient operations."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -34,8 +36,21 @@ router = APIRouter(
 def create(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
-):
-    """Create a new ingredient."""
+) -> IngredientOut:
+    """Create a new ingredient.
+
+    Args:
+        ingredient: Validated ingredient data.
+        db: Database session provided by FastAPI.
+
+    Returns:
+        The newly created ingredient.
+
+    Raises:
+        HTTPException: If the vendor does not exist, the ingredient
+            already exists, a database constraint is violated, or
+            an unexpected database error occurs.
+    """
     try:
         return create_ingredient(
             db=db,
@@ -80,6 +95,12 @@ def create(
                 ),
             },
         ) from exc
+
+
+@router.get(
+    "/all",
+    response_model=IngredientListResponse,
+)
 def read_all_ingredients(
     db: Session = Depends(get_db),
 ) -> IngredientListResponse:
@@ -117,8 +138,7 @@ def read_ingredient(
         The ingredient matching the specified ID.
 
     Raises:
-        HTTPException:
-            404 if the ingredient does not exist.
+        HTTPException: If the ingredient does not exist.
     """
     ingredient = get_ingredient_by_id(
         db=db,

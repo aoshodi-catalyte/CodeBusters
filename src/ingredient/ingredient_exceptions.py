@@ -1,3 +1,6 @@
+"""Custom exceptions for ingredient operations."""
+
+
 class VendorNotFoundError(Exception):
     """Raised when the specified vendor does not exist."""
 

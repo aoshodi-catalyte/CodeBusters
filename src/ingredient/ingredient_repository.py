@@ -1,3 +1,5 @@
+"""Repository functions for managing ingredients."""
+
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -96,13 +98,13 @@ def create_ingredient(
                 db=db,
                 allergen_name=allergen_name,
             )
-
             ingredient.allergens.append(allergen)
 
         db.commit()
         db.refresh(ingredient)
 
         return ingredient
+
     except VendorNotFoundError:
         db.rollback()
         raise
@@ -118,12 +120,14 @@ def create_ingredient(
 
         error_message = str(exc.orig).lower()
 
-        if (
+        is_duplicate = (
             constraint == "uq_ingredient_name"
             or "unique constraint failed: ingredient.name"
             in error_message
             or "uq_ingredient_name" in error_message
-        ):
+        )
+
+        if is_duplicate:
             raise IngredientAlreadyExistsError(
                 ingredient_data.name
             ) from exc

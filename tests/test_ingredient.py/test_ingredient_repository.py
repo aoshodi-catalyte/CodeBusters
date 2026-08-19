@@ -18,10 +18,7 @@ from ingredient.ingredient_repository import (
     get_ingredient_by_id,
     get_or_create_allergen,
 )
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
-)
+from ingredient.ingredient_schema import AllergenSchema
 from vendor.vendor_schema import Vendor
 
 
@@ -243,7 +240,7 @@ def test_duplicate_ingredient_raises_error(db):
 
 
 def test_invalid_purchasing_cost_raises_constraint_error(db):
-    """Test that a negative purchasing cost violates the database constraint."""
+    """Test that a negative purchasing cost violates the constraint."""
     vendor = Vendor(
         name="Constraint Test Vendor",
         contact_name="Test Person",
@@ -288,23 +285,17 @@ def test_unexpected_sqlalchemy_error_is_reraised():
         )
 
     db.rollback.assert_called_once()
-    # ============================================================
-# TEST 11
-# RETURN EMPTY LIST
-# ============================================================
+
 
 def test_get_all_ingredients_returns_empty_list(db):
+    """Test that an empty database returns an empty list."""
     result = get_all_ingredients(db)
 
     assert result == []
 
 
-# ============================================================
-# TEST 12
-# RETURN ONE INGREDIENT
-# ============================================================
-
 def test_get_all_ingredients_returns_one_ingredient(db):
+    """Test that one ingredient is returned."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="Test Person",
@@ -332,12 +323,8 @@ def test_get_all_ingredients_returns_one_ingredient(db):
     assert result[0].name == "Flour"
 
 
-# ============================================================
-# TEST 13
-# RETURN MULTIPLE INGREDIENTS
-# ============================================================
-
 def test_get_all_ingredients_returns_multiple_ingredients(db):
+    """Test that multiple ingredients are returned."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="Test Person",
@@ -370,4 +357,7 @@ def test_get_all_ingredients_returns_multiple_ingredients(db):
     result = get_all_ingredients(db)
 
     assert len(result) == 2
-    assert {i.name for i in result} == {"Flour", "Sugar"}
+    assert {ingredient.name for ingredient in result} == {
+        "Flour",
+        "Sugar",
+    }

@@ -1,3 +1,5 @@
+"""Pydantic schemas for ingredient validation and responses."""
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from constants.INGREDIENT_TYPES import CafeAllergen, UnitOfMeasure
@@ -59,20 +61,26 @@ class Ingredient(BaseModel):
     """
 
     active: bool = True
+
     name: str = Field(
         min_length=1,
         max_length=255,
     )
+
     purchasing_cost: float = Field(
         ge=0,
     )
+
     unit_amount: float = Field(
         gt=0,
     )
+
     unit_of_measure: UnitOfMeasure
-    allergens: list[str] = Field(
+
+    allergens: list[CafeAllergen] = Field(
         default_factory=list,
     )
+
     vendor_id: int = Field(
         gt=0,
     )
@@ -133,7 +141,10 @@ class Ingredient(BaseModel):
 
     @field_validator("purchasing_cost", "unit_amount")
     @classmethod
-    def validate_two_decimal_places(cls, value: float) -> float:
+    def validate_two_decimal_places(
+        cls,
+        value: float,
+    ) -> float:
         """Validate that numeric values contain at most two decimals.
 
         Args:
@@ -154,7 +165,10 @@ class Ingredient(BaseModel):
 
     @field_validator("unit_of_measure", mode="before")
     @classmethod
-    def validate_unit_of_measure(cls, value) -> UnitOfMeasure:
+    def validate_unit_of_measure(
+        cls,
+        value,
+    ) -> UnitOfMeasure:
         """Convert the supplied value into a UnitOfMeasure.
 
         Args:

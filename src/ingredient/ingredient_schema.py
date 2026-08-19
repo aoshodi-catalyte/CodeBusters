@@ -1,3 +1,5 @@
+"""SQLAlchemy models for ingredients and allergens."""
+
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -15,10 +17,6 @@ from sqlalchemy.orm import relationship
 from constants.INGREDIENT_TYPES import UnitOfMeasure
 from database import Base
 
-
-# ============================================================
-# ASSOCIATION TABLE
-# ============================================================
 
 ingredient_allergen = Table(
     "ingredient_allergen",
@@ -42,18 +40,10 @@ ingredient_allergen = Table(
 )
 
 
-# ============================================================
-# ALLERGEN MODEL
-# ============================================================
-
 class AllergenSchema(Base):
     """SQLAlchemy model representing an allergen."""
 
     __tablename__ = "allergen"
-    __table_args__ = (
-        CheckConstraint("length(trim(name)) > 0", name="ck_allergen_name_not_blank"),
-        UniqueConstraint("name", name="uq_allergen_name",),
-    )
 
     __table_args__ = (
         CheckConstraint(
@@ -83,10 +73,6 @@ class AllergenSchema(Base):
         back_populates="allergens",
     )
 
-
-# ============================================================
-# INGREDIENT MODEL
-# ============================================================
 
 class IngredientSchema(Base):
     """SQLAlchemy model representing an ingredient."""
