@@ -1,7 +1,15 @@
+"""
+Pydantic model for validating promotion data.
+
+This module defines the Promotion model, which validates promotion
+information before it is stored in the database. It ensures that
+promo codes, discount percentages, and promotion date/time ranges
+meet the application's validation requirements.
+"""
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, model_validator
 from zoneinfo import ZoneInfo
 
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class Promotion(BaseModel):
     """
@@ -85,7 +93,7 @@ class Promotion(BaseModel):
 
     @field_validator("start_datetime", "end_datetime", mode="before")
     @classmethod
-    def convert_datetimes(cls, value):
+    def convert_datetimes(cls, value: str | datetime) -> str | datetime:
         """
         Converts a user-friendly date/time string into a datetime.
 

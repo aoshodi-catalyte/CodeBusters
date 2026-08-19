@@ -1,10 +1,18 @@
-from promotion.promotion_model import Promotion
-from promotion.promotion_schema import PromotionSchema
-from sqlalchemy.orm import Session
+"""
+Repository for managing promotion database operations.
+
+This module defines the PromotionRepository class, which provides methods
+for creating and retrieving promotion records using a SQLAlchemy database
+session.
+"""
 from typing import List
 
+from sqlalchemy.orm import Session
 
-class PromotionRepository():
+from promotion.promotion_model import Promotion
+from promotion.promotion_schema import PromotionSchema
+
+class PromotionRepository:
     """
     Provides database operations for promotion records.
 

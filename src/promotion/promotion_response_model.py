@@ -1,4 +1,11 @@
+"""
+Pydantic response model for promotion data.
+
+This module defines the PromotionResponseModel used to validate and
+serialize promotion data returned by the API.
+"""
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 class PromotionResponseModel(BaseModel):

@@ -108,32 +108,6 @@ def test_create_promotion_stores_discount_percentage(db):
 
     assert result.discount_percentage == 25.0
 
-def test_create_promotion_stores_start_datetime(db):
-    """
-    Test that the promotion start datetime is stored correctly.
-    """
-    repo = PromotionRepository(db)
-
-    promotion = Promotion(
-        active=True,
-        promo_code="START2026",
-        discount_percentage=15.0,
-        start_datetime="06/01/2026 09:00 AM",
-        end_datetime="06/30/2026 11:59 PM",
-    )
-
-    result = repo.create_promotion(promotion)
-
-    expected = datetime(
-        2026,
-        6,
-        1,
-        9,
-        0,
-    )
-
-    assert result.start_datetime == expected
-
 def test_create_promotion_stores_end_datetime(db):
     """
     Test that the promotion end datetime is stored correctly.

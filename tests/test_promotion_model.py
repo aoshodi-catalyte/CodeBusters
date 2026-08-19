@@ -464,3 +464,33 @@ def test_end_datetime_cannot_equal_start_datetime():
             start_datetime="06/01/2026 09:00 AM",
             end_datetime="06/01/2026 09:00 AM",
         )
+
+def test_promotion_start_datetime_has_timezone():
+    """
+    Test that the promotion start datetime includes the Chicago timezone.
+    """
+    promotion = Promotion(
+        active=True,
+        promo_code="START2026",
+        discount_percentage=15.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    assert promotion.start_datetime.tzinfo is not None
+    assert promotion.start_datetime.tzinfo == ZoneInfo("America/Chicago")
+
+def test_promotion_end_datetime_has_timezone():
+    """
+    Test that the promotion end datetime includes the Chicago timezone.
+    """
+    promotion = Promotion(
+        active=True,
+        promo_code="END2026",
+        discount_percentage=15.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    assert promotion.end_datetime.tzinfo is not None
+    assert promotion.end_datetime.tzinfo == ZoneInfo("America/Chicago")

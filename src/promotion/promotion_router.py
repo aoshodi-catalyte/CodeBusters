@@ -1,12 +1,20 @@
+"""
+FastAPI router for promotion endpoints.
+
+This module defines API endpoints for creating and retrieving promotions.
+It uses the PromotionRepository to interact with the database and handles
+duplicate promo codes by returning an appropriate HTTP error response.
+"""
+from typing import List
+
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from database import get_db
 from promotion.promotion_repository import PromotionRepository
 from promotion.promotion_response_model import PromotionResponseModel
 from promotion.promotion_model import Promotion
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
-
 router = APIRouter(
     prefix="/promotions",
     tags=["promotions"]

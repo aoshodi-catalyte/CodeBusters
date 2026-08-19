@@ -1,4 +1,12 @@
+"""
+SQLAlchemy schema for promotions.
+
+This module defines the PromotionSchema database model, which represents
+promotions stored in the database, including their promo codes, discount
+percentages, and active date and time ranges.
+"""
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String
+
 from database import Base
 
 class PromotionSchema(Base):
