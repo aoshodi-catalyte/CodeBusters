@@ -3,9 +3,10 @@ Repository layer for vendor-related database operations, including creation,
 retrieval, and persistence logic for vendor records.
 """
 
+from sqlalchemy.orm import Session
+
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
-from sqlalchemy.orm import Session
 
 
 class VendorRepository:
