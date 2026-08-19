@@ -81,6 +81,14 @@ def create(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
+                "error": "ingredient_already_exists",
+                "message": str(exc),
+            },
+        ) from exc
+    # DATABASE CONSTRAINT
+    except IngredientConstraintError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+            detail={
                 "error": "database_constraint_violation",
                 "message": str(exc),
             },

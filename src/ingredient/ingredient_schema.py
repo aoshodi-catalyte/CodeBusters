@@ -50,6 +50,10 @@ class AllergenSchema(Base):
     """SQLAlchemy model representing an allergen."""
 
     __tablename__ = "allergen"
+    __table_args__ = (
+        CheckConstraint("length(trim(name)) > 0", name="ck_allergen_name_not_blank"),
+        UniqueConstraint("name", name="uq_allergen_name",),
+    )
 
     __table_args__ = (
         CheckConstraint(

@@ -182,7 +182,6 @@ class CafeAllergen(str, Enum):
             .replace(" ", "")
             .replace("-", "")
         )
-
         for allergen in cls:
             allergen_normalized = (
                 allergen.value

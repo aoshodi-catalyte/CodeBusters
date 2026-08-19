@@ -103,7 +103,6 @@ def create_ingredient(
         db.refresh(ingredient)
 
         return ingredient
-
     except VendorNotFoundError:
         db.rollback()
         raise

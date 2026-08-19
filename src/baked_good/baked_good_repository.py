@@ -1,3 +1,13 @@
+"""
+Repository operations for baked goods.
+
+This module provides the BakedGoodRepository class, which handles
+database operations for baked goods using a SQLAlchemy session.
+
+The repository supports retrieving all baked goods and creating new
+baked goods while verifying that the associated vendor exists.
+"""
+
 from sqlalchemy.orm import Session
 from typing import List
 from baked_good.baked_good_model import BakedGood
@@ -42,7 +52,7 @@ class BakedGoodRepository:
             A list of BakedGoodSchema objects representing all baked goods
             stored in the database.
         """
-        
+
         return self.session.query(BakedGoodSchema).all()
 
     def create_baked_good(self, baked_good: BakedGood) -> BakedGoodSchema:
@@ -59,14 +69,14 @@ class BakedGoodRepository:
         Returns:
             BakedGoodSchema: The newly created baked good.
         """
-        
+
         vendor = self.session.query(Vendor).filter(
             Vendor.id == baked_good.vendor_id
         ).first()
 
         if vendor is None:
             raise ValueError("Vendor not found")
-        
+
         new_baked_good = BakedGoodSchema(**baked_good.model_dump())
         self.session.add(new_baked_good)
         self.session.commit()

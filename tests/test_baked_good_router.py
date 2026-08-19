@@ -80,7 +80,7 @@ def test_post_baked_good(client):
         "phone": "5551234567",
     }
 
-    vendor_response = client.post("/vendor", json=vendor)
+    vendor_response = client.post("/vendors", json=vendor)
     assert vendor_response.status_code == 201
 
     vendor_data = vendor_response.json()
@@ -214,7 +214,7 @@ def test_get_baked_goods(client):
     }
 
     vendor_response = client.post(
-        "/vendor",
+        "/vendors",
         json=vendor
     )
 
