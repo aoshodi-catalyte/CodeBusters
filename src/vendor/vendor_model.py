@@ -60,7 +60,7 @@ class VendorBase(BaseModel):
         Raises:
             ValueError: If the email does not match the required pattern.
         """
-        value = value.strip().lower()
+        value = value.strip()
 
         if not value:
             raise ValueError("Must not be blank")
