@@ -112,7 +112,7 @@ class DrinkRecipeRepository:
             except ValueError as e:
                 raise ValueError(
                     f"Unit conversion failed for ingredient {ingredient.name}: {e}"
-                )
+                ) from e
 
             # Cost per unit of ingredient
             cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount
