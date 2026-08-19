@@ -1,3 +1,8 @@
+"""
+SQLAlchemy ORM model defining the employee_role table and its relationship
+to employee records.
+"""
+
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from database import Base
