@@ -1,6 +1,11 @@
+"""Constants and enums used for ingredient validation."""
+
 from enum import Enum
 
+
 class UnitOfMeasure(str, Enum):
+    """Supported units of measure for ingredients."""
+
     grams = "g"
     kilograms = "kg"
     ounces = "oz"
@@ -13,18 +18,31 @@ class UnitOfMeasure(str, Enum):
     scoops = "scoop"
     shots = "shot"
     dashes = "dash"
+
     @classmethod
-    def from_string(cls, value: str):
-        normalized = (
-            value.strip()
-            .lower()
-            .replace(" ", "")
-            .replace("_", "")
-            .replace("-", "")
-        )
+    def from_string(cls, value: str) -> "UnitOfMeasure":
+        """Convert a string or alias into a UnitOfMeasure enum value.
+
+        Args:
+            value: Unit name or abbreviation supplied by the user.
+
+        Returns:
+            The matching UnitOfMeasure enum member.
+
+        Raises:
+            ValueError: If the supplied value is not a recognized unit.
+        """
+        normalized = cls._normalize(value)
+
         aliases = {
             cls.grams: ["g", "gram", "grams"],
-            cls.kilograms: ["kg", "kilo", "kilos", "kilogram", "kilograms"],
+            cls.kilograms: [
+                "kg",
+                "kilo",
+                "kilos",
+                "kilogram",
+                "kilograms",
+            ],
             cls.ounces: ["oz", "ounce", "ounces"],
             cls.pounds: ["lb", "lbs", "pound", "pounds"],
             cls.fluid_ounces: [
@@ -55,20 +73,40 @@ class UnitOfMeasure(str, Enum):
             cls.shots: ["shot", "shots"],
             cls.dashes: ["dash", "dashes"],
         }
+
         for unit, unit_aliases in aliases.items():
             normalized_aliases = {
-                alias.strip()
-                .lower()
-                .replace(" ", "")
-                .replace("_", "")
-                .replace("-", "")
+                cls._normalize(alias)
                 for alias in unit_aliases
             }
+
             if normalized in normalized_aliases:
                 return unit
+
         raise ValueError(f"Unknown unit of measure: {value}")
 
+    @staticmethod
+    def _normalize(value: str) -> str:
+        """Normalize a unit string for comparison.
+
+        Args:
+            value: Unit string to normalize.
+
+        Returns:
+            Normalized unit string.
+        """
+        return (
+            value.strip()
+            .lower()
+            .replace(" ", "")
+            .replace("_", "")
+            .replace("-", "")
+        )
+
+
 class CafeAllergen(str, Enum):
+    """Supported allergens for cafe ingredients."""
+
     MILK = "Milk"
     WHEY = "Whey"
     CASEIN = "Casein"
@@ -118,23 +156,47 @@ class CafeAllergen(str, Enum):
     NUT_BASED_PESTO = "Nut-based pesto"
     CHOCOLATE_COCOA = "Chocolate/cocoa"
     CARAMEL = "Caramel coloring or flavorings"
-    SHARED_PREPARATION_SURFACES = "Shared fryer or preparation surfaces"
-    
+    SHARED_PREPARATION_SURFACES = (
+        "Shared fryer or preparation surfaces"
+    )
+
     @classmethod
-    def from_string(cls, value: str):
-        normalized = (
+    def from_string(cls, value: str) -> "CafeAllergen":
+        """Convert a string into a CafeAllergen enum value.
+
+        Args:
+            value: Allergen name supplied by the user.
+
+        Returns:
+            The matching CafeAllergen enum member.
+
+        Raises:
+            ValueError: If the supplied value is not a recognized
+                allergen.
+        """
+        normalized = cls._normalize(value)
+
+        for allergen in cls:
+            allergen_normalized = cls._normalize(allergen.value)
+
+            if allergen_normalized == normalized:
+                return allergen
+
+        raise ValueError(f"Unknown allergen: {value}")
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        """Normalize an allergen string for comparison.
+
+        Args:
+            value: Allergen string to normalize.
+
+        Returns:
+            Normalized allergen string.
+        """
+        return (
             value.strip()
             .lower()
             .replace(" ", "")
             .replace("-", "")
         )
-        for allergen in cls:
-            allergen_normalized = (
-                allergen.value.lower()
-                .replace(" ", "")
-                .replace("-", "")
-            )
-            if allergen_normalized == normalized:
-                return allergen
-
-        raise ValueError(f"Unknown allergen: {value}")
