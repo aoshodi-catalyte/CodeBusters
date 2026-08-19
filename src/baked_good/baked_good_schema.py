@@ -11,7 +11,6 @@ from sqlalchemy.orm import relationship
 from database import Base
 from vendor.vendor_schema import Vendor
 
-
 class BakedGoodSchema(Base):
     """
     Defines the database structure for a baked good.
