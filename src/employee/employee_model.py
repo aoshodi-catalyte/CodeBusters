@@ -1,7 +1,11 @@
+"""
+Pydantic model defining validation rules and business logic for employee data.
+"""
+
 import re
+from datetime import date, datetime
 from pydantic import BaseModel, Field, condecimal, field_validator, model_validator
 from constants.employee_roles import EmployeeRole
-from datetime import date, datetime
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -9,6 +13,11 @@ ConstrainedMoney = condecimal(gt=0, decimal_places=2)
 
 
 class Employee(BaseModel):
+    """
+    Represents an employee record with validation for names, email, role,
+    compensation, and employment lifecycle dates.
+    """
+
     active: bool
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
