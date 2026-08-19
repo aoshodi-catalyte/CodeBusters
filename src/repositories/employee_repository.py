@@ -1,3 +1,8 @@
+"""
+Repository layer for employee-related database operations, including creation
+and role mapping logic.
+"""
+
 from sqlalchemy.orm import Session
 from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
@@ -20,10 +25,36 @@ def map_role_enum_to_fk(enum_value: EmployeeRole, db: Session) -> int:
 
 
 class EmployeeRepository:
+    """
+    Provides database operations for employee records, including creation and
+    role foreign-key resolution.
+    """
+
     def __init__(self, db: Session):
         self.db = db
 
     def create_new_employee(self, employee_data: Employee) -> EmployeeSchema:
+        """
+        Create a new employee record in the database.
+
+        This method:
+            - Resolves the employee role enum to its foreign key ID.
+            - Constructs an EmployeeSchema ORM instance.
+            - Persists the new employee to the database.
+            - Returns the refreshed ORM object.
+
+        Args:
+            employee_data (Employee):
+                Validated Pydantic model containing employee fields.
+
+        Returns:
+            EmployeeSchema:
+                The newly created and persisted employee ORM instance.
+
+        Raises:
+            ValueError:
+                If the provided role cannot be mapped to a valid role ID.
+        """
 
         role_id = map_role_enum_to_fk(employee_data.role, self.db)
 

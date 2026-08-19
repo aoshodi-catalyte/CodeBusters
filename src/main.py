@@ -7,13 +7,15 @@ Initializes the API, seeds required database values, and registers all routers.
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from constants.employee_roles import EmployeeRole
-from employee.employee_role_schema import EmployeeRoleSchema
-from database import SessionLocal, create_db
 
+from constants.employee_roles import EmployeeRole
 from constants.drink_types import DrinkType
 
+from database import SessionLocal, create_db
+
+from employee.employee_role_schema import EmployeeRoleSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
+
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from vendor.vendor_router import router as vendor_router
 from baked_good.baked_good_router import router as baked_good_router
