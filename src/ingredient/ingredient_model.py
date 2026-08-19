@@ -1,9 +1,9 @@
-from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
 
 # ==========================================
 # PYDANTIC SCHEMAS
+
 # ==========================================
 class AllergenOut(BaseModel):
     name: str
@@ -23,13 +23,13 @@ class IngredientOut(BaseModel):
     id: int
     name: str
     active: bool
-    purchasing_cost: Decimal
-    unit_amount: Decimal
+    purchasing_cost: float
+    unit_amount: float
     unit_of_measure: str
     allergens: list[AllergenOut]
     vendor_id: int
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 class Ingredient(BaseModel):
     
@@ -62,57 +62,106 @@ class Ingredient(BaseModel):
 
     active: bool = True
     name: str = Field(min_length=1, max_length=255)
-    purchasing_cost: Decimal = Field( ge=0, decimal_places=2,)
-    unit_amount: Decimal = Field( gt=0, decimal_places=2, )
+    purchasing_cost: float = Field( ge=0, )
+    unit_amount: float = Field( gt=0, )
     unit_of_measure: UnitOfMeasure
-    allergens: list[CafeAllergen]
+    allergens: list[str] = Field(default_factory=list)
     vendor_id: int = Field( gt=0,)
 
-    @field_validator("unit_of_measure", mode="before")
+    @field_validator("name", mode="before")
     @classmethod
-    def validate_unit_of_measure(cls, value):
+    def strip_name(cls, value: str) -> str:
         """
-        Convert the supplied unit of measure into a UnitOfMeasure.
-
-        The validator runs before Pydantic performs the normal
-        field validation, allowing values such as strings to be
-        converted using UnitOfMeasure.from_string().
+        Remove leading and trailing whitespace from the ingredient name.
 
         Args:
-            value: The unit of measure supplied by the client.
+            value: The ingredient name supplied by the client.
 
         Returns:
-            A valid UnitOfMeasure value.
+            The ingredient name with leading and trailing whitespace
+            removed.
 
         Raises:
-            ValueError: If the supplied value cannot be converted
-                to a valid UnitOfMeasure.
-        """   
-        return UnitOfMeasure.from_string(value)
+            ValueError: If the supplied value is not a string or is
+                empty after whitespace is removed.
+        """
+        if not isinstance(value, str):
+            raise ValueError("Ingredient name must be a string")
+        value = value.strip()
+        if not value:
+            raise ValueError("Ingredient name cannot be blank")
+        return value
 
     @field_validator("allergens", mode="before")
     @classmethod
     def validate_allergens(cls, value):
         """
         Convert supplied allergen values into CafeAllergen values.
-
         A single allergen value is converted into a list so that
         the API accepts either one allergen or multiple allergens.
-        Each allergen is then converted using CafeAllergen.from_string().
-
+        Each allergen is converted using CafeAllergen.from_string().
         Args:
-            value: A single allergen or a list of allergens supplied
+            value: A single allergen or list of allergens supplied
                 by the client.
-
         Returns:
-            A list of valid CafeAllergen values.
+            A list of validated CafeAllergen values.
 
         Raises:
             ValueError: If an allergen cannot be converted into a
-                valid CafeAllergen.
+                valid CafeAllergen value.
         """    
+        if value is None:
+            return []
         if not isinstance(value, list):
             value = [value]
-        return [CafeAllergen.from_string(allergen) for allergen in value]
+       
+        return [
+            allergen
+            if isinstance(allergen, CafeAllergen)
+            else CafeAllergen.from_string(allergen)
+            for allergen in value
+        ]
 
- 
+    @field_validator("purchasing_cost", "unit_amount")
+    @classmethod
+    def validate_two_decimal_places(cls, value: float) -> float:
+        """
+        Validate that numeric ingredient values contain no more
+        than two decimal places.
+        This validation is applied to purchasing_cost and
+        unit_amount before the values are stored in the database.
+        It prevents values such as 4.999 from passing API validation
+        and being silently rounded by the database.
+        Args:
+            value: Numeric value supplied for purchasing_cost or
+                unit_amount.
+        Returns:
+            The validated numeric value.
+        Raises:
+            ValueError: If the value contains more than two decimal
+                places.
+        """ 
+        if round(value, 2) != value:
+            raise ValueError("Value must have no more than 2 decimal places")
+        return value
+
+    @field_validator("unit_of_measure", mode="before")
+    @classmethod
+    def validate_unit_of_measure(cls, value):
+        """
+        Convert the supplied unit of measure into a UnitOfMeasure.
+        The validator runs before Pydantic performs the normal
+        field validation, allowing values such as strings to be
+        converted using UnitOfMeasure.from_string().
+        Args:
+            value: The unit of measure supplied by the client.
+        Returns:
+            A valid UnitOfMeasure value.
+        Raises:
+            ValueError: If the supplied value cannot be converted
+                to a valid UnitOfMeasure.
+        """   
+        return UnitOfMeasure.from_string(value)
+class IngredientListResponse(BaseModel):
+    message: str
+    ingredients: list[IngredientOut]  

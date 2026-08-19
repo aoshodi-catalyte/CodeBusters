@@ -11,16 +11,9 @@ from config import settings
 
 DATABASE_URL = settings.DATABASE_URL
 
-engine = create_engine(
-    DATABASE_URL,
-    echo=True
-)
+engine = create_engine(DATABASE_URL, echo=True)
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
@@ -33,6 +26,7 @@ def create_db() -> None:
     """
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
 
 def get_db():
     """Provide a database session for request scoped dependency injection.

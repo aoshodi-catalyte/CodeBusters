@@ -1,20 +1,23 @@
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
-
-from database import get_db
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+import pytest
+from database import Base, get_db
 from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
-
+from vendor.vendor_schema import Vendor
+from ingredient.ingredient_schema import IngredientSchema
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
 )
-
+from ingredient.ingredient_repository import get_ingredient_by_id
 from ingredient.ingredient_router import router
 import ingredient.ingredient_router as ingredient_router
 
@@ -25,6 +28,35 @@ import ingredient.ingredient_router as ingredient_router
 
 app = FastAPI()
 app.include_router(router)
+
+
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+# ============================================================
+# TEST HELPERS
+# ============================================================
+
+@pytest.fixture
+def client_with_real_db():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    # Import models so they are registered with Base.metadata
+    from vendor.vendor_schema import Vendor
+    from ingredient.ingredient_model import Ingredient
+
+    Base.metadata.create_all(bind=engine)
+
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+    )
 
 
 # ============================================================
@@ -84,7 +116,10 @@ def valid_ingredient_response():
         "purchasing_cost": Decimal(payload["purchasing_cost"]),
         "unit_amount": Decimal(payload["unit_amount"]),
         "unit_of_measure": payload["unit_of_measure"],
-        "allergens": [payload["allergens"][0]],
+        "allergens": [
+            {"name": allergen.title()}
+            for allergen in payload["allergens"]
+        ],
         "vendor_id": payload["vendor_id"],
     }
 
@@ -109,7 +144,7 @@ def test_create_ingredient_success(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -148,7 +183,7 @@ def test_create_ingredient_vendor_not_found(monkeypatch):
     payload["vendor_id"] = 999
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -180,7 +215,7 @@ def test_create_ingredient_already_exists(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -213,7 +248,7 @@ def test_create_ingredient_constraint_error(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -244,7 +279,7 @@ def test_create_ingredient_database_error(monkeypatch):
     )
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=valid_ingredient_payload(),
     )
 
@@ -273,7 +308,7 @@ def test_create_ingredient_invalid_vendor_id(monkeypatch):
     payload["vendor_id"] = 0
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -293,7 +328,7 @@ def test_create_ingredient_negative_purchasing_cost(monkeypatch):
     payload["purchasing_cost"] = "-5.00"
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -313,7 +348,7 @@ def test_create_ingredient_zero_unit_amount(monkeypatch):
     payload["unit_amount"] = "0"
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -333,7 +368,7 @@ def test_create_ingredient_missing_name(monkeypatch):
     del payload["name"]
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 
@@ -353,7 +388,7 @@ def test_create_ingredient_empty_name(monkeypatch):
     payload["name"] = ""
 
     response = client.post(
-        "/ingredient/",
+        "/ingredients/",
         json=payload,
     )
 

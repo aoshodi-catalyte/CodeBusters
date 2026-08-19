@@ -69,7 +69,6 @@ def create_ingredient(
             raise VendorNotFoundError(ingredient_data.vendor_id)
         # Remove duplicate allergens
         unique_allergens = list(dict.fromkeys(ingredient_data.allergens))
-        # Create ingredient
         ingredient = IngredientSchema(
             active=ingredient_data.active,
             name=ingredient_data.name,
@@ -78,32 +77,73 @@ def create_ingredient(
             unit_of_measure=ingredient_data.unit_of_measure,
             vendor_id=ingredient_data.vendor_id,
         )
-        # Find or create allergens
-        for allergen_name in unique_allergens:
-            allergen = get_or_create_allergen(db=db, allergen_name=allergen_name,)
-            ingredient.allergens.append(allergen)
-        # Save ingredient
+
+        # Add ingredient to the session BEFORE working
+        # with the allergen relationship.
         db.add(ingredient)
+
+        for allergen_name in unique_allergens:
+            allergen = get_or_create_allergen(
+                db=db,
+                allergen_name=allergen_name,
+            )
+
+            ingredient.allergens.append(allergen)
+
         db.commit()
         db.refresh(ingredient)
 
         return ingredient
-
     except VendorNotFoundError:
         db.rollback()
         raise
 
     except IntegrityError as exc:
         db.rollback()
-        constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
-
+        constraint = getattr(getattr(exc.orig, "diag", None),"constraint_name",None,)
+        # PostgreSQL
         if constraint == "uq_ingredient_name":
             raise IngredientAlreadyExistsError(ingredient_data.name) from exc
-
+        # SQLite
+        error_message = str(exc.orig).lower()
+        if ("unique constraint failed: ingredient.name" in error_message or "uq_ingredient_name" in error_message):
+            raise IngredientAlreadyExistsError(
+                ingredient_data.name
+            ) from exc
         raise IngredientConstraintError(
             constraint
         ) from exc
-
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
         db.rollback()
-        raise
+        raise exc
+
+def get_all_ingredients(db: Session):
+    """Return all ingredients.
+
+    Args:
+        db: Active SQLAlchemy database session.
+
+    Returns:
+        A list of all ingredients.
+    """
+    return db.query(IngredientSchema).all()
+
+def get_ingredient_by_id(
+    db: Session,
+    ingredient_id: int,
+):
+    """
+    Retrieve an ingredient by its ID.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_id: ID of the ingredient to retrieve.
+
+    Returns:
+        The ingredient if it exists, otherwise None.
+    """
+    return (
+        db.query(IngredientSchema)
+        .filter(IngredientSchema.id == ingredient_id)
+        .first()
+    )
