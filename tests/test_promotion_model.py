@@ -195,7 +195,7 @@ def test_discount_percentage_rejects_over_100():
     """
     with pytest.raises(
         ValidationError,
-        match="Discount percentage cannot exceed 100%"
+        match="Discount percentage must be between 0% and 100%"
     ):
         Promotion(
             active=True,

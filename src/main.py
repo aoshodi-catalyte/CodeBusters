@@ -17,7 +17,7 @@ from vendor.vendor_router import router as vendor_router
 from baked_good.baked_good_router import router as baked_good_router
 from ingredient.ingredient_router import router as ingredient_router
 from customer.customer_router import router as customer_router
-from promotion.promotion.router import router as promotion_router
+from promotion.promotion_router import router as promotion_router
 
 
 @asynccontextmanager
@@ -62,8 +62,5 @@ app.include_router(vendor_router)
 app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 app.include_router(customer_router)
-<<<<<<< HEAD
 app.include_router(promotion_router)
 
-=======
->>>>>>> 6901ebd691952b2d30f1941150eae7c205f3e60b
