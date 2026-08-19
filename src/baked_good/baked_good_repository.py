@@ -7,6 +7,7 @@ database operations for baked goods using a SQLAlchemy session.
 The repository supports retrieving all baked goods and creating new
 baked goods while verifying that the associated vendor exists.
 """
+
 from typing import List
 
 from sqlalchemy.orm import Session
@@ -84,5 +85,3 @@ class BakedGoodRepository:
         self.session.refresh(new_baked_good)
 
         return new_baked_good
-
-

@@ -30,7 +30,7 @@ from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 
 from constants.drink_types import DrinkType
-from constants.UNIT_CONVERSIONS import convert
+from constants.unit_conversions import convert
 
 from utils.validators import round_float
 

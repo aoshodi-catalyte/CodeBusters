@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, CheckConstraint, Column, Enum, ForeignKey, Integer, Numeric, String, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
-from constants.INGREDIENT_TYPES import UnitOfMeasure
+from constants.ingredient_types import UnitOfMeasure
 from database import Base
 
 # ASSOCIATION TABLE
