@@ -77,7 +77,7 @@ def create_customer(
 
         return customer
 
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
 
         raise HTTPException(
@@ -86,7 +86,7 @@ def create_customer(
                 "A customer with this email or phone number "
                 "already exists."
             )
-        )
+        ) from exc
 
     except Exception as exc:
         db.rollback()
