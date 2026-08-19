@@ -34,25 +34,8 @@ router = APIRouter(
 def create(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
-) -> IngredientOut:
-    """Create a new ingredient.
-
-    Args:
-        ingredient: Validated ingredient information.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The newly created ingredient.
-
-    Raises:
-        HTTPException:
-            404 if the vendor does not exist.
-        HTTPException:
-            409 if the ingredient already exists or violates
-            a database constraint.
-        HTTPException:
-            500 if an unexpected database error occurs.
-    """
+):
+    """Create a new ingredient."""
     try:
         return create_ingredient(
             db=db,
@@ -81,14 +64,6 @@ def create(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
-                "error": "ingredient_already_exists",
-                "message": str(exc),
-            },
-        ) from exc
-    # DATABASE CONSTRAINT
-    except IngredientConstraintError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-            detail={
                 "error": "database_constraint_violation",
                 "message": str(exc),
             },
@@ -105,12 +80,6 @@ def create(
                 ),
             },
         ) from exc
-
-
-@router.get(
-    "/all",
-    response_model=IngredientListResponse,
-)
 def read_all_ingredients(
     db: Session = Depends(get_db),
 ) -> IngredientListResponse:
