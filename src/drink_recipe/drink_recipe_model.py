@@ -114,6 +114,7 @@ class DrinkRecipe(BaseModel):
     @field_validator("name", "description")
     @classmethod
     def validate_not_blank(cls, value):
+        """Ensure name and description are not blank or whitespace."""
         value = value.strip()
         if not value:
             raise ValueError("Must not be blank")
@@ -122,4 +123,5 @@ class DrinkRecipe(BaseModel):
 
     @field_validator("markup_percentage")
     def round_values(cls, v):
+        """Round markup percentage using shared rounding utility."""
         return round_float(v)

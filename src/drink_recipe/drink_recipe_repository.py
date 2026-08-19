@@ -22,14 +22,17 @@
 """
 
 from sqlalchemy.orm import Session
+
 from ingredient.ingredient_schema import IngredientSchema
-from utils.validators import round_float
-from constants.drink_types import DrinkType
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
+
+from constants.drink_types import DrinkType
 from constants.UNIT_CONVERSIONS import convert
+
+from utils.validators import round_float
 
 
 def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
@@ -65,7 +68,8 @@ class DrinkRecipeRepository:
 
     def create_drink_recipe(self, drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
         """
-        Creates a new drink recipe, calculates its costs, persists it, and returns the ORM representation.
+        Create a new drink recipe, calculate its costs,
+        persist it, and return the ORM representation.
         """
         drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
 
