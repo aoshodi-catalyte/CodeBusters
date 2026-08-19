@@ -1,4 +1,4 @@
-"""Tests for the SQLAlchemy ingredient model."""
+"""Tests for the SQLAlchemy ingredient schema."""
 
 from decimal import Decimal
 
@@ -22,7 +22,7 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
 )
 
-TestingSessionLocal = sessionmaker(
+TESTING_SESSION_LOCAL = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
@@ -30,16 +30,16 @@ TestingSessionLocal = sessionmaker(
 
 
 @pytest.fixture
-def db():
-    """Create a fresh database for each test."""
+def session():
+    """Create a fresh database session for each test."""
     Base.metadata.create_all(bind=engine)
 
-    session = TestingSessionLocal()
+    database_session = TESTING_SESSION_LOCAL()
 
     try:
-        yield session
+        yield database_session
     finally:
-        session.close()
+        database_session.close()
         Base.metadata.drop_all(bind=engine)
 
 
@@ -47,7 +47,7 @@ def db():
 # TEST DATA HELPERS
 # ============================================================
 
-def create_vendor(db, vendor_id=1):
+def create_vendor(session, vendor_id=1):
     """Create a vendor that can be used by an ingredient."""
     vendor = Vendor(
         id=vendor_id,
@@ -59,15 +59,15 @@ def create_vendor(db, vendor_id=1):
         phone="3125551234",
     )
 
-    db.add(vendor)
-    db.commit()
-    db.refresh(vendor)
+    session.add(vendor)
+    session.commit()
+    session.refresh(vendor)
 
     return vendor
 
 
 def create_ingredient(
-    db,
+    session,
     vendor_id=1,
     name="Flour",
     purchasing_cost=Decimal("10.00"),
@@ -83,22 +83,22 @@ def create_ingredient(
         vendor_id=vendor_id,
     )
 
-    db.add(ingredient)
-    db.commit()
-    db.refresh(ingredient)
+    session.add(ingredient)
+    session.commit()
+    session.refresh(ingredient)
 
     return ingredient
 
 
 # ============================================================
-# INGREDIENT CREATION
+# 1. INGREDIENT CAN BE CREATED
 # ============================================================
 
-def test_create_ingredient(db):
+def test_create_ingredient(session):
     """Test that a valid ingredient can be stored in the database."""
-    create_vendor(db)
+    create_vendor(session)
 
-    ingredient = create_ingredient(db)
+    ingredient = create_ingredient(session)
 
     assert ingredient.id is not None
     assert ingredient.name == "Flour"
@@ -109,12 +109,12 @@ def test_create_ingredient(db):
 
 
 # ============================================================
-# ACTIVE DEFAULT
+# 2. ACTIVE DEFAULTS TO TRUE
 # ============================================================
 
-def test_ingredient_active_defaults_to_true(db):
+def test_ingredient_active_defaults_to_true(session):
     """Test that active defaults to True when no value is provided."""
-    create_vendor(db)
+    create_vendor(session)
 
     ingredient = IngredientSchema(
         name="Sugar",
@@ -124,20 +124,20 @@ def test_ingredient_active_defaults_to_true(db):
         vendor_id=1,
     )
 
-    db.add(ingredient)
-    db.commit()
-    db.refresh(ingredient)
+    session.add(ingredient)
+    session.commit()
+    session.refresh(ingredient)
 
     assert ingredient.active is True
 
 
 # ============================================================
-# NAME CONSTRAINTS
+# 3. INGREDIENT NAME CANNOT BE NULL
 # ============================================================
 
-def test_ingredient_name_cannot_be_null(db):
+def test_ingredient_name_cannot_be_null(session):
     """Test that the ingredient name cannot be NULL."""
-    create_vendor(db)
+    create_vendor(session)
 
     ingredient = IngredientSchema(
         name=None,
@@ -147,17 +147,21 @@ def test_ingredient_name_cannot_be_null(db):
         vendor_id=1,
     )
 
-    db.add(ingredient)
+    session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        db.commit()
+        session.commit()
 
-    db.rollback()
+    session.rollback()
 
 
-def test_ingredient_name_cannot_be_blank(db):
+# ============================================================
+# 4. INGREDIENT NAME CANNOT BE BLANK
+# ============================================================
+
+def test_ingredient_name_cannot_be_blank(session):
     """Test that blank ingredient names violate the database constraint."""
-    create_vendor(db)
+    create_vendor(session)
 
     ingredient = IngredientSchema(
         name="   ",
@@ -167,21 +171,21 @@ def test_ingredient_name_cannot_be_blank(db):
         vendor_id=1,
     )
 
-    db.add(ingredient)
+    session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        db.commit()
+        session.commit()
 
-    db.rollback()
+    session.rollback()
 
 
 # ============================================================
-# NUMERIC CONSTRAINTS
+# 5. PURCHASING COST CANNOT BE NEGATIVE
 # ============================================================
 
-def test_purchasing_cost_cannot_be_negative(db):
+def test_purchasing_cost_cannot_be_negative(session):
     """Test that purchasing_cost cannot be less than zero."""
-    create_vendor(db)
+    create_vendor(session)
 
     ingredient = IngredientSchema(
         name="Butter",
@@ -191,17 +195,21 @@ def test_purchasing_cost_cannot_be_negative(db):
         vendor_id=1,
     )
 
-    db.add(ingredient)
+    session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        db.commit()
+        session.commit()
 
-    db.rollback()
+    session.rollback()
 
 
-def test_unit_amount_must_be_positive(db):
+# ============================================================
+# 6. UNIT AMOUNT MUST BE GREATER THAN ZERO
+# ============================================================
+
+def test_unit_amount_must_be_positive(session):
     """Test that unit_amount must be greater than zero."""
-    create_vendor(db)
+    create_vendor(session)
 
     ingredient = IngredientSchema(
         name="Milk",
@@ -211,24 +219,24 @@ def test_unit_amount_must_be_positive(db):
         vendor_id=1,
     )
 
-    db.add(ingredient)
+    session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        db.commit()
+        session.commit()
 
-    db.rollback()
+    session.rollback()
 
 
 # ============================================================
-# UNIQUE CONSTRAINT
+# 7. INGREDIENT NAME MUST BE UNIQUE
 # ============================================================
 
-def test_ingredient_name_must_be_unique(db):
+def test_ingredient_name_must_be_unique(session):
     """Test that two ingredients cannot have the same name."""
-    create_vendor(db)
+    create_vendor(session)
 
     create_ingredient(
-        db,
+        session,
         name="Flour",
     )
 
@@ -241,19 +249,19 @@ def test_ingredient_name_must_be_unique(db):
         vendor_id=1,
     )
 
-    db.add(duplicate)
+    session.add(duplicate)
 
     with pytest.raises(IntegrityError):
-        db.commit()
+        session.commit()
 
-    db.rollback()
+    session.rollback()
 
 
 # ============================================================
-# VENDOR CONSTRAINT
+# 8. INGREDIENT MUST HAVE A VALID VENDOR
 # ============================================================
 
-def test_ingredient_vendor_id_is_required(db):
+def test_ingredient_vendor_id_is_required(session):
     """Test that vendor_id cannot be NULL."""
     ingredient = IngredientSchema(
         active=True,
@@ -264,24 +272,24 @@ def test_ingredient_vendor_id_is_required(db):
         vendor_id=None,
     )
 
-    db.add(ingredient)
+    session.add(ingredient)
 
     with pytest.raises(IntegrityError):
-        db.commit()
+        session.commit()
 
-    db.rollback()
+    session.rollback()
 
 
 # ============================================================
-# INGREDIENT/ALLERGEN RELATIONSHIP
+# 9. INGREDIENT AND ALLERGEN MANY-TO-MANY RELATIONSHIP
 # ============================================================
 
-def test_ingredient_can_have_multiple_allergens(db):
+def test_ingredient_can_have_multiple_allergens(session):
     """Test that an ingredient can have multiple allergens."""
-    create_vendor(db)
+    create_vendor(session)
 
     ingredient = create_ingredient(
-        db,
+        session,
         name="Peanut Flour",
     )
 
@@ -291,8 +299,8 @@ def test_ingredient_can_have_multiple_allergens(db):
     ingredient.allergens.append(peanut)
     ingredient.allergens.append(gluten)
 
-    db.commit()
-    db.refresh(ingredient)
+    session.commit()
+    session.refresh(ingredient)
 
     assert len(ingredient.allergens) == 2
 
@@ -308,20 +316,20 @@ def test_ingredient_can_have_multiple_allergens(db):
 
 
 # ============================================================
-# VENDOR/INGREDIENT RELATIONSHIP
+# 10. VENDOR AND INGREDIENT RELATIONSHIP
 # ============================================================
 
-def test_vendor_has_ingredients_relationship(db):
+def test_vendor_has_ingredients_relationship(session):
     """Test that a vendor can access its associated ingredients."""
-    vendor = create_vendor(db)
+    vendor = create_vendor(session)
 
     ingredient = create_ingredient(
-        db,
+        session,
         vendor_id=vendor.id,
         name="Flour",
     )
 
-    db.refresh(vendor)
+    session.refresh(vendor)
 
     assert len(vendor.ingredients) == 1
     assert vendor.ingredients[0].id == ingredient.id
