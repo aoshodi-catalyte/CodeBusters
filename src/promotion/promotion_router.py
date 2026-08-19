@@ -21,7 +21,10 @@ router = APIRouter(
 )
 
 @router.post("/", response_model = PromotionResponseModel, status_code=201)
-def post_promotion(promotion_model: Promotion, db: Session = Depends(get_db)) -> PromotionResponseModel:
+def post_promotion(
+    promotion_model: Promotion, 
+    db: Session = Depends(get_db)
+) -> PromotionResponseModel:
     """
     Create a new promotion.
 
@@ -45,16 +48,16 @@ def post_promotion(promotion_model: Promotion, db: Session = Depends(get_db)) ->
     try:
         post_promotions = repo.create_promotion(promotion_model)
 
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Promotion with promo code "
                    f"'{promotion_model.promo_code}' already exists."
-        )
+        ) from exc
 
     return post_promotions
-    
+
 @router.get("/", response_model= List[PromotionResponseModel], status_code=200)
 def get_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseModel]:
     """
@@ -72,6 +75,6 @@ def get_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseModel
             retrieved from the database.
     """
     repo = PromotionRepository(db)
-    get_promotions = repo.get_all_promotions()
+    get_promos = repo.get_all_promotions()
 
-    return get_promotions
+    return get_promos

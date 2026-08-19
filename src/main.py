@@ -49,7 +49,6 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(customer_router)
 
-
 @app.get("/")
 def root():
     """
@@ -63,4 +62,3 @@ app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 app.include_router(customer_router)
 app.include_router(promotion_router)
-

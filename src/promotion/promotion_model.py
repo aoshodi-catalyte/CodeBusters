@@ -7,7 +7,6 @@ promo codes, discount percentages, and promotion date/time ranges
 meet the application's validation requirements.
 """
 from datetime import datetime
-from operator import ge
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -118,10 +117,10 @@ class Promotion(BaseModel):
                 value,
                 "%m/%d/%Y %I:%M %p"
             )
-            except ValueError:
+            except ValueError as exc:
                 raise ValueError(
                     "Invalid date/time format. Please use MM/DD/YYYY HH:MM AM/PM."
-                )
+                ) from exc
         return value
 
     @field_validator("start_datetime", "end_datetime")

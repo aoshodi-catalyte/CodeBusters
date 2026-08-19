@@ -19,7 +19,7 @@ TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=test_engine
-)
+) # pylint: disable=invalid-name
 
 @pytest.fixture
 def db():
@@ -32,7 +32,7 @@ def db():
     finally:
         session.close()
         Base.metadata.drop_all(bind=test_engine)
-        
+
 def test_create_baked_good_repository(db):
     """
     Tests that a baked good can be created and stored in the repository.
@@ -61,7 +61,7 @@ def test_create_baked_good_repository(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-    
+
     repository = BakedGoodRepository(db)
 
     baked_good = BakedGood (

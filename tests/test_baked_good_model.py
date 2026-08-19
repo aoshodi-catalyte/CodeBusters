@@ -139,7 +139,7 @@ def test_retail_price_cannot_be_negative():
             purchasing_cost=10.0,
             retail_price=-15.0,
             vendor_id=1
-        )   
+        )
 
 def test_retail_price_must_be_greater_than_purchasing_cost():
     """

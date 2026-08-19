@@ -5,6 +5,7 @@ This module defines the PromotionRepository class, which provides methods
 for creating and retrieving promotion records using a SQLAlchemy database
 session.
 """
+
 from typing import List
 
 from sqlalchemy.orm import Session
@@ -31,7 +32,7 @@ class PromotionRepository:
             session (Session): SQLAlchemy database session used for
                 database operations.
         """
-        self.session = session 
+        self.session = session
 
     def create_promotion(self, promotion: Promotion) -> PromotionSchema:
         """

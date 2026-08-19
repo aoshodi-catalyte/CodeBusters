@@ -68,6 +68,6 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Cannot create baked good because the vendor does not exist."
-        )
+        ) from exc
 
     return created_baked_good
