@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from constants.INGREDIENT_TYPES import UnitOfMeasure
+from constants.ingredient_types import UnitOfMeasure
 from ingredient.ingredient_model import Allergen, Ingredient
 
 

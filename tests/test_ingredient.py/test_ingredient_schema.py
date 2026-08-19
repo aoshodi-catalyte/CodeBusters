@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from database import Base
-from constants.INGREDIENT_TYPES import UnitOfMeasure
+from constants.ingredient_types import UnitOfMeasure
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from vendor.vendor_schema import Vendor
 
