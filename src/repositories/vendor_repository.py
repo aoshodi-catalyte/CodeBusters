@@ -2,6 +2,7 @@ from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
 from sqlalchemy.orm import Session
 
+
 class VendorRepository:
     def __init__(self, db: Session):
         """Initialize the VendorRepository with a database session.
@@ -36,7 +37,7 @@ class VendorRepository:
             contact_name=vendor_data.contact_name,
             contact_role=vendor_data.contact_role,
             email=vendor_data.email,
-            phone=vendor_data.phone
+            phone=vendor_data.phone,
         )
         self.db.add(db_vendor)
         self.db.commit()

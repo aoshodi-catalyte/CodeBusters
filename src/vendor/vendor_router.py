@@ -9,7 +9,6 @@ from repositories.vendor_repository import VendorRepository
 router = APIRouter()
 
 
-
 @router.post("/vendors", response_model=VendorResponse, status_code=201)
 async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)):
     """Create a new vendor record and return the created vendor.
@@ -35,5 +34,5 @@ async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Vendor with this name or email already exists."
+            detail="Vendor with this name or email already exists.",
         )

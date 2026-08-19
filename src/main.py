@@ -1,19 +1,32 @@
+"""
+FastAPI application entry point.
+
+Initializes the API, seeds required database values, and registers all routers.
+"""
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from constants.DRINK_TYPES import DrinkType
-from database import SessionLocal
+
+from database import SessionLocal, create_db
+from constants.drink_types import DrinkType
+
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from vendor.vendor_router import router as vendor_router
 from baked_good.baked_good_router import router as baked_good_router
 from ingredient.ingredient_router import router as ingredient_router
-from database import create_db
 from customer.customer_router import router as customer_router
 from promotion.promotion.router import router as promotion_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
+    """
+    Application startup and shutdown lifecycle handler.
+
+    Seeds initial drink type data and ensures database tables exist.
+    """
     # --- Startup logic ---
     db = SessionLocal()
     create_db()  # Ensure tables are created before seeding data
@@ -49,5 +62,8 @@ app.include_router(vendor_router)
 app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 app.include_router(customer_router)
+<<<<<<< HEAD
 app.include_router(promotion_router)
 
+=======
+>>>>>>> 6901ebd691952b2d30f1941150eae7c205f3e60b
