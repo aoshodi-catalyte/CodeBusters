@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from constants.DRINK_TYPES import DrinkType
+from constants.drink_types import DrinkType
 from database import SessionLocal
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from drink_recipe.drink_recipe_router import router as drink_recipe_router

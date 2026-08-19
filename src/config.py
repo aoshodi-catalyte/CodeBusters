@@ -5,7 +5,6 @@ This module defines the Settings class, which loads environment variables
 using Pydantic Settings. It is responsible for providing the DATABASE_URL
 used by the application and by test workflows (e.g., pytest on GitHub Actions).
 """
-
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 
@@ -28,7 +27,6 @@ class Settings(BaseSettings):
     """
 
     model_config = ConfigDict(env_file=".env")
-
     DATABASE_URL: str
 
 
