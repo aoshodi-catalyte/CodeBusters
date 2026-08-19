@@ -13,7 +13,7 @@ class PromotionSchema(Base):
         start_datetime: The date and time when the promotion begins.
         end_datetime: The date and time when the promotion ends.
     """
-    __tablename__ = "Promotion"
+    __tablename__ = "promotion"
     id = Column(Integer, primary_key=True)
     active = Column(Boolean, nullable=False)
     promo_code = Column(String, unique=True, nullable=False)

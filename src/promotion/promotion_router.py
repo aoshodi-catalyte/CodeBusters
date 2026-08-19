@@ -2,8 +2,9 @@ from promotion.promotion_repository import PromotionRepository
 from promotion.promotion_response_model import PromotionResponseModel
 from promotion.promotion_model import Promotion
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from database import get_db
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 
 router = APIRouter(
@@ -28,9 +29,21 @@ def post_promotion(promotion_model: Promotion, db: Session = Depends(get_db)) ->
 
     Returns:
         PromotionResponseModel: The newly created promotion.
+
+    Raises:
+        HTTPException: If the promo code already exists.
     """
     repo = PromotionRepository(db)
-    post_promotions = repo.create_promotion(promotion_model)
+    try:
+        post_promotions = repo.create_promotion(promotion_model)
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Promotion with promo code "
+                   f"'{promotion_model.promo_code}' already exists."
+        )
 
     return post_promotions
     

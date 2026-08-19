@@ -4,7 +4,6 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 from datetime import datetime
 
-from datetime import datetime
 from database import Base
 from promotion.promotion_model import Promotion
 from promotion.promotion_schema import PromotionSchema

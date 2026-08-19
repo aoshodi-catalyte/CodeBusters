@@ -141,3 +141,23 @@ def test_post_promotion_requires_promo_code(client):
     response = client.post("/promotions/", json=promotion)
 
     assert response.status_code == 422
+
+def test_post_promotion_duplicate_promo_code(client):
+    promotion = {
+        "active": True,
+        "promo_code": "SUMMER2026",
+        "discount_percentage": 20.0,
+        "start_datetime": "08/19/2026 09:00 AM",
+        "end_datetime": "08/31/2026 11:59 PM"
+    }
+
+    first_response = client.post("/promotions/", json=promotion)
+
+    assert first_response.status_code == 201
+
+    second_response = client.post("/promotions/", json=promotion)
+
+    assert second_response.status_code == 409
+    assert second_response.json() == {
+        "detail": "Promotion with promo code 'SUMMER2026' already exists."
+    }
