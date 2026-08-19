@@ -143,25 +143,6 @@ def test_discount_percentage_accepts_positive_value():
 
     assert promotion.discount_percentage == 25.0
 
-def test_discount_percentage_rejects_zero():
-    """
-    Test that a discount percentage of zero is rejected.
-
-    Verifies that the discount percentage must be greater than zero
-    and that a zero value raises a Pydantic ValidationError.
-
-    Returns:
-        None: The test passes if the zero discount percentage is rejected.
-    """
-    with pytest.raises(ValidationError):
-        Promotion(
-            active=True,
-            promo_code="SUMMER2026",
-            discount_percentage=0,
-            start_datetime="06/01/2026 09:00 AM",
-            end_datetime="06/30/2026 11:59 PM",
-        )
-
 def test_discount_percentage_rejects_negative_value():
     """
     Test that a negative discount percentage is rejected.

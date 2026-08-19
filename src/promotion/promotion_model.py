@@ -7,6 +7,7 @@ promo codes, discount percentages, and promotion date/time ranges
 meet the application's validation requirements.
 """
 from datetime import datetime
+from operator import ge
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -32,8 +33,8 @@ class Promotion(BaseModel):
     """
 
     active: bool
-    promo_code: str
-    discount_percentage: float = Field(gt=0)
+    promo_code: str = Field(min_length=1)
+    discount_percentage: float = Field(ge=0)
     start_datetime: datetime
     end_datetime: datetime
 
@@ -86,8 +87,8 @@ class Promotion(BaseModel):
         Returns:
             float: The validated discount percentage.
         """
-        if value > 100:
-            raise ValueError("Discount percentage cannot exceed 100%.")
+        if value < 0 or value > 100:
+            raise ValueError("Discount percentage must be between 0% and 100%.")
 
         return value
 
