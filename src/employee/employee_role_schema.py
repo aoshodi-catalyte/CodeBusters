@@ -4,6 +4,13 @@ from database import Base
 
 
 class EmployeeRoleSchema(Base):
+    """
+    Defines the set of valid employee roles used throughout the application.
+
+    Relationships:
+        - employees: One-to-Many relationship with EmployeeSchema.
+    """
+
     __tablename__ = "employee_role"
 
     id = Column(Integer, primary_key=True, index=True)

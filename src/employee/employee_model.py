@@ -21,6 +21,28 @@ class Employee(BaseModel):
     @field_validator("first_name", "last_name", "email")
     @classmethod
     def validate_not_blank(cls, value):
+        """
+        Ensure that string fields are not empty or composed solely of whitespace.
+
+        This validator normalizes input by stripping leading and trailing whitespace
+        and then verifies that the resulting value contains at least one non‑space
+        character.
+
+        Fields validated:
+            - first_name
+            - last_name
+            - email
+
+        Args:
+            value (str): Raw string provided by the client.
+
+        Returns:
+            str: The cleaned, non‑blank string.
+
+        Raises:
+            ValueError: If the field is empty after stripping whitespace.
+        """
+
         value = value.strip()
         if not value:
             raise ValueError("Must not be blank")
@@ -30,13 +52,16 @@ class Employee(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        """Validate that the email field contains a properly formatted email address.
+        """
+        Validate that the email field contains a properly formatted email address.
 
-        Uses a regular expression to ensure the email contains one '@' symbol,
-        no whitespace, and a valid domain structure.
+        Uses a compiled regular expression to enforce:
+            - exactly one '@' symbol
+            - no whitespace characters
+            - a valid domain structure (e.g., example.com)
 
         Args:
-            value (str): The email address provided by the user or client.
+            value (str): The email address provided by the user.
 
         Returns:
             str: The validated email address.
@@ -44,6 +69,7 @@ class Employee(BaseModel):
         Raises:
             ValueError: If the email does not match the required pattern.
         """
+
         if not EMAIL_PATTERN.match(value):
             raise ValueError("email must be a valid email address")
         return value
@@ -51,6 +77,25 @@ class Employee(BaseModel):
     @field_validator("role")
     @classmethod
     def validate_role(cls, role_name):
+        """
+        Normalize and validate the employee role.
+
+        Accepts either:
+            - an EmployeeRole enum instance
+            - a string that can be converted to a valid EmployeeRole value
+
+        The validator lowercases string input to allow case‑insensitive matching.
+
+        Args:
+            role_name (str | EmployeeRole): The role value provided by the client.
+
+        Returns:
+            EmployeeRole: A valid EmployeeRole enum instance.
+
+        Raises:
+            ValueError: If the provided role does not match any known EmployeeRole.
+        """
+
         if isinstance(role_name, EmployeeRole):
             return role_name
 
@@ -65,6 +110,26 @@ class Employee(BaseModel):
     @field_validator("hire_date", "term_date", mode="before")
     @classmethod
     def validate_date(cls, value):
+        """
+        Parse and validate date fields provided as strings.
+
+        Accepts dates in MM/DD/YYYY format and converts them into `datetime.date`
+        objects. Allows `None` for nullable fields such as term_date.
+
+        Fields validated:
+            - hire_date
+            - term_date
+
+        Args:
+            value (str | None): The raw date string or None.
+
+        Returns:
+            date | None: Parsed date object or None.
+
+        Raises:
+            ValueError: If the date string is not in MM/DD/YYYY format.
+        """
+
         if value is None:
             return None
 
@@ -75,6 +140,25 @@ class Employee(BaseModel):
 
     @model_validator(mode="after")
     def check_term_date_rules(self):
+        """
+        Enforce business rules related to employee active status and term dates.
+
+        Rules enforced:
+            - Active employees cannot have a term_date.
+            - Inactive employees must have a term_date.
+            - term_date cannot be in the future.
+            - term_date cannot be earlier than hire_date.
+
+        These rules ensure logical consistency between employment status and
+        lifecycle dates.
+
+        Returns:
+            Employee: The validated Employee instance.
+
+        Raises:
+            ValueError: If any rule is violated.
+        """
+
         if self.active and self.term_date is not None:
             raise ValueError("Active employees cannot have a term_date.")
 

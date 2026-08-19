@@ -5,6 +5,13 @@ from database import Base
 
 
 class EmployeeSchema(Base):
+    """
+    Represents an employee record within the system.
+
+    Relationships:
+        - role: Many-to-One relationship with EmployeeRoleSchema.
+    """
+
     __tablename__ = "employee"
 
     id = Column(Integer, primary_key=True, index=True)
