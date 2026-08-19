@@ -81,7 +81,7 @@ class Employee(BaseModel):
 
         if not EMAIL_PATTERN.match(value):
             raise ValueError("email must be a valid email address")
-        return value
+        return value.lower()
 
     @field_validator("role")
     @classmethod
