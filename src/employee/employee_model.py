@@ -112,9 +112,11 @@ class Employee(BaseModel):
 
         try:
             return EmployeeRole(normalized)
-        except ValueError:
+        except ValueError as exc:
             valid = [r.value for r in EmployeeRole]
-            raise ValueError(f"Invalid role: {role_name}. Valid roles are: {valid}")
+            raise ValueError(
+                f"Invalid role: {role_name}. Valid roles are: {valid}"
+            ) from exc
 
     @field_validator("hire_date", "term_date", mode="before")
     @classmethod
@@ -144,8 +146,8 @@ class Employee(BaseModel):
 
         try:
             return datetime.strptime(value, "%m/%d/%Y").date()
-        except ValueError:
-            raise ValueError("Date must be in MM/DD/YYYY format")
+        except ValueError as exc:
+            raise ValueError("Date must be in MM/DD/YYYY format") from exc
 
     @model_validator(mode="after")
     def check_term_date_rules(self):
