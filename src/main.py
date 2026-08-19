@@ -16,12 +16,12 @@ from database import SessionLocal, create_db
 from employee.employee_role_schema import EmployeeRoleSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 
+from employee.employee_router import router as employee_router
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from vendor.vendor_router import router as vendor_router
 from baked_good.baked_good_router import router as baked_good_router
 from ingredient.ingredient_router import router as ingredient_router
 from customer.customer_router import router as customer_router
-from employee.employee_router import router as employee_router
 
 
 @asynccontextmanager
