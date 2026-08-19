@@ -1,7 +1,19 @@
+"""
+Pydantic response schema for vendor records, including serialization helpers
+for formatting phone numbers in API responses.
+"""
+
 from pydantic import BaseModel, field_serializer, ConfigDict
 
 
 class VendorResponse(BaseModel):
+    """
+    Defines the shape of vendor data returned in API responses.
+
+    Extends the base vendor model with database-generated fields and
+    serialization logic for human-readable formatting.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     active: bool

@@ -1,3 +1,8 @@
+"""
+FastAPI router for vendor-related API endpoints, including creation of new
+vendor records and handling of database integrity errors.
+"""
+
 from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session

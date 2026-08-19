@@ -1,9 +1,19 @@
+"""
+Repository layer for vendor-related database operations, including creation,
+retrieval, and persistence logic for vendor records.
+"""
+
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
 from sqlalchemy.orm import Session
 
 
 class VendorRepository:
+    """
+    Provides database operations for vendor records, including creation and
+    retrieval of vendor data from the database.
+    """
+
     def __init__(self, db: Session):
         """Initialize the VendorRepository with a database session.
 
