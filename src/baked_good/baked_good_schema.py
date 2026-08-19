@@ -48,5 +48,3 @@ class BakedGoodSchema(Base):
     vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
 
     vendor = relationship(Vendor, back_populates="baked_goods")
-
-
