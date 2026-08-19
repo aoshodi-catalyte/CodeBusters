@@ -24,7 +24,7 @@ class PromotionResponseModel(BaseModel):
         from_attributes: Allows the response model to be created from
             attributes of a SQLAlchemy model instance.
     """
-    
+
     id: int
     active: bool
     promo_code: str

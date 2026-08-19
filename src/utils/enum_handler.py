@@ -2,7 +2,6 @@
 Utility helpers for enum normalization and case-insensitive lookup.
 """
 
-
 def enum_missing_handler(cls, value):
     """
     Shared logic for case-insensitive enum value lookup.
@@ -15,7 +14,11 @@ def enum_missing_handler(cls, value):
         Enum | None: The matched enum member or None.
     """
     if isinstance(value, str):
-        value = value.lower()
-        if value in cls._value2member_map_:
-            return cls._value2member_map_[value]
+        lowered = value.lower()
+
+        # __members__ is the public, pylint-safe mapping
+        for member_name, member in cls.__members__.items():
+            if member.value.lower() == lowered:
+                return member
+
     return None

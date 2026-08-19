@@ -22,7 +22,7 @@ router = APIRouter(
 
 @router.post("/", response_model = PromotionResponseModel, status_code=201)
 def post_promotion(
-    promotion_model: Promotion, 
+    promotion_model: Promotion,
     db: Session = Depends(get_db)
 ) -> PromotionResponseModel:
     """
