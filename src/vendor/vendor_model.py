@@ -1,7 +1,6 @@
 import re
 from pydantic import BaseModel, field_validator, Field
 
-
 PHONE_DIGITS_PATTERN = re.compile(r"^\d{10}$")
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -11,10 +10,40 @@ class VendorBase(BaseModel):
     name: str = Field(min_length=1)
     contact_name: str = Field(min_length=1)
     contact_role: str = Field(min_length=1)
-    email: str 
+    email: str
     phone: str = Field(min_length=10)
 
-    @field_validator("email")
+    @field_validator("name", "contact_name", "contact_role", "phone", mode="before")
+    @classmethod
+    def strip_and_validate_no_trailing_spaces(cls, value: str) -> str:
+        """Normalize and validate string fields by enforcing consistent formatting rules.
+
+        This validator:
+        - Removes all leading and trailing whitespace using `strip()`
+        - Ensures the resulting value is not blank after trimming
+        - Runs before all other validators to guarantee normalized input
+
+        This prevents issues such as:
+        - Duplicate records caused by trailing spaces (e.g., "bob" vs "bob ")
+        - Case‑sensitive mismatches (e.g., "Manager" vs "manager")
+        - Invalid blank values created by whitespace-only input
+
+        Args:
+            value (str): The raw string value provided by the client.
+
+        Returns:
+            str: The normalized string value with whitespace removed and lowercased.
+
+        Raises:
+            ValueError: If the trimmed value is empty.
+        """
+        value = value.strip()
+        if not value:
+            raise ValueError("Must not be blank")
+
+        return value
+
+    @field_validator("email", mode="before")
     @classmethod
     def validate_email(cls, value: str) -> str:
         """Validate that the email field contains a properly formatted email address.
@@ -26,13 +55,19 @@ class VendorBase(BaseModel):
             value (str): The email address provided by the user or client.
 
         Returns:
-            str: The validated email address.
+            str: The validated email address all lowercased.
 
         Raises:
             ValueError: If the email does not match the required pattern.
         """
-        if not EMAIL_PATTERN.match(value):
+        value = value.strip().lower()
+
+        if not value:
+            raise ValueError("Must not be blank")
+
+        if not EMAIL_PATTERN.fullmatch(value):
             raise ValueError("email must be a valid email address")
+
         return value
 
     @field_validator("phone")

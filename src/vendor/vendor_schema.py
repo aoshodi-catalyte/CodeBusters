@@ -6,8 +6,6 @@ from sqlalchemy.orm import relationship
 # from baked_good.baked_good_schema import BakedGoodSchema
 from pydantic import ConfigDict, field_serializer
 
-from baked_good.baked_good_schema import BakedGoodSchema
-
 
 class VendorSchema(VendorBase):
     model_config = ConfigDict(from_attributes=True)
