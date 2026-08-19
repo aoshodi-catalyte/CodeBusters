@@ -108,11 +108,11 @@ class DrinkRecipe(BaseModel):
         """
         try:
             return DrinkType(value)  # Convert string/int to DrinkType enum
-        except ValueError:
+        except ValueError as exc:
             raise ValueError(
                 f"Invalid drink type: {value}. "
                 f"Valid types are: {[dt.value for dt in DrinkType]}"
-            )
+            ) from exc
 
     @field_validator("name", "description")
     @classmethod
