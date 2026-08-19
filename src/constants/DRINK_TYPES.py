@@ -46,4 +46,3 @@ class DrinkType(str, Enum):
             if value in cls._value2member_map_:
                 return cls._value2member_map_[value]
         return None
-
