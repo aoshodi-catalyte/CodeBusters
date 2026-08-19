@@ -49,7 +49,7 @@ def test_post_new_vendor(client):
         "phone": "1234567896",
     }
 
-    response = client.post("/vendor", json=vendor_payload)
+    response = client.post("/vendors", json=vendor_payload)
 
     assert response.status_code == 201
 

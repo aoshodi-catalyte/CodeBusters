@@ -12,9 +12,9 @@ The schema is used by the repository layer to persist recipe data, compute
 production cost and sale price, and manage ingredient associations.
 """
 
-from drink_recipe.drink_type_schema import DrinkTypeSchema
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
+from drink_recipe.drink_type_schema import DrinkTypeSchema
 from database import Base
 
 
