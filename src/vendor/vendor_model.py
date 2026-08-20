@@ -78,7 +78,7 @@ class VendorBase(BaseModel):
         if not EMAIL_PATTERN.fullmatch(value):
             raise ValueError("email must be a valid email address")
 
-        return value
+        return value.lower()
 
     @field_validator("phone")
     @classmethod
