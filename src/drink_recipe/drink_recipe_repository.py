@@ -85,8 +85,8 @@ class DrinkRecipeRepository:
         if existing:
             raise ValueError(f"Drink recipe name '{drink_recipe.name}' already exists")
 
-        if not drink_recipe.ingredients:
-            raise ValueError("Drink recipe must include at least one ingredient")
+        # if not drink_recipe.ingredients:
+        #     raise ValueError("Drink recipe must include at least one ingredient")
 
         recipe = DrinkRecipeSchema(
             name=drink_recipe.name,

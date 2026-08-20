@@ -15,7 +15,7 @@ def test_vendor_schema_valid_data():
         phone="123-456-7896",
     )
 
-    assert vendor_example.email == "bestBurgers@burger.com"
+    assert vendor_example.email == "bestburgers@burger.com"
     assert vendor_example.phone == "1234567896"
 
 
