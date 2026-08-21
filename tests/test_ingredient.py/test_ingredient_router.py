@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
-from constants.INGREDIENT_TYPES import CafeAllergen, UnitOfMeasure
+from constants.ingredient_types import CafeAllergen, UnitOfMeasure
 from database import get_db
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,

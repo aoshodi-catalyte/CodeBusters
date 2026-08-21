@@ -1,4 +1,9 @@
-"""SQLAlchemy models for ingredients and allergens."""
+"""
+SQLAlchemy ORM models for ingredients and allergens.
+
+Defines the ingredient table, allergen table, and their association table,
+including validation constraints, vendor relationships, and recipe links.
+"""
 
 from sqlalchemy import (
     Boolean,
@@ -14,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from constants.INGREDIENT_TYPES import UnitOfMeasure
+from constants.ingredient_types import UnitOfMeasure
 from database import Base
 
 
