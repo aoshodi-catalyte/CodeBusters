@@ -155,7 +155,7 @@ class DrinkRecipeRepository:
             .first()
         )
 
-    def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
+    def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]: # Comment for sprint2
         """
         Retrieve all drink recipes.
         """

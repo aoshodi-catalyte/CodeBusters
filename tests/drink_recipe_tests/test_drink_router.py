@@ -205,16 +205,34 @@ def test_create_recipe_invalid_ingredient_id(client, db):
 
 def test_get_drink_recipe_by_id(client, db): # Comment for sprint2
     drink_type = DrinkTypeSchema(name="tea")
-    db.add(drink_type)
+
+    ing1 = IngredientSchema(
+        name="Sugar",
+        purchasing_cost=5.50,
+        unit_amount=10.00,
+        unit_of_measure="lb",
+        vendor_id=1
+    )
+    ing2 = IngredientSchema(
+        name="Green Tea",
+        purchasing_cost=7.30,
+        unit_amount=100.00,
+        unit_of_measure="g",
+        vendor_id=1
+    )
+
+    db.add_all([drink_type, ing1, ing2])
     db.commit()
 
     recipe = {
         "name": "Plain Tea",
         "description": "Simple tea",
-        "ingredients": [],
+        "ingredients": [
+            {"id": ing1.id, "quantity_used": 5.00, "unit_of_measure_used": "g"},
+            {"id": ing2.id, "quantity_used": 10.00, "unit_of_measure_used": "g"}],
         "active": True,
         "type": "tea",
-        "markup_percentage": 10
+        "markup_percentage": 81
     }
 
     created = client.post("/drink_recipes/", json=recipe).json()
@@ -226,7 +244,12 @@ def test_get_drink_recipe_by_id(client, db): # Comment for sprint2
     data = response.json()
     assert data["id"] == recipe_id
     assert data["name"] == "Plain Tea"
-    assert data["ingredients"] == []
+    assert data["ingredients"] == [
+        {"id": ing1.id, "name": "Sugar", "quantity_used": 5.0, "unit_of_measure_used": "g"},
+        {"id": ing2.id, "name": "Green Tea", "quantity_used": 10.00, "unit_of_measure_used": "g"}
+    ]
+    assert data["production_cost"] == 0.74
+    assert data ["sale_price"] == 1.34
 
 def test_get_drink_recipe_by_id_not_found(client, db): # Comment for sprint2
     response = client.get(f"/drink_recipes/{9999}")
@@ -318,17 +341,33 @@ def test_all_valid_drink_types(client, db, drink_types):
     assert data[2]["type"] == "soda"
     assert data[3]["type"] == "other"
 
-def test_get_all_drink_recipes(client, db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    db.add(drink_type)
+def test_get_all_drink_recipes(client, db, drink_types):
+    ing1 = IngredientSchema(
+        name="Sugar",
+        purchasing_cost=5.50,
+        unit_amount=10.00,
+        unit_of_measure="lb",
+        vendor_id=1
+    )
+    ing2 = IngredientSchema(
+        name="Green Tea",
+        purchasing_cost=7.30,
+        unit_amount=100.00,
+        unit_of_measure="g",
+        vendor_id=1
+    )
+
+    db.add_all([ing1, ing2])
     db.commit()
 
     r1 = {
         "name": "A",
         "description": "desc",
-        "ingredients": [],
+        "ingredients": [
+            {"id": ing1.id, "quantity_used": 5.00, "unit_of_measure_used": "g"},
+            {"id": ing2.id, "quantity_used": 10.00, "unit_of_measure_used": "g"}],
         "active": True,
-        "type": "coffee",
+        "type": "tea",
         "markup_percentage": 10
     }
 
@@ -351,3 +390,9 @@ def test_get_all_drink_recipes(client, db):
     assert len(data) == 2
     assert data[0]["name"] == "A"
     assert data[1]["name"] == "B"
+
+
+def test_get_all_returns_empty_list(client, db):
+    response = client.get("/drink_recipes/")
+    assert response.status_code == 200
+    assert response.json() == []
