@@ -318,7 +318,7 @@ def test_all_valid_drink_types(client, db, drink_types):
     assert data[2]["type"] == "soda"
     assert data[3]["type"] == "other"
 
-def test_get_all_drink_recipes(client, db):
+def test_get_all_drink_recipes(client, db): # Comment for sprint2
     drink_type = DrinkTypeSchema(name="coffee")
     db.add(drink_type)
     db.commit()
