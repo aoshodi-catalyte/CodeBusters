@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+from fastapi import Depends, status, APIRouter, HTTPException
+from sqlalchemy.orm import Session
+from database import get_db
+from typing import List
+=======
 """
 FastAPI router for baked good endpoints.
 
@@ -12,13 +18,19 @@ from fastapi import Depends, status, APIRouter, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
+>>>>>>> 8bb3688c86749408fa79034a4abffc034ea8909c
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_response_model import BakedGoodResponseModel
 
+<<<<<<< HEAD
+router = APIRouter(
+    prefix="/baked_goods", 
+=======
 
 router = APIRouter(
     prefix="/baked_goods",
+>>>>>>> 8bb3688c86749408fa79034a4abffc034ea8909c
     tags=["baked_goods"]
 )
 
@@ -51,7 +63,6 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
     which converts it into a BakedGoodSchema SQLAlchemy model,
     adds it to the database, commits the transaction, and refreshes
     the object with its database-generated values.
-
     Args:
         baked_good: The validated baked good data received from the request.
         db: The SQLAlchemy database session provided by the get_db dependency.

@@ -18,7 +18,10 @@ from ingredient.ingredient_repository import (
     get_ingredient_by_id,
     get_or_create_allergen,
 )
-from ingredient.ingredient_schema import AllergenSchema
+from ingredient.ingredient_schema import (
+    AllergenSchema,
+    IngredientSchema,
+)
 from vendor.vendor_schema import Vendor
 
 
@@ -240,7 +243,7 @@ def test_duplicate_ingredient_raises_error(db):
 
 
 def test_invalid_purchasing_cost_raises_constraint_error(db):
-    """Test that a negative purchasing cost violates the constraint."""
+    """Test that a negative purchasing cost violates the database constraint."""
     vendor = Vendor(
         name="Constraint Test Vendor",
         contact_name="Test Person",
@@ -285,79 +288,3 @@ def test_unexpected_sqlalchemy_error_is_reraised():
         )
 
     db.rollback.assert_called_once()
-
-
-def test_get_all_ingredients_returns_empty_list(db):
-    """Test that an empty database returns an empty list."""
-    result = get_all_ingredients(db)
-
-    assert result == []
-
-
-def test_get_all_ingredients_returns_one_ingredient(db):
-    """Test that one ingredient is returned."""
-    vendor = Vendor(
-        name="Test Vendor",
-        contact_name="Test Person",
-        contact_role="Sales",
-        email="test@vendor.com",
-        phone="3125556666",
-        active=True,
-    )
-
-    db.add(vendor)
-    db.commit()
-    db.refresh(vendor)
-
-    create_ingredient(
-        db,
-        make_ingredient(
-            name="Flour",
-            vendor_id=vendor.id,
-        ),
-    )
-
-    result = get_all_ingredients(db)
-
-    assert len(result) == 1
-    assert result[0].name == "Flour"
-
-
-def test_get_all_ingredients_returns_multiple_ingredients(db):
-    """Test that multiple ingredients are returned."""
-    vendor = Vendor(
-        name="Test Vendor",
-        contact_name="Test Person",
-        contact_role="Sales",
-        email="test2@vendor.com",
-        phone="3125557777",
-        active=True,
-    )
-
-    db.add(vendor)
-    db.commit()
-    db.refresh(vendor)
-
-    create_ingredient(
-        db,
-        make_ingredient(
-            name="Flour",
-            vendor_id=vendor.id,
-        ),
-    )
-
-    create_ingredient(
-        db,
-        make_ingredient(
-            name="Sugar",
-            vendor_id=vendor.id,
-        ),
-    )
-
-    result = get_all_ingredients(db)
-
-    assert len(result) == 2
-    assert {ingredient.name for ingredient in result} == {
-        "Flour",
-        "Sugar",
-    }

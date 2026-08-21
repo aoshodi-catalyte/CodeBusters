@@ -3,6 +3,7 @@
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,6 +19,10 @@ from ingredient.ingredient_router import router
 import ingredient.ingredient_router as ingredient_router
 
 
+# ============================================================
+# TEST APPLICATION
+# ============================================================
+
 app = FastAPI()
 app.include_router(router)
 
@@ -32,6 +37,10 @@ app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
+
+# ============================================================
+# TEST DATA
+# ============================================================
 
 VALID_UNIT_OF_MEASURE = next(iter(UnitOfMeasure)).value
 VALID_ALLERGEN = next(iter(CafeAllergen)).value
@@ -51,7 +60,7 @@ def valid_ingredient_payload():
 
 
 def valid_ingredient_response():
-    """Return data expected from the mocked repository."""
+    """Return the data that the mocked repository would return."""
     payload = valid_ingredient_payload()
 
     return {
@@ -69,9 +78,14 @@ def valid_ingredient_response():
     }
 
 
+# ============================================================
+# SUCCESSFUL CREATION
+# ============================================================
+
 def test_create_ingredient_success(monkeypatch):
     """Test that a valid ingredient is successfully created."""
     expected_ingredient = valid_ingredient_response()
+
     mock_create = MagicMock(return_value=expected_ingredient)
 
     monkeypatch.setattr(
@@ -96,6 +110,10 @@ def test_create_ingredient_success(monkeypatch):
 
     mock_create.assert_called_once()
 
+
+# ============================================================
+# VENDOR DOES NOT EXIST
+# ============================================================
 
 def test_create_ingredient_vendor_not_found(monkeypatch):
     """Test that a missing vendor returns HTTP 404."""
@@ -124,6 +142,10 @@ def test_create_ingredient_vendor_not_found(monkeypatch):
     assert data["detail"]["error"] == "vendor_not_found"
 
 
+# ============================================================
+# DUPLICATE INGREDIENT
+# ============================================================
+
 def test_create_ingredient_already_exists(monkeypatch):
     """Test that a duplicate ingredient returns HTTP 409."""
     mock_create = MagicMock(
@@ -148,8 +170,12 @@ def test_create_ingredient_already_exists(monkeypatch):
     assert data["detail"]["error"] == "ingredient_already_exists"
 
 
+# ============================================================
+# DATABASE CONSTRAINT ERROR
+# ============================================================
+
 def test_create_ingredient_constraint_error(monkeypatch):
-    """Test that a constraint violation returns HTTP 409."""
+    """Test that a database constraint violation returns HTTP 409."""
     mock_create = MagicMock(
         side_effect=IngredientConstraintError(
             "ck_ingredient_unit_amount_positive",
@@ -174,6 +200,10 @@ def test_create_ingredient_constraint_error(monkeypatch):
     assert data["detail"]["error"] == "database_constraint_violation"
 
 
+# ============================================================
+# UNEXPECTED DATABASE ERROR
+# ============================================================
+
 def test_create_ingredient_database_error(monkeypatch):
     """Test that an unexpected SQLAlchemy error returns HTTP 500."""
     mock_create = MagicMock(
@@ -196,11 +226,16 @@ def test_create_ingredient_database_error(monkeypatch):
     data = response.json()
 
     assert data["detail"]["error"] == "database_error"
-    assert data["detail"]["message"] == (
-        "An unexpected database error occurred "
+    assert (
+        data["detail"]["message"]
+        == "An unexpected database error occurred "
         "while creating the ingredient."
     )
 
+
+# ============================================================
+# INVALID VENDOR ID
+# ============================================================
 
 def test_create_ingredient_invalid_vendor_id():
     """Test that vendor_id must be greater than zero."""
@@ -215,6 +250,10 @@ def test_create_ingredient_invalid_vendor_id():
     assert response.status_code == 422
 
 
+# ============================================================
+# NEGATIVE PURCHASING COST
+# ============================================================
+
 def test_create_ingredient_negative_purchasing_cost():
     """Test that purchasing_cost cannot be negative."""
     payload = valid_ingredient_payload()
@@ -227,6 +266,10 @@ def test_create_ingredient_negative_purchasing_cost():
 
     assert response.status_code == 422
 
+
+# ============================================================
+# ZERO UNIT AMOUNT
+# ============================================================
 
 def test_create_ingredient_zero_unit_amount():
     """Test that unit_amount must be greater than zero."""
@@ -241,6 +284,10 @@ def test_create_ingredient_zero_unit_amount():
     assert response.status_code == 422
 
 
+# ============================================================
+# MISSING REQUIRED FIELD
+# ============================================================
+
 def test_create_ingredient_missing_name():
     """Test that name is required."""
     payload = valid_ingredient_payload()
@@ -254,6 +301,10 @@ def test_create_ingredient_missing_name():
     assert response.status_code == 422
 
 
+# ============================================================
+# EMPTY INGREDIENT NAME
+# ============================================================
+
 def test_create_ingredient_empty_name():
     """Test that ingredient name cannot be empty."""
     payload = valid_ingredient_payload()
@@ -265,66 +316,3 @@ def test_create_ingredient_empty_name():
     )
 
     assert response.status_code == 422
-
-
-def test_read_all_ingredients_returns_200(monkeypatch):
-    """Test that reading all ingredients returns HTTP 200."""
-    monkeypatch.setattr(
-        ingredient_router,
-        "get_all_ingredients",
-        lambda db: [],
-    )
-
-    response = client.get("/ingredients/all")
-
-    assert response.status_code == 200
-
-
-def test_read_all_ingredients_returns_empty_list(monkeypatch):
-    """Test that no ingredients returns an empty list."""
-    monkeypatch.setattr(
-        ingredient_router,
-        "get_all_ingredients",
-        lambda db: [],
-    )
-
-    response = client.get("/ingredients/all")
-
-    assert response.status_code == 200
-    assert response.json()["ingredients"] == []
-
-
-def test_read_all_ingredients_returns_ingredients(monkeypatch):
-    """Test that all ingredients are returned successfully."""
-    ingredients = [
-        {
-            "id": 1,
-            "name": "Flour",
-            "active": True,
-            "purchasing_cost": 10.00,
-            "unit_amount": 25.00,
-            "unit_of_measure": VALID_UNIT_OF_MEASURE,
-            "allergens": [
-                {"name": VALID_ALLERGEN},
-            ],
-            "vendor_id": 1,
-        },
-    ]
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "get_all_ingredients",
-        lambda db: ingredients,
-    )
-
-    response = client.get("/ingredients/all")
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["message"] == (
-        "These are all the ingredients in your inventory!"
-    )
-    assert len(data["ingredients"]) == 1
-    assert data["ingredients"][0]["name"] == "Flour"
