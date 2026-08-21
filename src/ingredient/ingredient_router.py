@@ -32,28 +32,11 @@ router = APIRouter(
     response_model=IngredientOut,
     status_code=status.HTTP_201_CREATED,
 )
-def create(
+def create_ingredient_endpoint(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
-):
-    """Create a new ingredient.
-
-    Args:
-        ingredient: Validated ingredient information.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The newly created ingredient.
-
-    Raises:
-        HTTPException:
-            404 if the vendor does not exist.
-        HTTPException:
-            409 if the ingredient already exists or violates
-            a database constraint.
-        HTTPException:
-            500 if an unexpected database error occurs.
-    """
+) -> IngredientOut:
+    """Create a new ingredient."""
     try:
         return create_ingredient(
             db=db,
@@ -106,15 +89,8 @@ def create(
 )
 def read_all_ingredients(
     db: Session = Depends(get_db),
-):
-    """Retrieve all ingredients in the inventory.
-
-    Args:
-        db: Database session provided by FastAPI.
-
-    Returns:
-        A response containing a message and a list of all ingredients.
-    """
+) -> IngredientListResponse:
+    """Retrieve all ingredients in the inventory."""
     ingredients = get_all_ingredients(db)
 
     return {
@@ -130,20 +106,8 @@ def read_all_ingredients(
 def read_ingredient(
     ingredient_id: int,
     db: Session = Depends(get_db),
-):
-    """Retrieve a single ingredient by its ID.
-
-    Args:
-        ingredient_id: ID of the ingredient to retrieve.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The ingredient matching the specified ID.
-
-    Raises:
-        HTTPException:
-            404 if the ingredient does not exist.
-    """
+) -> IngredientOut:
+    """Retrieve a single ingredient by its ID."""
     ingredient = get_ingredient_by_id(
         db=db,
         ingredient_id=ingredient_id,
@@ -168,29 +132,12 @@ def read_ingredient(
     "/{ingredient_id}",
     response_model=IngredientOut,
 )
-def update(
+def update_ingredient_endpoint(
     ingredient_id: int,
     ingredient: Ingredient,
     db: Session = Depends(get_db),
-):
-    """Update an existing ingredient.
-
-    Args:
-        ingredient_id: ID of the ingredient to update.
-        ingredient: Validated ingredient information.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The updated ingredient.
-
-    Raises:
-        HTTPException:
-            404 if the ingredient or vendor does not exist.
-        HTTPException:
-            409 if the update violates a database constraint.
-        HTTPException:
-            500 if an unexpected database error occurs.
-    """
+) -> IngredientOut:
+    """Update an existing ingredient."""
     try:
         result = update_ingredient(
             db=db,

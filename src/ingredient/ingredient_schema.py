@@ -1,3 +1,5 @@
+"""SQLAlchemy models for ingredients and allergens."""
+
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -11,9 +13,10 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
+
 from constants.INGREDIENT_TYPES import UnitOfMeasure
-from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from database import Base
+from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 
 
 # ASSOCIATION TABLE
@@ -22,12 +25,18 @@ ingredient_allergen = Table(
     Base.metadata,
     Column(
         "ingredient_id",
-        ForeignKey("ingredient.id", ondelete="CASCADE"),
+        ForeignKey(
+            "ingredient.id",
+            ondelete="CASCADE",
+        ),
         primary_key=True,
     ),
     Column(
         "allergen_id",
-        ForeignKey("allergen.id", ondelete="CASCADE"),
+        ForeignKey(
+            "allergen.id",
+            ondelete="CASCADE",
+        ),
         primary_key=True,
     ),
 )
@@ -125,6 +134,11 @@ class IngredientSchema(Base):
         nullable=False,
     )
 
+    ingredient_recipes = relationship(
+        DrinkRecipeIngredientSchema,
+        back_populates="ingredient",
+    )
+
     allergens = relationship(
         "AllergenSchema",
         secondary=ingredient_allergen,
@@ -144,16 +158,3 @@ class IngredientSchema(Base):
         "Vendor",
         back_populates="ingredients",
     )
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    active = Column(Boolean, nullable=False, default=True)
-    name = Column(String(255), nullable=False) 
-    purchasing_cost = Column(Numeric(10, 2), nullable=False) 
-    unit_amount = Column(Numeric(10, 2), nullable=False) 
-    unit_of_measure = Column(Enum(UnitOfMeasure), nullable=False)
-
-    ingredient_recipes = relationship(
-        DrinkRecipeIngredientSchema, back_populates="ingredient"
-    )
-    allergens = relationship("AllergenSchema", secondary=ingredient_allergen, back_populates="ingredients")
-    vendor_id = Column(Integer, ForeignKey("vendor.id", ondelete="RESTRICT",), nullable=False)
-    vendor = relationship("Vendor", back_populates="ingredients")
