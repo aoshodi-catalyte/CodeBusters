@@ -81,10 +81,7 @@ def test_create_customer(client):
     assert result["first_name"] == "John"
     assert result["last_name"] == "Doe"
     assert result["email"] == "john.doe@example.com"
-
-    # API response should format the phone number.
     assert result["phone_number"] == "555-123-4567"
-
     assert result["active"] is True
     assert result["loyalty_points"] == 100
     assert result["id"] is not None
@@ -97,7 +94,7 @@ def test_get_customers(client):
     Phone numbers should be returned in xxx-xxx-xxxx format.
     """
 
-    customer1 = {
+    customer_one = {
         "first_name": "John",
         "last_name": "Doe",
         "email": "john@example.com",
@@ -106,7 +103,7 @@ def test_get_customers(client):
         "loyalty_points": 100
     }
 
-    customer2 = {
+    customer_two = {
         "first_name": "Jane",
         "last_name": "Smith",
         "email": "jane@example.com",
@@ -115,8 +112,15 @@ def test_get_customers(client):
         "loyalty_points": 200
     }
 
-    client.post("/customers", json=customer1)
-    client.post("/customers", json=customer2)
+    client.post(
+        "/customers",
+        json=customer_one
+    )
+
+    client.post(
+        "/customers",
+        json=customer_two
+    )
 
     response = client.get("/customers")
 
@@ -135,25 +139,23 @@ def test_get_customers(client):
 
 def test_get_customers_when_empty(client):
     """
-    Verifies that the API returns 404 when no customers exist.
+    Verifies that the API returns an empty list with HTTP 200 when
+    no customers exist.
     """
 
     response = client.get("/customers")
 
-    assert response.status_code == 404
-
-    assert response.json() == {
-        "detail": "No customers found."
-    }
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_create_duplicate_customer(client):
+def test_create_customer_with_duplicate_email(client):
     """
-    Verifies that creating a customer with an existing email
-    or phone number returns HTTP 409.
+    Verifies that creating a customer with an existing email returns
+    HTTP 409 with the correct error message.
     """
 
-    customer = {
+    first_customer = {
         "first_name": "John",
         "last_name": "Doe",
         "email": "john@example.com",
@@ -162,25 +164,74 @@ def test_create_duplicate_customer(client):
         "loyalty_points": 100
     }
 
+    second_customer = {
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "email": "john@example.com",
+        "phone_number": "5559876543",
+        "active": True,
+        "loyalty_points": 50
+    }
+
     first_response = client.post(
         "/customers",
-        json=customer
+        json=first_customer
     )
 
     assert first_response.status_code == 201
 
     second_response = client.post(
         "/customers",
-        json=customer
+        json=second_customer
     )
 
     assert second_response.status_code == 409
 
     assert second_response.json() == {
-        "detail": (
-            "A customer with this email or phone number "
-            "already exists."
-        )
+        "detail": "A customer with this email already exists."
+    }
+
+
+def test_create_customer_with_duplicate_phone_number(client):
+    """
+    Verifies that creating a customer with an existing phone number
+    returns HTTP 409 with the correct error message.
+    """
+
+    first_customer = {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@example.com",
+        "phone_number": "5551234567",
+        "active": True,
+        "loyalty_points": 100
+    }
+
+    second_customer = {
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "email": "jane@example.com",
+        "phone_number": "5551234567",
+        "active": True,
+        "loyalty_points": 50
+    }
+
+    first_response = client.post(
+        "/customers",
+        json=first_customer
+    )
+
+    assert first_response.status_code == 201
+
+    second_response = client.post(
+        "/customers",
+        json=second_customer
+    )
+
+    assert second_response.status_code == 409
+
+    assert second_response.json() == {
+        "detail": "A customer with this phone number already exists."
     }
 
 
