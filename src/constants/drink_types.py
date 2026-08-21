@@ -43,4 +43,4 @@ class DrinkType(str, Enum):
 
     @classmethod
     def _missing_(cls, value):
-        return enum_missing_handler(cls, value)
+        return enum_missing_handler(cls, v

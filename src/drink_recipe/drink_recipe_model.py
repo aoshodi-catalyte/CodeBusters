@@ -39,6 +39,38 @@ class RecipeIngredient(BaseModel):
     id: int
     quantity_used: float = Field(gt=0)
     unit_of_measure_used: str = Field(min_length=1, max_length=50)
+from constants.drink_types import DrinkType
+from utils.validators import round_float
+
+
+class RecipeIngredient(BaseModel):
+    """
+    Represents a single ingredient used within a drink recipe.
+
+    This model describes how much of a specific ingredient is used and in
+    what unit of measurement. It does not define the ingredient itself—
+    only its usage within the context of a recipe.
+
+    Fields:
+        id (int):
+            The database ID of the ingredient being referenced. This must
+            correspond to an existing Ingredient record.
+
+        quantity_used (float):
+            The amount of the ingredient used in the recipe. Must be greater
+            than zero. This value is later converted into the ingredient's
+            purchase unit for cost calculation.
+
+        unit_of_measure_used (str):
+            The unit describing how the recipe measures this ingredient
+            (e.g., "oz", "g", "tsp"). Must be a non‑empty string between
+            1 and 50 characters. This unit is used during cost conversion
+            and must exist in the unit conversion table.
+    """
+
+    id: int
+    quantity_used: float = Field(gt=0)
+    unit_of_measure_used: str = Field(min_length=1, max_length=50)
 
 
 class DrinkRecipe(BaseModel):

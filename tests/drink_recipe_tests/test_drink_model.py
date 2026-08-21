@@ -20,8 +20,12 @@ def test_valid_drink_recipe():
     )
 
     assert recipe.name == "Sweet Coffee"
-    assert recipe.ingredients[0] == RecipeIngredient(id=1, quantity_used=0.50, unit_of_measure_used="cup")
-    assert recipe.ingredients[1] == RecipeIngredient(id=2, quantity_used=2.00, unit_of_measure_used="tbsp")
+    assert recipe.ingredients[0] == RecipeIngredient(
+        id=1, quantity_used=0.50, unit_of_measure_used="cup"
+    )
+    assert recipe.ingredients[1] == RecipeIngredient(
+        id=2, quantity_used=2.00, unit_of_measure_used="tbsp"
+    )
     assert recipe.markup_percentage == 20
     assert recipe.type == DrinkType.COFFEE
 
@@ -36,6 +40,7 @@ def test_invalid_drink_type():
             type="invalid_type",
             markup_percentage=10,
         )
+
 
 def test_default_empty_ingredients():
     recipe = DrinkRecipe(
@@ -56,13 +61,19 @@ def test_multiple_ingredients():
         ingredients=[
             {"id": 1, "quantity_used": 0.50, "unit_of_measure_used": "cup"},
             {"id": 2, "quantity_used": 2.00, "unit_of_measure_used": "tbsp"},
-            {"id": 3, "quantity_used": 1.00, "unit_of_measure_used": "tbsp"}
+            {"id": 3, "quantity_used": 1.00, "unit_of_measure_used": "tbsp"},
         ],
         active=True,
         type="tea",
         markup_percentage=15,
     )
 
-    assert recipe.ingredients[0] == RecipeIngredient(id=1, quantity_used=0.50, unit_of_measure_used="cup")
-    assert recipe.ingredients[1] == RecipeIngredient(id=2, quantity_used=2.00, unit_of_measure_used="tbsp")
-    assert recipe.ingredients[2] == RecipeIngredient(id=3, quantity_used=1.00, unit_of_measure_used="tbsp")
+    assert recipe.ingredients[0] == RecipeIngredient(
+        id=1, quantity_used=0.50, unit_of_measure_used="cup"
+    )
+    assert recipe.ingredients[1] == RecipeIngredient(
+        id=2, quantity_used=2.00, unit_of_measure_used="tbsp"
+    )
+    assert recipe.ingredients[2] == RecipeIngredient(
+        id=3, quantity_used=1.00, unit_of_measure_used="tbsp"
+    )

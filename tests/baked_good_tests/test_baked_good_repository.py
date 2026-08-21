@@ -1,10 +1,11 @@
+import pytest
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlalchemy import create_engine
-from baked_good.baked_good_repository import BakedGoodRepository
+
 from baked_good.baked_good_model import BakedGood
+from baked_good.baked_good_repository import BakedGoodRepository
 from database import Base
-import pytest
 from vendor.vendor_schema import Vendor
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -19,7 +20,7 @@ TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=test_engine
-)
+) # pylint: disable=invalid-name
 
 @pytest.fixture
 def db():
@@ -32,7 +33,7 @@ def db():
     finally:
         session.close()
         Base.metadata.drop_all(bind=test_engine)
-        
+
 def test_create_baked_good_repository(db):
     """
     Tests that a baked good can be created and stored in the repository.
@@ -61,7 +62,7 @@ def test_create_baked_good_repository(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-    
+
     repository = BakedGoodRepository(db)
 
     baked_good = BakedGood (

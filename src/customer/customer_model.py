@@ -184,4 +184,8 @@ class CustomerResponse(BaseModel):
             f"{value[:3]}-"
             f"{value[3:6]}-"
             f"{value[6:]}"
+<<<<<<< HEAD
         )
+=======
+        )
+>>>>>>> fc4504c683cea032e2b8da45d105264ab33944c0
