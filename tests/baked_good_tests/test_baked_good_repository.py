@@ -156,3 +156,4 @@ def test_create_baked_good_invalid_vendor(db):
 
     with pytest.raises(ValueError, match="Vendor not found"):
         repository.create_baked_good(baked_good)
+

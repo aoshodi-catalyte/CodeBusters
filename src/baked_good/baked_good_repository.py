@@ -46,7 +46,7 @@ class BakedGoodRepository:
 
         self.session = session
 
-    def get_baked_goods(self) -> List[BakedGoodSchema]:
+    def get_all_baked_goods(self) -> List[BakedGoodSchema]:
         """
         Retrieves all baked goods from the database.
 

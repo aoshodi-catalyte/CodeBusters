@@ -10,6 +10,7 @@ from pydantic import ConfigDict, field_serializer
 from vendor.vendor_model import VendorBase
 from database import Base
 from baked_good.baked_good_schema import BakedGoodSchema
+from ingredient.ingredient_schema import IngredientSchema
 
 
 class VendorSchema(VendorBase):
