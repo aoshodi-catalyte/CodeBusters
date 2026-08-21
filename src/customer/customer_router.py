@@ -1,7 +1,7 @@
 """
 API routes for Customer operations.
 
-This module handles HTTP requests and responses for customers.
+This module handles all HTTP requests and responses for customers.
 Database operations are delegated to the customer repository.
 """
 
