@@ -6,13 +6,15 @@ Initializes the API, seeds required database values, and registers all routers.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from baked_good.baked_good_router import router as baked_good_router
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
 from customer.customer_router import router as customer_router
-from database import SessionLocal, create_db
+from database import SessionLocal, create_db, get_db
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
@@ -27,43 +29,94 @@ async def lifespan(_app: FastAPI):
     """
     Application startup and shutdown lifecycle handler.
 
-    Seeds initial drink type data and ensures database tables exist.
+    Seeds initial drink type and employee role data and ensures
+    database tables exist.
     """
     # --- Startup logic ---
     db = SessionLocal()
-    create_db()  # Ensure tables are created before seeding data
+    create_db()
+
     try:
         for drink_type in DrinkType:
             existing = (
-                db.query(DrinkTypeSchema).filter_by(name=drink_type.value).first()
+                db.query(DrinkTypeSchema)
+                .filter_by(name=drink_type.value)
+                .first()
             )
+
             if not existing:
                 db.add(DrinkTypeSchema(name=drink_type.value))
 
         for role in EmployeeRole:
-            existing = db.query(EmployeeRoleSchema).filter_by(role=role.value).first()
+            existing = (
+                db.query(EmployeeRoleSchema)
+                .filter_by(role=role.value)
+                .first()
+            )
+
             if not existing:
                 db.add(EmployeeRoleSchema(role=role.value))
 
         db.commit()
+
     finally:
         db.close()
 
     # Yield control to the app
     yield
 
-    # --- Shutdown logic (optional) ---
+    # --- Shutdown logic ---
     # e.g., close global resources, flush logs, etc.
 
 
 app = FastAPI(lifespan=lifespan)
 
-app.include_router(customer_router)
+
+@app.get(
+    "/health",
+    status_code=status.HTTP_200_OK,
+    tags=["Health"]
+)
+def health_check():
+    """
+    Liveness endpoint.
+
+    Returns 200 as long as the application process is running.
+    This endpoint does not depend on database connectivity.
+    """
+    return {"status": "ok"}
+
+
+@app.get(
+    "/ready",
+    status_code=status.HTTP_200_OK,
+    tags=["Health"]
+)
+def readiness_check(
+    db: Session = Depends(get_db)
+):
+    """
+    Readiness endpoint.
+
+    Returns 200 when the application can successfully reach the
+    database. Returns 503 when the database is unavailable.
+    """
+    try:
+        db.execute(text("SELECT 1"))
+
+        return {"status": "ready"}
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is unavailable."
+        ) from exc
+
 
 @app.get("/")
 def root():
     """
-    Health check endpoint.
+    Root endpoint.
     """
     return {"message": "API is running"}
 
@@ -75,3 +128,4 @@ app.include_router(ingredient_router)
 app.include_router(customer_router)
 app.include_router(employee_router)
 app.include_router(promotion_router)
+
