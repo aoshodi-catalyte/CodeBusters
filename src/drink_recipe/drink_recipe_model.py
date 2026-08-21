@@ -75,12 +75,15 @@ class DrinkRecipe(BaseModel):
     """
 
     name: str = Field(min_length=1, description="The name of the drink recipe")
-    description: str = Field(min_length=1, description="A detailed description of the drink")
-    ingredients: list[RecipeIngredient] = Field(
-        default_factory=list,
-        description="List of ingredients used in this recipe"
+    description: str = Field(
+        min_length=1, description="A detailed description of the drink"
     )
-    active: bool = Field(..., description="Whether this recipe is currently active/in use")
+    ingredients: list[RecipeIngredient] = Field(
+        default_factory=list, description="List of ingredients used in this recipe"
+    )
+    active: bool = Field(
+        ..., description="Whether this recipe is currently active/in use"
+    )
     type: DrinkType = Field(..., description="The type/category of the drink")
     markup_percentage: float = Field(ge=0)
 
@@ -104,16 +107,16 @@ class DrinkRecipe(BaseModel):
         """
         try:
             return DrinkType(value)  # Convert string/int to DrinkType enum
-        except ValueError:
+        except ValueError as exc:
             raise ValueError(
                 f"Invalid drink type: {value}. "
                 f"Valid types are: {[dt.value for dt in DrinkType]}"
-            )
-
+            ) from exc
 
     @field_validator("name", "description")
     @classmethod
     def validate_not_blank(cls, value):
+        """Ensure name and description are not blank or whitespace."""
         value = value.strip()
         if not value:
             raise ValueError("Must not be blank")
@@ -122,4 +125,5 @@ class DrinkRecipe(BaseModel):
 
     @field_validator("markup_percentage")
     def round_values(cls, v):
+        """Round markup percentage using shared rounding utility."""
         return round_float(v)

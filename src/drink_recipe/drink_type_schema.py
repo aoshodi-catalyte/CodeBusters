@@ -11,7 +11,6 @@ ensuring consistent categorization across the system.
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from database import Base
 
 
@@ -53,4 +52,4 @@ class DrinkTypeSchema(Base):
     )
 
     # One-to-many back reference to drink recipes using this type
-    drink_recipes = relationship(DrinkRecipeSchema, back_populates="drink_type")
+    drink_recipes = relationship("DrinkRecipeSchema", back_populates="drink_type")

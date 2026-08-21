@@ -1,20 +1,26 @@
+"""
+Pydantic response model for baked goods.
+
+Defines the structure returned by the API when retrieving baked good records.
+This model ensures consistent serialization of baked good data across all
+endpoints and supports ORM mode via `from_attributes=True`.
+"""
+
 from pydantic import BaseModel, ConfigDict
+
 
 class BakedGoodResponseModel(BaseModel):
     """
-    Defines the data returned when retrieving a baked good.
+    Represents the validated response structure for a baked good.
 
-    Args:
-        id: The unique identifier of the baked good.
-        active: Indicates whether the baked good is currently active.
-        name: The name of the baked good.
-        description: A description of the baked good.
-        purchasing_cost: The cost to purchase or produce the baked good.
-        retail_price: The price at which the baked good is sold.
-        vendor_id: The ID of the vendor associated with the baked good.
-
-    Returns:
-        A validated BakedGoodResponseModel object.
+    Fields:
+        id (int): Unique identifier of the baked good.
+        active (bool): Whether the baked good is currently active.
+        name (str): Name of the baked good.
+        description (str): Description of the baked good.
+        purchasing_cost (float): Cost to produce or purchase the baked good.
+        retail_price (float): Price at which the baked good is sold.
+        vendor_id (int): ID of the vendor associated with the baked good.
     """
 
     id: int

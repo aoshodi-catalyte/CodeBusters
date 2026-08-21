@@ -1,3 +1,12 @@
+"""
+FastAPI router for ingredient management endpoints.
+
+This module exposes API routes for creating, retrieving, and listing
+ingredients. It coordinates request validation, repository operations,
+and domain‑specific exception handling to ensure consistent and meaningful
+HTTP responses for ingredient‑related actions.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -81,16 +90,17 @@ def create_ingredient_endpoint(
                 ),
             },
         ) from exc
-
-
-@router.get(
-    "/all",
-    response_model=IngredientListResponse,
-)
 def read_all_ingredients(
     db: Session = Depends(get_db),
 ) -> IngredientListResponse:
-    """Retrieve all ingredients in the inventory."""
+    """Retrieve all ingredients in the inventory.
+
+    Args:
+        db: Database session provided by FastAPI.
+
+    Returns:
+        A response containing a message and a list of all ingredients.
+    """
     ingredients = get_all_ingredients(db)
 
     return {
@@ -107,7 +117,19 @@ def read_ingredient(
     ingredient_id: int,
     db: Session = Depends(get_db),
 ) -> IngredientOut:
-    """Retrieve a single ingredient by its ID."""
+    """Retrieve a single ingredient by its ID.
+
+    Args:
+        ingredient_id: ID of the ingredient to retrieve.
+        db: Database session provided by FastAPI.
+
+    Returns:
+        The ingredient matching the specified ID.
+
+    Raises:
+        HTTPException:
+            404 if the ingredient does not exist.
+    """
     ingredient = get_ingredient_by_id(
         db=db,
         ingredient_id=ingredient_id,

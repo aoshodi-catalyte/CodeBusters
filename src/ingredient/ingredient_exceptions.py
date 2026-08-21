@@ -1,11 +1,17 @@
-"""Custom exceptions used by the ingredient module."""
+"""
+Custom exception classes used across the application.
 
+Provides domain‑specific errors for vendor lookup failures, duplicate
+ingredient creation, and ingredient constraint violations. These exceptions
+allow repositories and services to raise clear, typed errors that can be
+caught and translated into appropriate API responses.
+"""
 
 class VendorNotFoundError(Exception):
     """Raised when the specified vendor does not exist."""
 
-    def __init__(self, vendor_id: int) -> None:
-        """Initialize a VendorNotFoundError.
+    def __init__(self, vendor_id: int):
+        """Initialize the vendor-not-found exception.
 
         Args:
             vendor_id: ID of the vendor that could not be found.
@@ -20,8 +26,8 @@ class VendorNotFoundError(Exception):
 class IngredientAlreadyExistsError(Exception):
     """Raised when an ingredient with the same name already exists."""
 
-    def __init__(self, name: str) -> None:
-        """Initialize an IngredientAlreadyExistsError.
+    def __init__(self, name: str):
+        """Initialize the duplicate-ingredient exception.
 
         Args:
             name: Name of the ingredient that already exists.
@@ -36,8 +42,8 @@ class IngredientAlreadyExistsError(Exception):
 class IngredientConstraintError(Exception):
     """Raised when an ingredient violates a database constraint."""
 
-    def __init__(self, constraint: str | None = None) -> None:
-        """Initialize an IngredientConstraintError.
+    def __init__(self, constraint: str | None = None):
+        """Initialize the database-constraint exception.
 
         Args:
             constraint: Name of the database constraint that was

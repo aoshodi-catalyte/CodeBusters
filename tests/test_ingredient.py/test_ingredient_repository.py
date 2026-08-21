@@ -529,7 +529,8 @@ def test_update_ingredient_updates_allergens(db):
 
     assert {allergen.name for allergen in updated.allergens} == {
         "Soy",
-    }"""Tests for ingredient repository database operations."""
+    }
+    """Tests for ingredient repository database operations."""
 
 from decimal import Decimal
 from unittest.mock import MagicMock

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from constants.INGREDIENT_TYPES import CafeAllergen, UnitOfMeasure
+from constants.ingredient_types import CafeAllergen, UnitOfMeasure
 
 
 class AllergenOut(BaseModel):
