@@ -203,7 +203,7 @@ def test_create_recipe_invalid_ingredient_id(client, db):
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_get_drink_recipe_by_id(client, db):
+def test_get_drink_recipe_by_id(client, db): # Comment for sprint2
     drink_type = DrinkTypeSchema(name="tea")
     db.add(drink_type)
     db.commit()
@@ -228,7 +228,7 @@ def test_get_drink_recipe_by_id(client, db):
     assert data["name"] == "Plain Tea"
     assert data["ingredients"] == []
 
-def test_get_drink_recipe_by_id_not_found(client, db):
+def test_get_drink_recipe_by_id_not_found(client, db): # Comment for sprint2
     response = client.get(f"/drink_recipes/{9999}")
     assert response.status_code == 404
     assert response.json()["detail"] == "Drink recipe not found"

@@ -145,7 +145,7 @@ class DrinkRecipeRepository:
         self.session.refresh(recipe)
         return recipe
 
-    def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
+    def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None: # Comment for sprint 2
         """
         Retrieve a drink recipe by its ID.
         """

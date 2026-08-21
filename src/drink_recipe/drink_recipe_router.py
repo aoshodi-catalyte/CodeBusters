@@ -119,7 +119,7 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
 
 
 @router.get("/{recipe_id}", response_model=DrinkRecipeResponse)
-def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)): # Comment for sprint2
     """
     Retrieve a single drink recipe by its ID.
 
