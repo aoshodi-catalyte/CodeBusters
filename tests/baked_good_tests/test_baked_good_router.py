@@ -92,7 +92,7 @@ def test_post_baked_good(client):
     assert data["description"] == "A cookie with chocolate chips."
     assert data["purchasing_cost"] == 1.00
     assert data["retail_price"] == 2.50
-    assert data["vendor_id"] == 1
+    assert data["vendor_id"] == vendor_id
 
 def test_post_baked_good_missing_description(client):
     """
