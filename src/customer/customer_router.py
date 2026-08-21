@@ -1,7 +1,7 @@
 """
 API routes for Customer operations.
 
-This module handles HTTP requests and responses for customers.
+This module handles all HTTP requests and responses for customers.
 Database operations are delegated to the customer repository.
 """
 
@@ -9,36 +9,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import engine, get_db
+from database import get_db
 from customer.customer_model import CustomerCreate, CustomerResponse
 from customer.customer_repository import CustomerRepository
-from customer.customer_schema import CustomerSchema
 
 
 router = APIRouter()
-
-
-# DEVELOPMENT ONLY:
-# Reset the customer table whenever the application reloads.
-def reset_customer_table() -> None:
-    """
-    Drop and recreate the customer table.
-
-    This is intended for development only and will delete
-    all existing customer records.
-    """
-    CustomerSchema.__table__.drop(
-        bind=engine,
-        checkfirst=True
-    )
-
-    CustomerSchema.__table__.create(
-        bind=engine,
-        checkfirst=True
-    )
-
-
-reset_customer_table()
 
 
 @router.post(
@@ -53,39 +29,52 @@ def create_customer(
     """
     Create a new customer and persist it to the database.
 
-    The incoming phone number is validated and normalized by the
-    CustomerCreate Pydantic model before being passed to the repository.
-    The CustomerResponse model formats the phone number for the API response.
-
-    Args:
-        customer: Customer data provided by the API client.
-        db: SQLAlchemy database session.
-
-    Returns:
-        CustomerResponse: The newly created customer.
-
     Raises:
         HTTPException 409:
-            If the email or phone number already exists.
+            If the email already exists.
+
+        HTTPException 409:
+            If the phone number already exists.
 
         HTTPException 500:
             If an unexpected database error occurs.
     """
     try:
         repo = CustomerRepository(db)
-        customer = repo.create_customer(customer)
 
-        return customer
+        # Check if the email already exists
+        existing_email = repo.get_customer_by_email(customer.email)
+
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A customer with this email already exists."
+            )
+
+        # Check if the phone number already exists
+        existing_phone = repo.get_customer_by_phone(
+            customer.phone_number
+        )
+
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A customer with this phone number already exists."
+            )
+
+        new_customer = repo.create_customer(customer)
+
+        return new_customer
+
+    except HTTPException:
+        raise
 
     except IntegrityError as exc:
         db.rollback()
 
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "A customer with this email or phone number "
-                "already exists."
-            )
+            detail="A duplicate customer record already exists."
         ) from exc
 
     except Exception as exc:
@@ -112,12 +101,10 @@ def get_customers(
         db: SQLAlchemy database session.
 
     Returns:
-        list[CustomerResponse]: A list of all customers.
+        list[CustomerResponse]: A list of all customers. Returns an
+        empty list when no customers are found.
 
     Raises:
-        HTTPException 404:
-            If no customers are found.
-
         HTTPException 500:
             If an unexpected database error occurs.
     """
@@ -125,16 +112,10 @@ def get_customers(
         repo = CustomerRepository(db)
         customers = repo.get_customers()
 
+        return customers
+
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving customers."
         ) from exc
-
-    if not customers:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No customers found."
-        )
-
-    return customers
