@@ -21,7 +21,6 @@ from sqlalchemy.orm import relationship
 
 from constants.ingredient_types import UnitOfMeasure
 from database import Base
-from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 
 
 # ASSOCIATION TABLE
@@ -30,18 +29,12 @@ ingredient_allergen = Table(
     Base.metadata,
     Column(
         "ingredient_id",
-        ForeignKey(
-            "ingredient.id",
-            ondelete="CASCADE",
-        ),
+        ForeignKey("ingredient.id", ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
         "allergen_id",
-        ForeignKey(
-            "allergen.id",
-            ondelete="CASCADE",
-        ),
+        ForeignKey("allergen.id", ondelete="CASCADE"),
         primary_key=True,
     ),
 )
@@ -137,11 +130,6 @@ class IngredientSchema(Base):
     unit_of_measure = Column(
         Enum(UnitOfMeasure),
         nullable=False,
-    )
-
-    ingredient_recipes = relationship(
-        DrinkRecipeIngredientSchema,
-        back_populates="ingredient",
     )
 
     allergens = relationship(
