@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from drink_recipe.drink_recipe_model import DrinkRecipe
-from constants.DRINK_TYPES import DrinkType
+from constants.drink_types import DrinkType
 from drink_recipe.drink_recipe_model import RecipeIngredient
 
 

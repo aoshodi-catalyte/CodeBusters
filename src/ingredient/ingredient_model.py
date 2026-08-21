@@ -1,25 +1,31 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from constants.INGREDIENT_TYPES import UnitOfMeasure, CafeAllergen
+"""Pydantic schemas for ingredient validation and responses."""
 
-# ==========================================
-# PYDANTIC SCHEMAS
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-# ==========================================
+from constants.INGREDIENT_TYPES import CafeAllergen, UnitOfMeasure
+
+
 class AllergenOut(BaseModel):
+    """Response schema representing an ingredient allergen."""
+
     name: str
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class Allergen(BaseModel):
-    """
-    Pydantic schema representing an ingredient allergen.
+    """Schema representing an ingredient allergen.
 
     Attributes:
         name: Name of the allergen. Must contain at least one character.
-    """    
+    """
+
     name: str = Field(min_length=1)
 
+
 class IngredientOut(BaseModel):
+    """Response schema representing an ingredient."""
+
     id: int
     name: str
     active: bool
@@ -31,90 +37,101 @@ class IngredientOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class Ingredient(BaseModel):
-    
-    """
-    Pydantic schema used to validate ingredient data.
+    """Schema used to validate ingredient data.
 
     This schema validates ingredient information before it is
-    passed to the repository for database creation.
+    passed to the repository for database creation or update.
 
     Attributes:
         active: Whether the ingredient is currently active.
-            Defaults to True.
         name: Name of the ingredient. Must be between 1 and
             255 characters.
-        purchasing_cost: Cost paid to purchase the ingredient.
-            Must be greater than or equal to zero and contain
-            no more than two decimal places.
-        unit_amount: Quantity of the ingredient represented by
-            the unit of measure. Must be greater than zero and
-            contain no more than two decimal places.
+        purchasing_cost: Cost to purchase the ingredient. Must be
+            greater than or equal to zero and contain no more than
+            two decimal places.
+        unit_amount: Quantity represented by the unit of measure.
+            Must be greater than zero and contain no more than
+            two decimal places.
         unit_of_measure: Unit used to measure the ingredient.
-            Must be a valid UnitOfMeasure value.
         allergens: List of allergens associated with the ingredient.
-            Each allergen must be a valid CafeAllergen value.
         vendor_id: ID of the vendor supplying the ingredient.
-            Must be greater than zero.The referenced vendor must
-            also exist in the database before the ingredient can
-            be created.
+            Must be greater than zero.
     """
 
     active: bool = True
-    name: str = Field(min_length=1, max_length=255)
-    purchasing_cost: float = Field( ge=0, )
-    unit_amount: float = Field( gt=0, )
+
+    name: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+    purchasing_cost: float = Field(
+        ge=0,
+    )
+
+    unit_amount: float = Field(
+        gt=0,
+    )
+
     unit_of_measure: UnitOfMeasure
-    allergens: list[str] = Field(default_factory=list)
-    vendor_id: int = Field( gt=0,)
+
+    allergens: list[CafeAllergen] = Field(
+        default_factory=list,
+    )
+
+    vendor_id: int = Field(
+        gt=0,
+    )
 
     @field_validator("name", mode="before")
     @classmethod
     def strip_name(cls, value: str) -> str:
-        """
-        Remove leading and trailing whitespace from the ingredient name.
+        """Remove leading and trailing whitespace from the name.
 
         Args:
-            value: The ingredient name supplied by the client.
+            value: Ingredient name supplied by the client.
 
         Returns:
-            The ingredient name with leading and trailing whitespace
-            removed.
+            The stripped ingredient name.
 
         Raises:
-            ValueError: If the supplied value is not a string or is
-                empty after whitespace is removed.
+            ValueError: If the value is not a string or is blank.
         """
         if not isinstance(value, str):
             raise ValueError("Ingredient name must be a string")
+
         value = value.strip()
+
         if not value:
             raise ValueError("Ingredient name cannot be blank")
+
         return value
 
     @field_validator("allergens", mode="before")
     @classmethod
-    def validate_allergens(cls, value):
-        """
-        Convert supplied allergen values into CafeAllergen values.
+    def validate_allergens(cls, value) -> list[CafeAllergen]:
+        """Convert supplied allergens into CafeAllergen values.
+
         A single allergen value is converted into a list so that
         the API accepts either one allergen or multiple allergens.
-        Each allergen is converted using CafeAllergen.from_string().
+
         Args:
-            value: A single allergen or list of allergens supplied
-                by the client.
+            value: A single allergen or list of allergens.
+
         Returns:
             A list of validated CafeAllergen values.
 
         Raises:
-            ValueError: If an allergen cannot be converted into a
-                valid CafeAllergen value.
-        """    
+            ValueError: If an allergen is not recognized.
+        """
         if value is None:
             return []
+
         if not isinstance(value, list):
             value = [value]
-       
+
         return [
             allergen
             if isinstance(allergen, CafeAllergen)
@@ -124,44 +141,50 @@ class Ingredient(BaseModel):
 
     @field_validator("purchasing_cost", "unit_amount")
     @classmethod
-    def validate_two_decimal_places(cls, value: float) -> float:
-        """
-        Validate that numeric ingredient values contain no more
-        than two decimal places.
-        This validation is applied to purchasing_cost and
-        unit_amount before the values are stored in the database.
-        It prevents values such as 4.999 from passing API validation
-        and being silently rounded by the database.
+    def validate_two_decimal_places(
+        cls,
+        value: float,
+    ) -> float:
+        """Validate that numeric values contain at most two decimals.
+
         Args:
-            value: Numeric value supplied for purchasing_cost or
-                unit_amount.
+            value: Numeric ingredient value.
+
         Returns:
             The validated numeric value.
+
         Raises:
-            ValueError: If the value contains more than two decimal
-                places.
-        """ 
+            ValueError: If the value contains more than two decimals.
+        """
         if round(value, 2) != value:
-            raise ValueError("Value must have no more than 2 decimal places")
+            raise ValueError(
+                "Value must have no more than 2 decimal places"
+            )
+
         return value
 
     @field_validator("unit_of_measure", mode="before")
     @classmethod
-    def validate_unit_of_measure(cls, value):
-        """
-        Convert the supplied unit of measure into a UnitOfMeasure.
-        The validator runs before Pydantic performs the normal
-        field validation, allowing values such as strings to be
-        converted using UnitOfMeasure.from_string().
+    def validate_unit_of_measure(
+        cls,
+        value,
+    ) -> UnitOfMeasure:
+        """Convert the supplied value into a UnitOfMeasure.
+
         Args:
-            value: The unit of measure supplied by the client.
+            value: Unit of measure supplied by the client.
+
         Returns:
             A valid UnitOfMeasure value.
+
         Raises:
-            ValueError: If the supplied value cannot be converted
-                to a valid UnitOfMeasure.
-        """   
+            ValueError: If the unit of measure is not recognized.
+        """
         return UnitOfMeasure.from_string(value)
+
+
 class IngredientListResponse(BaseModel):
+    """Response schema containing a list of ingredients."""
+
     message: str
-    ingredients: list[IngredientOut]  
+    ingredients: list[IngredientOut]

@@ -1,31 +1,26 @@
-import pytest
+"""Tests for the ingredient repository."""
+
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import (
-    create_ingredient,
-    get_all_ingredients,
-    get_or_create_allergen, 
-    get_ingredient_by_id
-)
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
-)
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
 )
+from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_repository import (
+    create_ingredient,
+    get_all_ingredients,
+    get_ingredient_by_id,
+    get_or_create_allergen,
+)
+from ingredient.ingredient_schema import AllergenSchema
 from vendor.vendor_schema import Vendor
 
-
-# ============================================================
-# HELPER
-# ============================================================
 
 def make_ingredient(
     name="Flour",
@@ -35,6 +30,19 @@ def make_ingredient(
     unit_of_measure="lb",
     allergens=None,
 ):
+    """Create an Ingredient object for testing.
+
+    Args:
+        name: Ingredient name.
+        vendor_id: ID of the ingredient vendor.
+        purchasing_cost: Ingredient purchasing cost.
+        unit_amount: Quantity of the ingredient.
+        unit_of_measure: Unit used to measure the ingredient.
+        allergens: List of ingredient allergens.
+
+    Returns:
+        A validated Ingredient object.
+    """
     if allergens is None:
         allergens = ["Wheat"]
 
@@ -49,12 +57,8 @@ def make_ingredient(
     )
 
 
-# ============================================================
-# TEST 1
-# CREATE INGREDIENT SUCCESSFULLY
-# ============================================================
-
 def test_create_ingredient_success(db):
+    """Test that an ingredient can be created successfully."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="John Doe",
@@ -82,12 +86,8 @@ def test_create_ingredient_success(db):
     assert result.active is True
 
 
-# ============================================================
-# TEST 2
-# INGREDIENT IS ASSOCIATED WITH CORRECT VENDOR
-# ============================================================
-
 def test_create_ingredient_with_vendor(db):
+    """Test that an ingredient is associated with the correct vendor."""
     vendor = Vendor(
         name="ABC Foods",
         contact_name="Jane Smith",
@@ -114,12 +114,8 @@ def test_create_ingredient_with_vendor(db):
     assert result.vendor.name == "ABC Foods"
 
 
-# ============================================================
-# TEST 3
-# VENDOR DOES NOT EXIST
-# ============================================================
-
 def test_create_ingredient_vendor_not_found(db):
+    """Test that a missing vendor raises VendorNotFoundError."""
     with pytest.raises(VendorNotFoundError):
         create_ingredient(
             db,
@@ -130,24 +126,16 @@ def test_create_ingredient_vendor_not_found(db):
         )
 
 
-# ============================================================
-# TEST 4
-# CREATE NEW ALLERGEN
-# ============================================================
-
 def test_get_or_create_allergen_creates_new_allergen(db):
+    """Test that a missing allergen is created."""
     result = get_or_create_allergen(db, "Milk")
 
     assert result.id is not None
     assert result.name == "Milk"
 
 
-# ============================================================
-# TEST 5
-# RETURN EXISTING ALLERGEN
-# ============================================================
-
 def test_get_or_create_allergen_returns_existing_allergen(db):
+    """Test that an existing allergen is returned."""
     allergen = AllergenSchema(name="Milk")
 
     db.add(allergen)
@@ -160,12 +148,8 @@ def test_get_or_create_allergen_returns_existing_allergen(db):
     assert result.name == "Milk"
 
 
-# ============================================================
-# TEST 6
-# INGREDIENT IS ASSOCIATED WITH ALLERGENS
-# ============================================================
-
 def test_create_ingredient_with_allergens(db):
+    """Test that an ingredient is associated with its allergens."""
     vendor = Vendor(
         name="Ingredient Supplier",
         contact_name="Bob Smith",
@@ -188,15 +172,14 @@ def test_create_ingredient_with_allergens(db):
         ),
     )
 
-    assert {a.name for a in result.allergens} == {"Milk", "Soy"}
+    assert {allergen.name for allergen in result.allergens} == {
+        "Milk",
+        "Soy",
+    }
 
-
-# ============================================================
-# TEST 7
-# DUPLICATE ALLERGENS ARE REMOVED
-# ============================================================
 
 def test_duplicate_allergens_are_removed(db):
+    """Test that duplicate allergens are removed."""
     vendor = Vendor(
         name="Duplicate Test Vendor",
         contact_name="Test Person",
@@ -223,12 +206,8 @@ def test_duplicate_allergens_are_removed(db):
     assert result.allergens[0].name == "Milk"
 
 
-# ============================================================
-# TEST 8
-# DUPLICATE INGREDIENT
-# ============================================================
-
 def test_duplicate_ingredient_raises_error(db):
+    """Test that duplicate ingredient names raise an exception."""
     vendor = Vendor(
         name="Duplicate Ingredient Vendor",
         contact_name="Test Person",
@@ -260,14 +239,8 @@ def test_duplicate_ingredient_raises_error(db):
         )
 
 
-# ============================================================
-# TEST 9
-# INVALID DATABASE CONSTRAINT
-# ============================================================
-
 def test_invalid_purchasing_cost_raises_constraint_error(db):
-    """Raise IngredientConstraintError when the database rejects a negative purchasing cost."""
-
+    """Test that a negative purchasing cost violates the constraint."""
     vendor = Vendor(
         name="Constraint Test Vendor",
         contact_name="Test Person",
@@ -296,12 +269,9 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
             ingredient_data,
         )
 
-# ============================================================
-# TEST 10
-# UNEXPECTED SQLALCHEMY ERROR
-# ============================================================
 
 def test_unexpected_sqlalchemy_error_is_reraised():
+    """Test that unexpected SQLAlchemy errors are re-raised."""
     db = MagicMock()
 
     db.query.side_effect = SQLAlchemyError(
@@ -315,23 +285,17 @@ def test_unexpected_sqlalchemy_error_is_reraised():
         )
 
     db.rollback.assert_called_once()
-    # ============================================================
-# TEST 11
-# RETURN EMPTY LIST
-# ============================================================
+
 
 def test_get_all_ingredients_returns_empty_list(db):
+    """Test that an empty database returns an empty list."""
     result = get_all_ingredients(db)
 
     assert result == []
 
 
-# ============================================================
-# TEST 12
-# RETURN ONE INGREDIENT
-# ============================================================
-
 def test_get_all_ingredients_returns_one_ingredient(db):
+    """Test that one ingredient is returned."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="Test Person",
@@ -359,12 +323,8 @@ def test_get_all_ingredients_returns_one_ingredient(db):
     assert result[0].name == "Flour"
 
 
-# ============================================================
-# TEST 13
-# RETURN MULTIPLE INGREDIENTS
-# ============================================================
-
 def test_get_all_ingredients_returns_multiple_ingredients(db):
+    """Test that multiple ingredients are returned."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="Test Person",
@@ -397,16 +357,14 @@ def test_get_all_ingredients_returns_multiple_ingredients(db):
     result = get_all_ingredients(db)
 
     assert len(result) == 2
-    assert {i.name for i in result} == {"Flour", "Sugar"}
-# ============================================================
-# TEST 14
-# GET INGREDIENT BY ID
-# ============================================================
+    assert {ingredient.name for ingredient in result} == {
+        "Flour",
+        "Sugar",
+    }
+
 
 def test_get_ingredient_by_id_returns_ingredient(db):
-    """
-    Test that an ingredient can be retrieved by its ID.
-    """
+    """Test that an ingredient can be retrieved by its ID."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="Test Person",
@@ -438,15 +396,8 @@ def test_get_ingredient_by_id_returns_ingredient(db):
     assert result.name == "Flour"
 
 
-# ============================================================
-# TEST 15
-# INGREDIENT ID DOES NOT EXIST
-# ============================================================
-
 def test_get_ingredient_by_id_returns_none(db):
-    """
-    Test that None is returned when the ingredient ID does not exist.
-    """
+    """Test that None is returned when the ingredient ID does not exist."""
     result = get_ingredient_by_id(
         db,
         9999,
@@ -455,16 +406,8 @@ def test_get_ingredient_by_id_returns_none(db):
     assert result is None
 
 
-# ============================================================
-# TEST 16
-# GET CORRECT INGREDIENT WHEN MULTIPLE EXIST
-# ============================================================
-
 def test_get_ingredient_by_id_returns_correct_ingredient(db):
-    """
-    Test that the correct ingredient is returned when multiple
-    ingredients exist.
-    """
+    """Test that the correct ingredient is returned when multiple exist."""
     vendor = Vendor(
         name="Test Vendor",
         contact_name="Test Person",
