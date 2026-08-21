@@ -56,20 +56,7 @@ def client():
 
 
 def test_post_baked_good(client):
-    """
-    Tests that a valid baked good can be created through the API.
-
-    Creates a test vendor first because the baked good requires a valid
-    vendor_id. Then sends a POST request containing valid baked good data
-    and verifies that the API returns a 201 status code and the expected
-    baked good information.
-
-    Args:
-        client: FastAPI test client provided by the client fixture.
-
-    Returns:
-        None
-    """
+    """Tests that a valid baked good can be created through the API."""
 
     vendor = {
         "active": True,
@@ -194,9 +181,9 @@ def test_post_baked_good_invalid_vendor(client):
     assert response.status_code == 404
 
 def test_get_all_baked_goods_returns_empty_list(client):
-    """Test that an empty list is returned when no baked goods exist."""
+    """Tests that an empty list is returned when no baked goods exist."""
 
-    response = client.get("/baked_goods")
+    response = client.get("/baked_goods/")
 
     assert response.status_code == 200
     assert response.json() == []
