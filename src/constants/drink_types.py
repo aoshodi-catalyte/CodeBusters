@@ -8,6 +8,8 @@ repository logic, and response serialization.
 """
 from enum import Enum
 
+from utils.enum_handler import enum_missing_handler
+
 
 class DrinkType(str, Enum):
     """
@@ -41,8 +43,4 @@ class DrinkType(str, Enum):
 
     @classmethod
     def _missing_(cls, value):
-        if isinstance(value, str):
-            value = value.lower()
-            if value in cls._value2member_map_:
-                return cls._value2member_map_[value]
-        return None
+        return enum_missing_handler(cls, v

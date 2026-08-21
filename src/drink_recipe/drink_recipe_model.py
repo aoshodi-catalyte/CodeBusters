@@ -39,6 +39,39 @@ class RecipeIngredient(BaseModel):
     id: int
     quantity_used: float = Field(gt=0)
     unit_of_measure_used: str = Field(min_length=1, max_length=50)
+from constants.drink_types import DrinkType
+from utils.validators import round_float
+
+
+class RecipeIngredient(BaseModel):
+    """
+    Represents a single ingredient used within a drink recipe.
+
+    This model describes how much of a specific ingredient is used and in
+    what unit of measurement. It does not define the ingredient itself—
+    only its usage within the context of a recipe.
+
+    Fields:
+        id (int):
+            The database ID of the ingredient being referenced. This must
+            correspond to an existing Ingredient record.
+
+        quantity_used (float):
+            The amount of the ingredient used in the recipe. Must be greater
+            than zero. This value is later converted into the ingredient's
+            purchase unit for cost calculation.
+
+        unit_of_measure_used (str):
+            The unit describing how the recipe measures this ingredient
+            (e.g., "oz", "g", "tsp"). Must be a non‑empty string between
+            1 and 50 characters. This unit is used during cost conversion
+            and must exist in the unit conversion table.
+    """
+
+    id: int
+    quantity_used: float = Field(gt=0)
+    unit_of_measure_used: str = Field(min_length=1, max_length=50)
+
 
 class DrinkRecipe(BaseModel):
     """
@@ -75,12 +108,15 @@ class DrinkRecipe(BaseModel):
     """
 
     name: str = Field(min_length=1, description="The name of the drink recipe")
-    description: str = Field(min_length=1, description="A detailed description of the drink")
-    ingredients: list[RecipeIngredient] = Field(
-        default_factory=list,
-        description="List of ingredients used in this recipe"
+    description: str = Field(
+        min_length=1, description="A detailed description of the drink"
     )
-    active: bool = Field(..., description="Whether this recipe is currently active/in use")
+    ingredients: list[RecipeIngredient] = Field(
+        default_factory=list, description="List of ingredients used in this recipe"
+    )
+    active: bool = Field(
+        ..., description="Whether this recipe is currently active/in use"
+    )
     type: DrinkType = Field(..., description="The type/category of the drink")
     markup_percentage: float = Field(ge=0)
 
@@ -104,12 +140,11 @@ class DrinkRecipe(BaseModel):
         """
         try:
             return DrinkType(value)  # Convert string/int to DrinkType enum
-        except ValueError:
+        except ValueError as exc:
             raise ValueError(
                 f"Invalid drink type: {value}. "
                 f"Valid types are: {[dt.value for dt in DrinkType]}"
-            )
-
+            ) from exc
 
     @field_validator("name", "description")
     @classmethod

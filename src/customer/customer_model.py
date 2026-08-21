@@ -8,7 +8,18 @@ CustomerResponse formats customer data for API responses.
 
 import re
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator, field_serializer
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    ConfigDict,
+    field_validator,
+    field_serializer
+)
+
+
+# Email validation pattern.
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class CustomerCreate(BaseModel):
@@ -35,8 +46,8 @@ class CustomerCreate(BaseModel):
         max_length=50
     )
 
-    # Must be provided and must follow a valid email format.
-    # Uniqueness is enforced by the database.
+    # Must be provided and follow the required email pattern.
+    # Email addresses are normalized to lowercase.
     email: EmailStr
 
     # Phone number can be provided with formatting.
@@ -50,9 +61,43 @@ class CustomerCreate(BaseModel):
         ge=0
     )
 
+    @field_validator("email")
+    @classmethod
+    def validate_and_normalize_email(
+        cls,
+        value: EmailStr
+    ) -> str:
+        """
+        Validate and normalize the customer's email address.
+
+        The email must match EMAIL_PATTERN and is converted
+        to lowercase before being persisted.
+
+        Args:
+            value: Email address provided by the client.
+
+        Returns:
+            A lowercase, validated email address.
+
+        Raises:
+            ValueError: If the email does not match the required pattern.
+        """
+
+        email = str(value)
+
+        if not EMAIL_PATTERN.fullmatch(email):
+            raise ValueError(
+                "Invalid email format."
+            )
+
+        return email.lower()
+
     @field_validator("phone_number")
     @classmethod
-    def validate_phone_number(cls, value: str) -> str:
+    def validate_phone_number(
+        cls,
+        value: str
+    ) -> str:
         """
         Validate and normalize a phone number.
 
@@ -112,13 +157,24 @@ class CustomerResponse(BaseModel):
     # Customer loyalty points.
     loyalty_points: int
 
+    @field_serializer("email")
+    def format_email(
+        self,
+        value: EmailStr
+    ) -> str:
+        """
+        Ensure email addresses are returned in lowercase.
+        """
+
+        return str(value).lower()
+
     @field_serializer("phone_number")
-    def format_phone_number(self, value: str) -> str:
+    def format_phone_number(
+        self,
+        value: str
+    ) -> str:
         """
         Format a stored 10-digit phone number for API responses.
-
-        Args:
-            value: The 10-digit phone number stored in the database.
 
         Returns:
             Phone number formatted as xxx-xxx-xxxx.
@@ -128,4 +184,8 @@ class CustomerResponse(BaseModel):
             f"{value[:3]}-"
             f"{value[3:6]}-"
             f"{value[6:]}"
+<<<<<<< HEAD
         )
+=======
+        )
+>>>>>>> fc4504c683cea032e2b8da45d105264ab33944c0

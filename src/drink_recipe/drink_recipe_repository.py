@@ -1,24 +1,24 @@
 """
-    Repository responsible for creating, retrieving, and managing drink recipe
-    records in the database.
+Repository responsible for creating, retrieving, and managing drink recipe
+records in the database.
 
-    This class encapsulates all persistence and data-access logic for drink
-    recipes. It coordinates ingredient lookup, unit conversion, cost calculation,
-    markup application, and association table creation. The repository ensures
-    that incoming DrinkRecipe models are transformed into fully populated
-    DrinkRecipeSchema ORM objects with accurate production cost and sale price.
+This class encapsulates all persistence and data-access logic for drink
+recipes. It coordinates ingredient lookup, unit conversion, cost calculation,
+markup application, and association table creation. The repository ensures
+that incoming DrinkRecipe models are transformed into fully populated
+DrinkRecipeSchema ORM objects with accurate production cost and sale price.
 
-    Responsibilities:
-        • Validate and resolve the drink type enum into its database ID.
-        • Create new drink recipe records and persist them to the database.
-        • Convert recipe ingredient usage units into the ingredient's purchase
-          unit using the unit conversion system.
-        • Calculate production cost by summing the cost contribution of each
-          ingredient based on purchasing cost and converted usage amount.
-        • Apply markup percentage to compute the final sale price.
-        • Create association records linking recipes to their ingredient usage.
-        • Retrieve individual drink recipes by ID.
-        • Retrieve all drink recipes stored in the database.
+Responsibilities:
+    • Validate and resolve the drink type enum into its database ID.
+    • Create new drink recipe records and persist them to the database.
+    • Convert recipe ingredient usage units into the ingredient's purchase
+      unit using the unit conversion system.
+    • Calculate production cost by summing the cost contribution of each
+      ingredient based on purchasing cost and converted usage amount.
+    • Apply markup percentage to compute the final sale price.
+    • Create association records linking recipes to their ingredient usage.
+    • Retrieve individual drink recipes by ID.
+    • Retrieve all drink recipes stored in the database.
 """
 
 from sqlalchemy.orm import Session
@@ -30,7 +30,7 @@ from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 
 from constants.drink_types import DrinkType
-from constants.UNIT_CONVERSIONS import convert
+from constants.unit_conversions import convert
 
 from utils.validators import round_float
 
@@ -41,7 +41,9 @@ def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
     """
     drink_type = db.query(DrinkTypeSchema).filter_by(name=enum_value.value).first()
     if not drink_type:
-        raise ValueError(f"DrinkType '{enum_value.value}' not found in drink_type table")
+        raise ValueError(
+            f"DrinkType '{enum_value.value}' not found in drink_type table"
+        )
     return drink_type.id
 
 
@@ -83,13 +85,15 @@ class DrinkRecipeRepository:
         if existing:
             raise ValueError(f"Drink recipe name '{drink_recipe.name}' already exists")
 
+        # if not drink_recipe.ingredients:
+        #     raise ValueError("Drink recipe must include at least one ingredient")
 
         recipe = DrinkRecipeSchema(
             name=drink_recipe.name,
             description=drink_recipe.description,
             active=drink_recipe.active,
             type_id=drink_type_id,
-            markup_percentage=drink_recipe.markup_percentage
+            markup_percentage=drink_recipe.markup_percentage,
         )
 
         self.session.add(recipe)
@@ -107,18 +111,20 @@ class DrinkRecipeRepository:
                 recipe_amount_in_purchase_unit = convert(
                     ing.quantity_used,
                     ing.unit_of_measure_used,
-                    ingredient.unit_of_measure
+                    ingredient.unit_of_measure,
                 )
             except ValueError as e:
                 raise ValueError(
                     f"Unit conversion failed for ingredient {ingredient.name}: {e}"
-                )
+                ) from e
 
             # Cost per unit of ingredient
             cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount
 
             # Cost for this ingredient in the recipe
-            ingredient_cost = float(cost_per_unit) * float(recipe_amount_in_purchase_unit)
+            ingredient_cost = float(cost_per_unit) * float(
+                recipe_amount_in_purchase_unit
+            )
             total_cost += ingredient_cost
 
             assoc = DrinkRecipeIngredientSchema(
@@ -139,7 +145,6 @@ class DrinkRecipeRepository:
         self.session.refresh(recipe)
         return recipe
 
-
     def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
         """
         Retrieve a drink recipe by its ID.
@@ -150,7 +155,7 @@ class DrinkRecipeRepository:
             .first()
         )
 
-    def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
+    def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]: # Comment for sprint2
         """
         Retrieve all drink recipes.
         """

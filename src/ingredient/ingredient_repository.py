@@ -1,4 +1,12 @@
-"""Repository functions for managing ingredients."""
+"""
+Repository functions for creating and retrieving ingredient records.
+
+This module provides database operations for ingredients, including vendor
+validation, allergen creation and association, uniqueness checks, and
+constraint‑aware error handling. It centralizes ingredient persistence logic
+so that routers and services can rely on consistent, validated interactions
+with the database.
+"""
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session

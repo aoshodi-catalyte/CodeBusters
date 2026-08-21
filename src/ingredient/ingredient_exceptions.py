@@ -1,5 +1,11 @@
-"""Custom exceptions for ingredient operations."""
+"""
+Custom exception classes used across the application.
 
+Provides domain‑specific errors for vendor lookup failures, duplicate
+ingredient creation, and ingredient constraint violations. These exceptions
+allow repositories and services to raise clear, typed errors that can be
+caught and translated into appropriate API responses.
+"""
 
 class VendorNotFoundError(Exception):
     """Raised when the specified vendor does not exist."""

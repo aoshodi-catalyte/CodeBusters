@@ -1,8 +1,16 @@
+"""
+SQLAlchemy schema for baked goods.
+
+This module defines the BakedGoodSchema database model, which represents
+baked goods stored in the database and establishes a relationship with
+the Vendor model.
+"""
+
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from database import Base
 # from vendor.vendor_schema import Vendor
-
 
 class BakedGoodSchema(Base):
     """

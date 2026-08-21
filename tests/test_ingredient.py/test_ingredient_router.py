@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from constants.INGREDIENT_TYPES import CafeAllergen, UnitOfMeasure
+from constants.ingredient_types import CafeAllergen, UnitOfMeasure
 from database import Base, get_db
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,

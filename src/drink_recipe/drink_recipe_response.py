@@ -93,6 +93,6 @@ class DrinkRecipeResponse(BaseModel):
     active: bool
     type: DrinkType
     ingredients: list[IngredientRef]
-    production_cost: float 
-    markup_percentage: float 
+    production_cost: float
+    markup_percentage: float
     sale_price: float
