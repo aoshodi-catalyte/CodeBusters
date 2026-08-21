@@ -232,7 +232,7 @@ def test_get_drink_recipe_by_id(client, db):
             {"id": ing2.id, "quantity_used": 10.00, "unit_of_measure_used": "g"}],
         "active": True,
         "type": "tea",
-        "markup_percentage": 10
+        "markup_percentage": 81
     }
 
     created = client.post("/drink_recipes/", json=recipe).json()
@@ -248,6 +248,8 @@ def test_get_drink_recipe_by_id(client, db):
         {"id": ing1.id, "name": "Sugar", "quantity_used": 5.0, "unit_of_measure_used": "g"},
         {"id": ing2.id, "name": "Green Tea", "quantity_used": 10.00, "unit_of_measure_used": "g"}
     ]
+    assert data["production_cost"] == 0.74
+    assert data ["sale_price"] == 1.34
 
 def test_get_drink_recipe_by_id_not_found(client, db):
     response = client.get(f"/drink_recipes/{9999}")
