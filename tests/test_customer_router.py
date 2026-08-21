@@ -135,16 +135,13 @@ def test_get_customers(client):
 
 def test_get_customers_when_empty(client):
     """
-    Verifies that the API returns 404 when no customers exist.
+    Verifies that the API returns 200 when no customers exist.
     """
 
     response = client.get("/customers")
 
-    assert response.status_code == 404
-
-    assert response.json() == {
-        "detail": "No customers found."
-    }
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_create_duplicate_customer(client):

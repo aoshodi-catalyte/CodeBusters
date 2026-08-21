@@ -133,7 +133,7 @@ def get_customers(
 
     if not customers:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="No customers found."
         )
 
