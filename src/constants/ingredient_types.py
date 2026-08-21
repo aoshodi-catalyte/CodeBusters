@@ -6,57 +6,46 @@ from enum import Enum
 class UnitOfMeasure(str, Enum):
     """Supported units of measure for ingredients."""
 
-    GRAMS = "g"
-    KILOGRAMS = "kg"
-    OUNCES = "oz"
-    POUNDS = "lb"
-    FLUID_OUNCES = "fl_oz"
-    MILLILITERS = "ml"
-    LITERS = "l"
-    GALLONS = "gal"
-    PUMPS = "pump"
-    SCOOPS = "scoop"
-    SHOTS = "shot"
-    DASHES = "dash"
+    grams = "g"
+    kilograms = "kg"
+    ounces = "oz"
+    pounds = "lb"
+    fluid_ounces = "fl_oz"
+    milliliters = "ml"
+    liters = "l"
+    gallons = "gal"
+    pumps = "pump"
+    scoops = "scoop"
+    shots = "shot"
+    dashes = "dash"
 
     @classmethod
     def from_string(cls, value: str) -> "UnitOfMeasure":
-        """Convert a string or alias into a UnitOfMeasure.
+        """Convert a string or alias into a UnitOfMeasure enum value.
 
         Args:
-            value: Unit name or abbreviation.
+            value: Unit name or abbreviation supplied by the user.
 
         Returns:
             The matching UnitOfMeasure enum member.
 
         Raises:
-            ValueError: If the unit is not recognized.
+            ValueError: If the supplied value is not a recognized unit.
         """
-        normalized = (
-            value.strip()
-            .lower()
-            .replace(" ", "")
-            .replace("_", "")
-            .replace("-", "")
-        )
+        normalized = cls._normalize(value)
 
         aliases = {
-            cls.GRAMS: ["g", "gram", "grams"],
-            cls.KILOGRAMS: [
+            cls.grams: ["g", "gram", "grams"],
+            cls.kilograms: [
                 "kg",
                 "kilo",
                 "kilos",
                 "kilogram",
                 "kilograms",
             ],
-            cls.OUNCES: ["oz", "ounce", "ounces"],
-            cls.POUNDS: [
-                "lb",
-                "lbs",
-                "pound",
-                "pounds",
-            ],
-            cls.FLUID_OUNCES: [
+            cls.ounces: ["oz", "ounce", "ounces"],
+            cls.pounds: ["lb", "lbs", "pound", "pounds"],
+            cls.fluid_ounces: [
                 "fl oz",
                 "floz",
                 "fluid ounce",
@@ -64,46 +53,54 @@ class UnitOfMeasure(str, Enum):
                 "fluid_ounce",
                 "fluid_ounces",
             ],
-            cls.MILLILITERS: [
+            cls.milliliters: [
                 "ml",
                 "milliliter",
                 "milliliters",
                 "millilitre",
                 "millilitres",
             ],
-            cls.LITERS: [
+            cls.liters: [
                 "l",
                 "liter",
                 "liters",
                 "litre",
                 "litres",
             ],
-            cls.GALLONS: [
-                "gal",
-                "gallon",
-                "gallons",
-            ],
-            cls.PUMPS: ["pump", "pumps"],
-            cls.SCOOPS: ["scoop", "scoops"],
-            cls.SHOTS: ["shot", "shots"],
-            cls.DASHES: ["dash", "dashes"],
+            cls.gallons: ["gal", "gallon", "gallons"],
+            cls.pumps: ["pump", "pumps"],
+            cls.scoops: ["scoop", "scoops"],
+            cls.shots: ["shot", "shots"],
+            cls.dashes: ["dash", "dashes"],
         }
 
         for unit, unit_aliases in aliases.items():
             normalized_aliases = {
-                alias.strip()
-                .lower()
-                .replace(" ", "")
-                .replace("_", "")
-                .replace("-", "")
+                cls._normalize(alias)
                 for alias in unit_aliases
             }
 
             if normalized in normalized_aliases:
                 return unit
 
-        raise ValueError(
-            f"Unknown unit of measure: {value}"
+        raise ValueError(f"Unknown unit of measure: {value}")
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        """Normalize a unit string for comparison.
+
+        Args:
+            value: Unit string to normalize.
+
+        Returns:
+            Normalized unit string.
+        """
+        return (
+            value.strip()
+            .lower()
+            .replace(" ", "")
+            .replace("_", "")
+            .replace("-", "")
         )
 
 
@@ -165,34 +162,41 @@ class CafeAllergen(str, Enum):
 
     @classmethod
     def from_string(cls, value: str) -> "CafeAllergen":
-        """Convert a string into a CafeAllergen.
+        """Convert a string into a CafeAllergen enum value.
 
         Args:
-            value: Allergen name supplied by the caller.
+            value: Allergen name supplied by the user.
 
         Returns:
             The matching CafeAllergen enum member.
 
         Raises:
-            ValueError: If the allergen is not recognized.
+            ValueError: If the supplied value is not a recognized
+                allergen.
         """
-        normalized = (
-            value.strip()
-            .lower()
-            .replace(" ", "")
-            .replace("-", "")
-        )
+        normalized = cls._normalize(value)
+
         for allergen in cls:
-            allergen_normalized = (
-                allergen.value
-                .lower()
-                .replace(" ", "")
-                .replace("-", "")
-            )
+            allergen_normalized = cls._normalize(allergen.value)
 
             if allergen_normalized == normalized:
                 return allergen
 
-        raise ValueError(
-            f"Unknown allergen: {value}"
+        raise ValueError(f"Unknown allergen: {value}")
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        """Normalize an allergen string for comparison.
+
+        Args:
+            value: Allergen string to normalize.
+
+        Returns:
+            Normalized allergen string.
+        """
+        return (
+            value.strip()
+            .lower()
+            .replace(" ", "")
+            .replace("-", "")
         )

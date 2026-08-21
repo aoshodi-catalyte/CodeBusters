@@ -1,12 +1,4 @@
-"""
-Repository functions for creating and retrieving ingredient records.
-
-This module provides database operations for ingredients, including vendor
-validation, allergen creation and association, uniqueness checks, and
-constraint‑aware error handling. It centralizes ingredient persistence logic
-so that routers and services can rely on consistent, validated interactions
-with the database.
-"""
+"""Repository functions for ingredient database operations."""
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -17,10 +9,7 @@ from ingredient.ingredient_exceptions import (
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
-)
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from vendor.vendor_schema import Vendor
 
 
@@ -65,8 +54,7 @@ def create_ingredient(
         The newly created ingredient.
 
     Raises:
-        VendorNotFoundError:
-            If the specified vendor does not exist.
+        VendorNotFoundError: If the specified vendor does not exist.
         IngredientAlreadyExistsError:
             If an ingredient with the same name already exists.
         IngredientConstraintError:
@@ -82,9 +70,7 @@ def create_ingredient(
         )
 
         if vendor is None:
-            raise VendorNotFoundError(
-                ingredient_data.vendor_id
-            )
+            raise VendorNotFoundError(ingredient_data.vendor_id)
 
         unique_allergens = list(
             dict.fromkeys(ingredient_data.allergens)
@@ -106,13 +92,13 @@ def create_ingredient(
                 db=db,
                 allergen_name=allergen_name,
             )
-
             ingredient.allergens.append(allergen)
 
         db.commit()
         db.refresh(ingredient)
 
         return ingredient
+
     except VendorNotFoundError:
         db.rollback()
         raise
@@ -140,9 +126,9 @@ def create_ingredient(
 
         raise IngredientConstraintError(constraint) from exc
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
         db.rollback()
-        raise
+        raise exc
 
 
 def get_all_ingredients(
@@ -154,7 +140,7 @@ def get_all_ingredients(
         db: Active SQLAlchemy database session.
 
     Returns:
-        A list of all ingredients.
+        A list containing all ingredients.
     """
     return db.query(IngredientSchema).all()
 
@@ -177,3 +163,103 @@ def get_ingredient_by_id(
         .filter(IngredientSchema.id == ingredient_id)
         .first()
     )
+
+
+def update_ingredient(
+    db: Session,
+    ingredient_id: int,
+    ingredient_data: Ingredient,
+) -> IngredientSchema | None:
+    """Update an existing ingredient.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_id: ID of the ingredient to update.
+        ingredient_data: Validated ingredient data.
+
+    Returns:
+        The updated ingredient, or None if it does not exist.
+
+    Raises:
+        VendorNotFoundError: If the specified vendor does not exist.
+        IngredientAlreadyExistsError:
+            If the updated name already belongs to another ingredient.
+        IngredientConstraintError:
+            If the update violates a database constraint.
+        SQLAlchemyError:
+            If an unexpected database error occurs.
+    """
+    try:
+        ingredient = (
+            db.query(IngredientSchema)
+            .filter(IngredientSchema.id == ingredient_id)
+            .first()
+        )
+
+        if ingredient is None:
+            return None
+
+        vendor = (
+            db.query(Vendor)
+            .filter(Vendor.id == ingredient_data.vendor_id)
+            .first()
+        )
+
+        if vendor is None:
+            raise VendorNotFoundError(ingredient_data.vendor_id)
+
+        ingredient.active = ingredient_data.active
+        ingredient.name = ingredient_data.name
+        ingredient.purchasing_cost = ingredient_data.purchasing_cost
+        ingredient.unit_amount = ingredient_data.unit_amount
+        ingredient.unit_of_measure = ingredient_data.unit_of_measure
+        ingredient.vendor_id = ingredient_data.vendor_id
+
+        unique_allergens = list(
+            dict.fromkeys(ingredient_data.allergens)
+        )
+
+        ingredient.allergens.clear()
+
+        for allergen_name in unique_allergens:
+            allergen = get_or_create_allergen(
+                db=db,
+                allergen_name=allergen_name,
+            )
+            ingredient.allergens.append(allergen)
+
+        db.commit()
+        db.refresh(ingredient)
+
+        return ingredient
+
+    except VendorNotFoundError:
+        db.rollback()
+        raise
+
+    except IntegrityError as exc:
+        db.rollback()
+
+        constraint = getattr(
+            getattr(exc.orig, "diag", None),
+            "constraint_name",
+            None,
+        )
+
+        error_message = str(exc.orig).lower()
+
+        if (
+            constraint == "uq_ingredient_name"
+            or "unique constraint failed: ingredient.name"
+            in error_message
+            or "uq_ingredient_name" in error_message
+        ):
+            raise IngredientAlreadyExistsError(
+                ingredient_data.name
+            ) from exc
+
+        raise IngredientConstraintError(constraint) from exc
+
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise exc

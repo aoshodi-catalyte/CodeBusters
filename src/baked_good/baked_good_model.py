@@ -10,6 +10,7 @@ the application's validation requirements.
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 class BakedGood(BaseModel):
+
     """
     Defines and validates the data for a baked good.
 

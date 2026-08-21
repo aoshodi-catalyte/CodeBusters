@@ -1,9 +1,13 @@
+<<<<<<< HEAD
+# src/utils/validators.py
+=======
 """
 Utility functions for numeric validation and rounding.
 
 Provides helpers such as `round_float`, which performs precise rounding of
 float values using Decimal to avoid binary floating‑point inaccuracies.
 """
+>>>>>>> 752f2f1a4ffc90eff888836022669e8b0aabd549
 
 from decimal import Decimal, ROUND_HALF_UP
 
