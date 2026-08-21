@@ -145,7 +145,7 @@ class DrinkRecipeRepository:
         self.session.refresh(recipe)
         return recipe
 
-    def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None: # Comment for sprint 2
+    def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
         """
         Retrieve a drink recipe by its ID.
         """
@@ -155,7 +155,7 @@ class DrinkRecipeRepository:
             .first()
         )
 
-    def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]: # Comment for sprint2
+    def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
         """
         Retrieve all drink recipes.
         """

@@ -119,7 +119,7 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
 
 
 @router.get("/{recipe_id}", response_model=DrinkRecipeResponse)
-def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)): # Comment for sprint2
+def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a single drink recipe by its ID.
 
@@ -148,7 +148,7 @@ def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)): # Comment f
 
 
 @router.get("/", response_model=list[DrinkRecipeResponse])
-def get_all_drink_recipes(db: Session = Depends(get_db)): # Comment for sprint2
+def get_all_drink_recipes(db: Session = Depends(get_db)):
     """
     Retrieve all drink recipes stored in the database.
 
