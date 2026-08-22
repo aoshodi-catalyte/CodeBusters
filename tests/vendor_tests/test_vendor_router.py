@@ -6,9 +6,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
+
+import models
+
 from vendor.vendor_router import router, get_db
-from ingredient.ingredient_schema import IngredientSchema, AllergenSchema
-from baked_good.baked_good_schema import BakedGoodSchema
 
 
 @pytest.fixture

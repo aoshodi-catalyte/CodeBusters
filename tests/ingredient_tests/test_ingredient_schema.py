@@ -1,5 +1,7 @@
 """Tests for the SQLAlchemy ingredient database schema."""
 
+import models
+
 from decimal import Decimal
 
 import pytest
@@ -11,7 +13,6 @@ from database import Base
 from constants.ingredient_types import UnitOfMeasure
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from vendor.vendor_schema import Vendor
-
 
 # ============================================================
 # TEST DATABASE
@@ -46,6 +47,7 @@ def db_session():
 # ============================================================
 # TEST DATA HELPERS
 # ============================================================
+
 
 def create_vendor(db_session, vendor_id=1):
     """Create a vendor that can be used by an ingredient."""
@@ -94,6 +96,7 @@ def create_ingredient(
 # 1. INGREDIENT CAN BE CREATED
 # ============================================================
 
+
 def test_create_ingredient(db_session):
     """Test that a valid ingredient can be stored."""
     create_vendor(db_session)
@@ -111,6 +114,7 @@ def test_create_ingredient(db_session):
 # ============================================================
 # 2. ACTIVE DEFAULTS TO TRUE
 # ============================================================
+
 
 def test_ingredient_active_defaults_to_true(db_session):
     """Test that active defaults to True."""
@@ -134,6 +138,7 @@ def test_ingredient_active_defaults_to_true(db_session):
 # ============================================================
 # 3. INGREDIENT NAME CANNOT BE NULL
 # ============================================================
+
 
 def test_ingredient_name_cannot_be_null(db_session):
     """Test that the ingredient name cannot be NULL."""
@@ -159,6 +164,7 @@ def test_ingredient_name_cannot_be_null(db_session):
 # 4. INGREDIENT NAME CANNOT BE BLANK
 # ============================================================
 
+
 def test_ingredient_name_cannot_be_blank(db_session):
     """Test that blank ingredient names are rejected."""
     create_vendor(db_session)
@@ -182,6 +188,7 @@ def test_ingredient_name_cannot_be_blank(db_session):
 # ============================================================
 # 5. PURCHASING COST CANNOT BE NEGATIVE
 # ============================================================
+
 
 def test_purchasing_cost_cannot_be_negative(db_session):
     """Test that purchasing_cost cannot be less than zero."""
@@ -207,6 +214,7 @@ def test_purchasing_cost_cannot_be_negative(db_session):
 # 6. UNIT AMOUNT MUST BE GREATER THAN ZERO
 # ============================================================
 
+
 def test_unit_amount_must_be_positive(db_session):
     """Test that unit_amount must be greater than zero."""
     create_vendor(db_session)
@@ -230,6 +238,7 @@ def test_unit_amount_must_be_positive(db_session):
 # ============================================================
 # 7. INGREDIENT NAME MUST BE UNIQUE
 # ============================================================
+
 
 def test_ingredient_name_must_be_unique(db_session):
     """Test that two ingredients cannot have the same name."""
@@ -261,6 +270,7 @@ def test_ingredient_name_must_be_unique(db_session):
 # 8. INGREDIENT MUST HAVE A VALID VENDOR
 # ============================================================
 
+
 def test_ingredient_vendor_id_is_required(db_session):
     """Test that vendor_id cannot be NULL."""
     ingredient = IngredientSchema(
@@ -284,6 +294,7 @@ def test_ingredient_vendor_id_is_required(db_session):
 # 9. INGREDIENT AND ALLERGEN MANY-TO-MANY RELATIONSHIP
 # ============================================================
 
+
 def test_ingredient_can_have_multiple_allergens(db_session):
     """Test that an ingredient can have multiple allergens."""
     create_vendor(db_session)
@@ -304,10 +315,7 @@ def test_ingredient_can_have_multiple_allergens(db_session):
 
     assert len(ingredient.allergens) == 2
 
-    allergen_names = {
-        allergen.name
-        for allergen in ingredient.allergens
-    }
+    allergen_names = {allergen.name for allergen in ingredient.allergens}
 
     assert allergen_names == {
         "Peanuts",
@@ -318,6 +326,7 @@ def test_ingredient_can_have_multiple_allergens(db_session):
 # ============================================================
 # 10. VENDOR AND INGREDIENT RELATIONSHIP
 # ============================================================
+
 
 def test_vendor_has_ingredients_relationship(db_session):
     """Test that a vendor can access its associated ingredients."""

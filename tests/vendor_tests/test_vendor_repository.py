@@ -1,12 +1,16 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from database import Base
+
+import models
+
 from database import Base
 from vendor.vendor_model import VendorBase
-from vendor.vendor_schema import Vendor
+
 from repositories.vendor_repository import VendorRepository
-from ingredient.ingredient_schema import IngredientSchema, AllergenSchema
-from baked_good.baked_good_schema import BakedGoodSchema
+from ingredient.ingredient_schema import IngredientSchema
 
 
 @pytest.fixture
