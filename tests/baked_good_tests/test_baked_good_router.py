@@ -383,4 +383,4 @@ def test_post_same_baked_good_different_vendor(client):
     response_2 = client.post("/baked_goods/", json=baked_good_2)
 
     assert response_1.status_code == 201
-    assert response_2.status_code == 201
+    assert response_2.status_code == 409
