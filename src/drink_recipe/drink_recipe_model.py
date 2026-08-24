@@ -40,6 +40,7 @@ class RecipeIngredient(BaseModel):
     quantity_used: float = Field(gt=0)
     unit_of_measure_used: str = Field(min_length=1, max_length=50)
 
+
 class DrinkRecipe(BaseModel):
     """
     Represents a drink recipe submitted through the API.
