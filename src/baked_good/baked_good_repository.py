@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
-from src.baked_good.baked_good_response_model import BakedGoodResponseModel
 from vendor.vendor_schema import Vendor
 
 class BakedGoodRepository:
@@ -87,7 +86,15 @@ class BakedGoodRepository:
 
         return new_baked_good
 
-def get_baked_good_by_id(self, baked_good_id):
-    baked_good_id = BakedGoodResponseModel.id
+    def get_baked_good_by_id(self, baked_good_id: int) -> BakedGoodSchema | None:
+        """
+        Retrieves a baked good by its ID.
 
-    return baked_good_id
+        Args:
+            baked_good_id: The unique ID of the baked good.
+
+        Returns:
+            BakedGoodSchema: The baked good matching the provided ID,
+                or None if the baked good does not exist.
+        """
+        return self.session.query(BakedGoodSchema).filter(BakedGoodSchema.id == baked_good_id).first()
