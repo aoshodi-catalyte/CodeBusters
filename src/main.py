@@ -6,19 +6,18 @@ Initializes the API, seeds required database values, and registers all routers.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from fastapi import FastAPI
 
 from baked_good.baked_good_router import router as baked_good_router
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
 from customer.customer_router import router as customer_router
-from database import SessionLocal, create_db, get_db
+from database import SessionLocal, create_db
 from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_router import router as employee_router
+from health.health_router import router as health_router
 from ingredient.ingredient_router import router as ingredient_router
 from promotion.promotion_router import router as promotion_router
 from vendor.vendor_router import router as vendor_router
@@ -62,7 +61,7 @@ async def lifespan(_app: FastAPI):
     finally:
         db.close()
 
-    # Yield control to the app
+    # Yield control to the application
     yield
 
     # --- Shutdown logic ---
@@ -70,47 +69,6 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-
-@app.get(
-    "/health",
-    status_code=status.HTTP_200_OK,
-    tags=["Health"]
-)
-def health_check():
-    """
-    Liveness endpoint.
-
-    Returns 200 as long as the application process is running.
-    This endpoint does not depend on database connectivity.
-    """
-    return {"status": "ok"}
-
-
-@app.get(
-    "/ready",
-    status_code=status.HTTP_200_OK,
-    tags=["Health"]
-)
-def readiness_check(
-    db: Session = Depends(get_db)
-):
-    """
-    Readiness endpoint.
-
-    Returns 200 when the application can successfully reach the
-    database. Returns 503 when the database is unavailable.
-    """
-    try:
-        db.execute(text("SELECT 1"))
-
-        return {"status": "ready"}
-
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database is unavailable."
-        ) from exc
 
 
 @app.get("/")
@@ -121,6 +79,7 @@ def root():
     return {"message": "API is running"}
 
 
+app.include_router(health_router)
 app.include_router(drink_recipe_router)
 app.include_router(vendor_router)
 app.include_router(baked_good_router)
@@ -128,4 +87,3 @@ app.include_router(ingredient_router)
 app.include_router(customer_router)
 app.include_router(employee_router)
 app.include_router(promotion_router)
-
