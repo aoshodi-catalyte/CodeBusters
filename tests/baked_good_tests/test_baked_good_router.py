@@ -1,3 +1,4 @@
+import models
 import pytest
 
 from fastapi import FastAPI
@@ -5,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
-import models
+
 
 from database import Base, get_db
 from baked_good.baked_good_router import router as baked_good_router

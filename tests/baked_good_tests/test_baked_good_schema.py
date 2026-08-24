@@ -1,6 +1,8 @@
+import models
+
 from sqlalchemy import inspect
 
-import models
+
 from baked_good.baked_good_schema import BakedGoodSchema
 
 

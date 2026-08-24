@@ -1,9 +1,10 @@
+import models
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-import models
 
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
