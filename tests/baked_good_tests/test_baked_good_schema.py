@@ -20,7 +20,7 @@ def test_baked_good_table_name():
         None
     """
 
-    assert BakedGoodSchema.__tablename__ == "baked_goods"
+    assert BakedGoodSchema.__tablename__ == "baked_good"
 
 
 def test_baked_good_columns():

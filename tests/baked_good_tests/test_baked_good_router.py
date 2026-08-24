@@ -237,3 +237,150 @@ def test_post_baked_good_invalid_vendor(client):
     response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 404
+
+def test_post_duplicate_baked_good(client):
+    """
+    Tests that a vendor cannot create the same baked good more than once.
+
+    Creates a test vendor and baked good, then attempts to create the
+    same baked good again for the same vendor and verifies that the
+    response has a 409 status code.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "Christian@Robinsonvendor.com",
+        "phone": "5551234567",
+    }
+
+    vendor_response = client.post("/vendors", json=vendor)
+
+    assert vendor_response.status_code == 201
+
+    baked_good = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    first_response = client.post("/baked_goods/", json=baked_good)
+
+    assert first_response.status_code == 201
+
+    second_response = client.post("/baked_goods/", json=baked_good)
+
+    assert second_response.status_code == 409
+
+def test_post_baked_good_lowercase_name(client):
+    """
+    Tests that a baked good name cannot be entered in lowercase.
+
+    Creates a test vendor and attempts to create a baked good with a
+    lowercase name, then verifies that the response has a 422 status code.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "Christian@Robinsonvendor.com",
+        "phone": "5551234567",
+    }
+
+    vendor_response = client.post("/vendors", json=vendor)
+
+    assert vendor_response.status_code == 201
+
+    baked_good = {
+        "active": True,
+        "name": "blueberry muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    response = client.post("/baked_goods/", json=baked_good)
+
+    assert response.status_code == 422
+
+def test_post_same_baked_good_different_vendor(client):
+    """
+    Tests that different vendors can have the same baked good.
+
+    Creates two test vendors and creates the same baked good for each
+    vendor, then verifies that both requests are successful.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor_1 = {
+        "active": True,
+        "name": "Test Vendor One",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "vendorone@example.com",
+        "phone": "5551234567",
+    }
+
+    vendor_2 = {
+        "active": True,
+        "name": "Test Vendor Two",
+        "contact_name": "John Smith",
+        "contact_role": "Manager",
+        "email": "vendortwo@example.com",
+        "phone": "5551234568",
+    }
+
+    vendor_1_response = client.post("/vendors", json=vendor_1)
+    vendor_2_response = client.post("/vendors", json=vendor_2)
+
+    assert vendor_1_response.status_code == 201
+    assert vendor_2_response.status_code == 201
+
+    baked_good_1 = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    baked_good_2 = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 2,
+    }
+
+    response_1 = client.post("/baked_goods/", json=baked_good_1)
+    response_2 = client.post("/baked_goods/", json=baked_good_2)
+
+    assert response_1.status_code == 201
+    assert response_2.status_code == 201
