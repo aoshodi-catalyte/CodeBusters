@@ -1,32 +1,13 @@
-<<<<<<< HEAD
-"""
-Pydantic schemas for ingredient data validation and API responses.
-
-This module defines request and response models for ingredients, including
-allergen handling, unit‑of‑measure validation, decimal precision checks, and
-normalization of user‑supplied values. These schemas ensure that ingredient
-data entering or leaving the API is fully validated, structured, and ready
-for use by repository and service layers.
-"""
-=======
 """Pydantic schemas for ingredient validation and API responses."""
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from constants.ingredient_types import CafeAllergen, UnitOfMeasure
 
-<<<<<<< HEAD
-
-class AllergenOut(BaseModel):
-    """Response schema representing an ingredient allergen."""
-
-=======
 
 class AllergenOut(BaseModel):
     """Schema used when returning an allergen to the client."""
 
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
     name: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -93,38 +74,12 @@ class Ingredient(BaseModel):
     """
 
     active: bool = True
-<<<<<<< HEAD
-
-    name: str = Field(
-        min_length=1,
-        max_length=255,
-    )
-
-    purchasing_cost: float = Field(
-        ge=0,
-    )
-
-    unit_amount: float = Field(
-        gt=0,
-    )
-
-    unit_of_measure: UnitOfMeasure
-
-    allergens: list[CafeAllergen] = Field(
-        default_factory=list,
-    )
-
-    vendor_id: int = Field(
-        gt=0,
-    )
-=======
     name: str = Field(min_length=1, max_length=255)
     purchasing_cost: float = Field(ge=0)
     unit_amount: float = Field(gt=0)
     unit_of_measure: UnitOfMeasure
     allergens: list[str] = Field(default_factory=list)
     vendor_id: int = Field(gt=0)
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
     @field_validator("name", mode="before")
     @classmethod
@@ -167,12 +122,8 @@ class Ingredient(BaseModel):
             A list of validated CafeAllergen values.
 
         Raises:
-<<<<<<< HEAD
-            ValueError: If an allergen is not recognized.
-=======
             ValueError: If an allergen cannot be converted into a
                 valid CafeAllergen value.
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
         """
         if value is None:
             return []
@@ -189,33 +140,18 @@ class Ingredient(BaseModel):
 
     @field_validator("purchasing_cost", "unit_amount")
     @classmethod
-<<<<<<< HEAD
-    def validate_two_decimal_places(
-        cls,
-        value: float,
-    ) -> float:
-        """Validate that numeric values contain at most two decimals.
-
-        Args:
-            value: Numeric ingredient value.
-=======
     def validate_two_decimal_places(cls, value: float) -> float:
         """Validate that a numeric value has at most two decimals.
 
         Args:
             value: Numeric ingredient value supplied by the client.
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
         Returns:
             The validated numeric value.
 
         Raises:
-<<<<<<< HEAD
-            ValueError: If the value contains more than two decimals.
-=======
             ValueError: If the value contains more than two decimal
                 places.
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
         """
         if round(value, 2) != value:
             raise ValueError(
@@ -226,16 +162,8 @@ class Ingredient(BaseModel):
 
     @field_validator("unit_of_measure", mode="before")
     @classmethod
-<<<<<<< HEAD
-    def validate_unit_of_measure(
-        cls,
-        value,
-    ) -> UnitOfMeasure:
-        """Convert the supplied value into a UnitOfMeasure.
-=======
     def validate_unit_of_measure(cls, value: str) -> UnitOfMeasure:
         """Convert a supplied string into a UnitOfMeasure value.
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
         Args:
             value: Unit of measure supplied by the client.

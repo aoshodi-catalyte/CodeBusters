@@ -10,11 +10,7 @@ from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from database import Base
-<<<<<<< HEAD
-# from vendor.vendor_schema import Vendor
-=======
 
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
 class BakedGoodSchema(Base):
     """
@@ -51,8 +47,4 @@ class BakedGoodSchema(Base):
 
     vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
 
-<<<<<<< HEAD
     vendor = relationship("Vendor", back_populates="baked_goods")
-=======
-    vendor = relationship("Vendor", back_populates="baked_goods")
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

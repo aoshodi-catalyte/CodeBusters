@@ -1,16 +1,4 @@
-<<<<<<< HEAD
-"""
-Repository functions for creating and retrieving ingredient records.
-
-This module provides database operations for ingredients, including vendor
-validation, allergen creation and association, uniqueness checks, and
-constraint‑aware error handling. It centralizes ingredient persistence logic
-so that routers and services can rely on consistent, validated interactions
-with the database.
-"""
-=======
 """Repository functions for ingredient database operations."""
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -21,14 +9,7 @@ from ingredient.ingredient_exceptions import (
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-<<<<<<< HEAD
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
-)
-=======
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 from vendor.vendor_schema import Vendor
 
 
@@ -133,14 +114,12 @@ def create_ingredient(
 
         error_message = str(exc.orig).lower()
 
-        is_duplicate = (
+        if (
             constraint == "uq_ingredient_name"
             or "unique constraint failed: ingredient.name"
             in error_message
             or "uq_ingredient_name" in error_message
-        )
-
-        if is_duplicate:
+        ):
             raise IngredientAlreadyExistsError(
                 ingredient_data.name
             ) from exc
@@ -183,9 +162,6 @@ def get_ingredient_by_id(
         db.query(IngredientSchema)
         .filter(IngredientSchema.id == ingredient_id)
         .first()
-<<<<<<< HEAD
-    )
-=======
     )
 
 
@@ -287,4 +263,3 @@ def update_ingredient(
     except SQLAlchemyError as exc:
         db.rollback()
         raise exc
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

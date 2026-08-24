@@ -44,30 +44,17 @@ router = APIRouter(
 def create(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
-<<<<<<< HEAD
-) -> IngredientOut:
-    """Create a new ingredient.
-
-    Args:
-        ingredient: Validated ingredient data.
-=======
 ):
     """Create a new ingredient.
 
     Args:
         ingredient: Validated ingredient information.
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
         db: Database session provided by FastAPI.
 
     Returns:
         The newly created ingredient.
 
     Raises:
-<<<<<<< HEAD
-        HTTPException: If the vendor does not exist, the ingredient
-            already exists, a database constraint is violated, or
-            an unexpected database error occurs.
-=======
         HTTPException:
             404 if the vendor does not exist.
         HTTPException:
@@ -75,7 +62,6 @@ def create(
             a database constraint.
         HTTPException:
             500 if an unexpected database error occurs.
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
     """
     try:
         return create_ingredient(
@@ -164,7 +150,8 @@ def read_ingredient(
         The ingredient matching the specified ID.
 
     Raises:
-        HTTPException: If the ingredient does not exist.
+        HTTPException:
+            404 if the ingredient does not exist.
     """
     ingredient = get_ingredient_by_id(
         db=db,
@@ -183,9 +170,6 @@ def read_ingredient(
             },
         )
 
-<<<<<<< HEAD
-    return ingredient
-=======
     return ingredient
 
 
@@ -275,4 +259,3 @@ def update(
                 ),
             },
         ) from exc
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

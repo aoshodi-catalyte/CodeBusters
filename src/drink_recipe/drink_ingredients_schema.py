@@ -61,8 +61,4 @@ class DrinkRecipeIngredientSchema(Base):
     unit_of_measure_used = Column(String(50), nullable=False)
 
     drink_recipe = relationship("DrinkRecipeSchema", back_populates="recipe_ingredients")
-<<<<<<< HEAD
     ingredient = relationship("IngredientSchema", back_populates="ingredient_recipes")
-=======
-    ingredient = relationship("IngredientSchema", back_populates="ingredient_recipes")
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

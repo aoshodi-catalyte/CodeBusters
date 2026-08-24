@@ -14,11 +14,7 @@ production cost and sale price, and manage ingredient associations.
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-<<<<<<< HEAD
-from drink_recipe.drink_type_schema import DrinkTypeSchema
-=======
 
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 from database import Base
 
 
@@ -88,9 +84,5 @@ class DrinkRecipeSchema(Base):
     recipe_ingredients = relationship(
         "DrinkRecipeIngredientSchema",
         back_populates="drink_recipe",
-<<<<<<< HEAD
-        cascade="all, delete-orphan"
-=======
         cascade="all, delete-orphan",
->>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
     )
