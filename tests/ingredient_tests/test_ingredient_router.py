@@ -15,8 +15,8 @@ from ingredient.ingredient_exceptions import (
     IngredientConstraintError,
     VendorNotFoundError,
 )
-from ingredient.ingredient_router import router
-import ingredient.ingredient_router as ingredient_router
+from routers.ingredient_router import router
+import routers.ingredient_router as ingredient_router
 
 
 # ============================================================

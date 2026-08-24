@@ -8,20 +8,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from baked_good.baked_good_router import router as baked_good_router
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
-from customer.customer_router import router as customer_router
 from database import SessionLocal, create_db
-from drink_recipe.drink_recipe_router import router as drink_recipe_router
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
-from employee.employee_router import router as employee_router
 from health.health_router import router as health_router
-from ingredient.ingredient_router import router as ingredient_router
-from promotion.promotion_router import router as promotion_router
+from routers.baked_good_router import router as baked_good_router
+from routers.customer_router import router as customer_router
+from routers.drink_recipe_router import router as drink_recipe_router
+from routers.employee_router import router as employee_router
+from routers.ingredient_router import router as ingredient_router
+from routers.promotion_router import router as promotion_router
 from vendor.vendor_router import router as vendor_router
-
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):

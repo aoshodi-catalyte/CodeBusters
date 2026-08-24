@@ -14,7 +14,7 @@ from ingredient.ingredient_exceptions import (
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import (
+from repositories.ingredient_repository import (
     create_ingredient,
     get_all_ingredients,
     get_ingredient_by_id,

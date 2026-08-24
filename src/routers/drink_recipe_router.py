@@ -33,7 +33,7 @@ from sqlalchemy.orm import Session
 from utils.response import to_response
 from database import get_db
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
-from drink_recipe.drink_recipe_repository import DrinkRecipeRepository
+from repositories.drink_recipe_repository import DrinkRecipeRepository
 from drink_recipe.drink_recipe_model import DrinkRecipe
 
 router = APIRouter(

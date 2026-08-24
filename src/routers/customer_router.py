@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from customer.customer_model import CustomerCreate, CustomerResponse
-from customer.customer_repository import CustomerRepository
+from repositories.customer_repository import CustomerRepository
 
 
 router = APIRouter()

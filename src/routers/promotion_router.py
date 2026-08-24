@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from database import get_db
-from promotion.promotion_repository import PromotionRepository
+from repositories.promotion_repository import PromotionRepository
 from promotion.promotion_response_model import PromotionResponseModel
 from promotion.promotion_model import Promotion
 router = APIRouter(

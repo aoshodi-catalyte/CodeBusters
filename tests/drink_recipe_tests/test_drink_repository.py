@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from drink_recipe.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
+from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
 from drink_recipe.drink_recipe_model import DrinkRecipe, RecipeIngredient
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from ingredient.ingredient_schema import IngredientSchema
