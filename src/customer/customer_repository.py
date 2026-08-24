@@ -37,14 +37,6 @@ class CustomerRepository:
         """
         Create and persist a new customer in the database.
 
-        The validated CustomerCreate object is converted into a
-        CustomerSchema database record. The record is added to the
-        database, committed, refreshed, and returned.
-
-        The phone number has already been normalized to 10 digits
-        by the CustomerCreate Pydantic model before reaching this
-        method.
-
         Args:
             customer: CustomerCreate object containing the validated
                 customer data.
@@ -74,6 +66,46 @@ class CustomerRepository:
 
         Returns:
             list[CustomerSchema]: A list containing all customer
-                records. Returns an empty list when no customers exist.
+            records. Returns an empty list when no customers exist.
         """
         return self.db.query(CustomerSchema).all()
+
+    def get_customer_by_email(
+        self,
+        email: str
+    ) -> CustomerSchema | None:
+        """
+        Retrieve a customer by email address.
+
+        Args:
+            email: The email address to search for.
+
+        Returns:
+            CustomerSchema | None: The matching customer if found,
+            otherwise None.
+        """
+        return (
+            self.db.query(CustomerSchema)
+            .filter(CustomerSchema.email == email)
+            .first()
+        )
+
+    def get_customer_by_phone(
+        self,
+        phone_number: str
+    ) -> CustomerSchema | None:
+        """
+        Retrieve a customer by phone number.
+
+        Args:
+            phone_number: The phone number to search for.
+
+        Returns:
+            CustomerSchema | None: The matching customer if found,
+            otherwise None.
+        """
+        return (
+            self.db.query(CustomerSchema)
+            .filter(CustomerSchema.phone_number == phone_number)
+            .first()
+        )

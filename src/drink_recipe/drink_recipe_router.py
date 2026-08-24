@@ -148,7 +148,7 @@ def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[DrinkRecipeResponse])
-def get_all_drink_recipes(db: Session = Depends(get_db)): # Comment for sprint2
+def get_all_drink_recipes(db: Session = Depends(get_db)):
     """
     Retrieve all drink recipes stored in the database.
 
