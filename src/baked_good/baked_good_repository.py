@@ -98,3 +98,4 @@ class BakedGoodRepository:
                 or None if the baked good does not exist.
         """
         return self.session.query(BakedGoodSchema).filter(BakedGoodSchema.id == baked_good_id).first()
+
