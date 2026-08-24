@@ -83,7 +83,7 @@ class BakedGoodRepository:
 
         existing_baked_good = self.session.query(BakedGoodSchema).filter(
             BakedGoodSchema.vendor_id == baked_good.vendor_id,
-            BakedGoodSchema.name.ilike(baked_good.name)
+            BakedGoodSchema.name.ilike(baked_good.name.strip())
         ).first()
 
         if existing_baked_good is not None:

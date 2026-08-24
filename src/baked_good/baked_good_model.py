@@ -61,7 +61,7 @@ class BakedGood(BaseModel):
         # if value != value.lower():
         #     raise ValueError("Name must be in title case")
 
-        return value.lower()
+        return value
 
     @field_validator("description")
     @classmethod
