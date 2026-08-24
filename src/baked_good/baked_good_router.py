@@ -56,7 +56,7 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
         ) from exc
 
     return created_baked_good
-#trying to fix merge.
+
 @router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel])
 def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
     """
@@ -75,37 +75,6 @@ def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponse
     baked_goods = repo.get_all_baked_goods()
 
     return baked_goods
-
-
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel)
-def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodResponseModel:
-    """
-    Creates and stores a new baked good in the database.
-
-    Passes the validated BakedGood Pydantic model to the repository,
-    which converts it into a BakedGoodSchema SQLAlchemy model,
-    adds it to the database, commits the transaction, and refreshes
-    the object with its database-generated values.
-
-    Args:
-        baked_good: The validated baked good data received from the request.
-        db: The SQLAlchemy database session provided by the get_db dependency.
-
-    Returns:
-        BakedGoodResponseModel: The newly created baked good,
-            including its database-generated ID.
-    """
-    repo = BakedGoodRepository(db)
-    try:
-        created_baked_good = repo.create_baked_good(baked_good)
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cannot create baked good because the vendor does not exist."
-        ) from exc
-
-    return created_baked_good
 
 @router.get(
     "/{baked_good_id}",
