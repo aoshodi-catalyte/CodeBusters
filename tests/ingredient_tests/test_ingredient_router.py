@@ -116,7 +116,6 @@ def valid_ingredient_payload():
         "vendor_id": 1,
     }
 
-
 def valid_ingredient_response():
     """Return the data that the mocked repository would return."""
     payload = valid_ingredient_payload()
