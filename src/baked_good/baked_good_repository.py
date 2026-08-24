@@ -7,15 +7,19 @@ database operations for baked goods using a SQLAlchemy session.
 The repository supports retrieving all baked goods and creating new
 baked goods while verifying that the associated vendor exists.
 """
-
+import re
 from typing import List
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from baked_good.baked_good_exceptions import (
+    DuplicateBakedGoodError,
+    VendorNotFoundError,
+)
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
 from vendor.vendor_schema import Vendor
-from baked_good.baked_good_exceptions import DuplicateBakedGoodError, VendorNotFoundError
 
 class BakedGoodRepository:
     """
@@ -81,14 +85,21 @@ class BakedGoodRepository:
         if vendor is None:
             raise VendorNotFoundError("Vendor not found")
 
-        existing_baked_good = self.session.query(BakedGoodSchema).filter(
-            BakedGoodSchema.vendor_id == baked_good.vendor_id,
-            BakedGoodSchema.name.ilike(baked_good.name.strip())
-        ).first()
+        normalized_input = re.sub(r"\s+", "", baked_good.name).lower()
 
-        if existing_baked_good is not None:
+        existing = (
+            self.session.query(BakedGoodSchema)
+            .filter(
+                func.lower(
+                    func.replace(BakedGoodSchema.name, " ", "")
+                ) == normalized_input
+            )
+            .first()
+        )
+
+        if existing is not None:
             raise DuplicateBakedGoodError(
-                "This vendor already has a baked good with this name"
+                f"A baked good with name '{baked_good.name}' already exists"
             )
 
         new_baked_good = BakedGoodSchema(**baked_good.model_dump())

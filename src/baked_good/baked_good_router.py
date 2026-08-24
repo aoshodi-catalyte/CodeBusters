@@ -52,7 +52,7 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
     except DuplicateBakedGoodError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This vendor already has a baked good with this name."
+            detail=f"A baked good with name '{baked_good.name}' already exists"
         ) from exc
 
     return created_baked_good

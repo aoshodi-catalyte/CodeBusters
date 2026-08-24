@@ -50,16 +50,13 @@ class BakedGood(BaseModel):
         Returns:
             The validated baked good name.
         """
-        value = value.strip()
+        stripped_value = value.strip()
 
-        if not value:
+        if not stripped_value:
             raise ValueError("Name cannot be empty")
 
-        if value != value:
+        if stripped_value != value:
             raise ValueError("Name cannot begin or end with a space")
-            
-        # if value != value.lower():
-        #     raise ValueError("Name must be in title case")
 
         return value
 
