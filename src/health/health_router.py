@@ -1,3 +1,11 @@
+"""
+API routes for application health and readiness checks.
+
+This module provides liveness and readiness endpoints used to
+determine whether the application process is running and whether
+the application can successfully connect to the database.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
