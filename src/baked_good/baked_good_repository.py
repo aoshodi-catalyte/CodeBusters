@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
 from vendor.vendor_schema import Vendor
+from baked_good.baked_good_exceptions import DuplicateBakedGoodError, VendorNotFoundError
 
 class BakedGoodRepository:
     """
@@ -65,8 +66,9 @@ class BakedGoodRepository:
             baked_good: The validated baked good to create.
 
         Raises:
-            ValueError: If the vendor associated with the baked good
-                does not exist.
+            VendorNotFoundError: If the vendor does not exist.
+            DuplicateBakedGoodError: If the vendor already has a baked good
+                with the same name.
 
         Returns:
             BakedGoodSchema: The newly created baked good.
@@ -77,7 +79,17 @@ class BakedGoodRepository:
         ).first()
 
         if vendor is None:
-            raise ValueError("Vendor not found")
+            raise VendorNotFoundError("Vendor not found")
+
+        existing_baked_good = self.session.query(BakedGoodSchema).filter(
+            BakedGoodSchema.vendor_id == baked_good.vendor_id,
+            BakedGoodSchema.name.ilike(baked_good.name)
+        ).first()
+
+        if existing_baked_good is not None:
+            raise DuplicateBakedGoodError(
+                "This vendor already has a baked good with this name"
+            )
 
         new_baked_good = BakedGoodSchema(**baked_good.model_dump())
         self.session.add(new_baked_good)
