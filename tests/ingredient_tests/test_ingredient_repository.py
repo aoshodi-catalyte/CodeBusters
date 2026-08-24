@@ -18,7 +18,9 @@ from ingredient.ingredient_repository import (
     get_ingredient_by_id,
     get_or_create_allergen,
     update_ingredient,
+    soft_delete_ingredient,
 )
+from constants.ingredient_types import UnitOfMeasure
 from ingredient.ingredient_schema import (
     AllergenSchema,
     IngredientSchema,
@@ -33,6 +35,7 @@ def make_ingredient(
     unit_amount=Decimal("25.00"),
     unit_of_measure="lb",
     allergens=None,
+    active=True,
 ):
     """Create an Ingredient object for testing.
 
@@ -43,6 +46,7 @@ def make_ingredient(
         unit_amount: Quantity of the ingredient.
         unit_of_measure: Unit used to measure the ingredient.
         allergens: List of ingredient allergens.
+        active: Active status of the ingredient.
 
     Returns:
         A validated Ingredient object.
@@ -51,7 +55,7 @@ def make_ingredient(
         allergens = ["Wheat"]
 
     return Ingredient(
-        active=True,
+        active=active,
         name=name,
         purchasing_cost=purchasing_cost,
         unit_amount=unit_amount,
@@ -536,3 +540,68 @@ def test_update_ingredient_vendor_not_found(db):
                 vendor_id=9999,
             ),
         )
+
+
+def test_repo_soft_delete_success(db):
+    """Verify repository successfully sets active to False on an active ingredient."""
+    vendor = Vendor(
+        name="Soft Delete Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="softdelete@test.com",
+        phone="3125557000",
+        active=True,
+    )
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Vanilla Extract",
+            vendor_id=vendor.id,
+            unit_of_measure="oz",
+        ),
+    )
+
+    result = soft_delete_ingredient(db=db, ingredient_id=ingredient.id)
+
+    assert result is not None
+    assert result.active is False
+
+
+def test_repo_soft_delete_not_found(db):
+    """Verify repository returns None when attempting to soft delete a non-existent ID."""
+    result = soft_delete_ingredient(db=db, ingredient_id=99999)
+    assert result is None
+
+
+def test_repo_soft_delete_already_inactive(db):
+    """Verify repository handles soft deleting an ingredient that is already inactive."""
+    vendor = Vendor(
+        name="Inactive Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="inactive@test.com",
+        phone="3125558000",
+        active=True,
+    )
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Expired Yeast",
+            vendor_id=vendor.id,
+            unit_of_measure="oz",
+            active=False,
+        ),
+    )
+
+    result = soft_delete_ingredient(db=db, ingredient_id=ingredient.id)
+
+    assert result is not None
+    assert result.active is False

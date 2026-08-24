@@ -2,7 +2,6 @@
 
 from decimal import Decimal
 from unittest.mock import MagicMock
-import pytest
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -17,78 +16,11 @@ from ingredient.ingredient_exceptions import (
     VendorNotFoundError,
 )
 from ingredient.ingredient_router import router
-from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import create_ingredient
-from vendor.vendor_schema import Vendor
-from main import app
+
 
 app = FastAPI()
 app.include_router(router)
 
-@pytest.fixture(name="client")
-
-def client(db):
-    """Create a test client using the test database session."""
-    def override_get_db():
-        yield db
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    try:
-        yield TestClient(app)
-    finally:
-        app.dependency_overrides.clear()
-
-def create_test_vendor(db):
-    """Create a vendor for ingredient integration tests."""
-
-    vendor = Vendor(
-        name="Test Vendor",
-        contact_name="John Doe",
-        contact_role="Sales",
-        email="john@testvendor.com",
-        phone="3125551234",
-        active=True,
-    )
-
-    db.add(vendor)
-    db.commit()
-    db.refresh(vendor)
-
-    return vendor
-
-def create_test_ingredient(
-    db,
-    vendor_id,
-    name="Flour",
-    ):
-    """Create an ingredient using the real repository."""
-
-    ingredient = Ingredient(
-        active=True,
-        name=name,
-        purchasing_cost=Decimal("10.00"),
-        unit_amount=Decimal("25.00"),
-        unit_of_measure=UnitOfMeasure.POUNDS,
-        allergens=["Wheat"],
-        vendor_id=vendor_id,
-    )
-
-    return create_ingredient(
-        db=db,
-        ingredient_data=ingredient,
-    )
-
-def test_read_all_ingredients_returns_empty_list():
-    """Verify an empty list is returned when no ingredients exist."""
-
-    response = client.get("/ingredients/all")
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["ingredients"] == []
 
 def override_get_db():
     """Provide a mock database session for router tests."""
@@ -115,6 +47,7 @@ def valid_ingredient_payload():
         "allergens": [VALID_ALLERGEN],
         "vendor_id": 1,
     }
+
 
 def valid_ingredient_response():
     """Return the data that the mocked repository would return."""
@@ -595,3 +528,63 @@ def test_update_ingredient_database_error(monkeypatch):
         == "An unexpected database error occurred "
         "while updating the ingredient."
     )
+
+
+def test_soft_delete_ingredient_success(monkeypatch):
+    """Verify DELETE /ingredients/{id} successfully soft deletes an ingredient (HTTP 200)."""
+    expected_ingredient = valid_ingredient_response()
+    expected_ingredient["active"] = False
+    mock_delete = MagicMock(return_value=expected_ingredient)
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "soft_delete_ingredient",
+        mock_delete,
+    )
+
+    response = client.delete("/ingredients/1")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == 1
+    assert data["active"] is False
+    mock_delete.assert_called_once()
+
+
+def test_soft_delete_ingredient_not_found(monkeypatch):
+    """Verify DELETE /ingredients/{id} returns HTTP 404 when ID does not exist."""
+    mock_delete = MagicMock(return_value=None)
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "soft_delete_ingredient",
+        mock_delete,
+    )
+
+    response = client.delete("/ingredients/99999")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["error"] == "ingredient_not_found"
+    mock_delete.assert_called_once()
+
+
+def test_soft_delete_ingredient_already_inactive(monkeypatch):
+    """Verify DELETE /ingredients/{id} handles deleting an already inactive ingredient gracefully."""
+    expected_ingredient = valid_ingredient_response()
+    expected_ingredient["active"] = False
+    mock_delete = MagicMock(return_value=expected_ingredient)
+
+    monkeypatch.setattr(
+        ingredient_router,
+        "soft_delete_ingredient",
+        mock_delete,
+    )
+
+    response = client.delete("/ingredients/1")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == 1
+    assert data["active"] is False
+    mock_delete.assert_called_once()
