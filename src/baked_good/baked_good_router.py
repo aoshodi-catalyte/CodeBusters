@@ -71,3 +71,27 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
         ) from exc
 
     return created_baked_good
+
+@router.get("/{baked_good_id}", status_code=status.HTTP_200_OK, response_model= BakedGoodResponseModel)
+def get_baked_good_by_id(baked_good_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieves a baked good by its ID.
+
+    Args:
+        baked_good_id: The unique ID of the baked good.
+        db: The database session.
+
+    Returns:
+        The baked good matching the provided ID.
+
+    Raises:
+        HTTPException: If the baked good does not exist.
+    """
+    repository = BakedGoodRepository(db)
+    baked_good = repository.get_baked_good_by_id(baked_good_id)
+
+    if baked_good is None:
+        raise HTTPException(
+            status_code=404, detail="Invalid Baked Good ID"
+        )
+    return baked_good

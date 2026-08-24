@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_schema import BakedGoodSchema
+from src.baked_good.baked_good_response_model import BakedGoodResponseModel
 from vendor.vendor_schema import Vendor
 
 class BakedGoodRepository:
@@ -85,3 +86,8 @@ class BakedGoodRepository:
         self.session.refresh(new_baked_good)
 
         return new_baked_good
+
+def get_baked_good_by_id(self, baked_good_id):
+    baked_good_id = BakedGoodResponseModel.id
+
+    return baked_good_id
