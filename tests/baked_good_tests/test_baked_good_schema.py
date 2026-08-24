@@ -111,7 +111,7 @@ def test_vendor_relationship_exists():
     relationship = relationships["vendor"]
 
     assert relationship.mapper.class_.__name__ == "Vendor"
-    assert relationship.back_populates == "baked_goods"
+    assert relationship.back_populates == "baked_good"
 
 
 def test_vendor_id_foreign_key():

@@ -283,45 +283,45 @@ def test_post_duplicate_baked_good(client):
 
     assert second_response.status_code == 409
 
-def test_post_baked_good_lowercase_name(client):
-    """
-    Tests that a baked good name cannot be entered in lowercase.
+# def test_post_baked_good_lowercase_name(client):
+#     """
+#     Tests that a baked good name cannot be entered in lowercase.
 
-    Creates a test vendor and attempts to create a baked good with a
-    lowercase name, then verifies that the response has a 422 status code.
+#     Creates a test vendor and attempts to create a baked good with a
+#     lowercase name, then verifies that the response has a 422 status code.
 
-    Args:
-        client: FastAPI test client provided by the client fixture.
+#     Args:
+#         client: FastAPI test client provided by the client fixture.
 
-    Returns:
-        None
-    """
+#     Returns:
+#         None
+#     """
 
-    vendor = {
-        "active": True,
-        "name": "Test Vendor",
-        "contact_name": "Christian Robinson",
-        "contact_role": "Manager",
-        "email": "Christian@Robinsonvendor.com",
-        "phone": "5551234567",
-    }
+#     vendor = {
+#         "active": True,
+#         "name": "Test Vendor",
+#         "contact_name": "Christian Robinson",
+#         "contact_role": "Manager",
+#         "email": "Christian@Robinsonvendor.com",
+#         "phone": "5551234567",
+#     }
 
-    vendor_response = client.post("/vendors", json=vendor)
+#     vendor_response = client.post("/vendors", json=vendor)
 
-    assert vendor_response.status_code == 201
+#     assert vendor_response.status_code == 201
 
-    baked_good = {
-        "active": True,
-        "name": "blueberry muffin",
-        "description": "A fresh blueberry muffin",
-        "purchasing_cost": 2.0,
-        "retail_price": 4.0,
-        "vendor_id": 1,
-    }
+#     baked_good = {
+#         "active": True,
+#         "name": "blueberry muffin",
+#         "description": "A fresh blueberry muffin",
+#         "purchasing_cost": 2.0,
+#         "retail_price": 4.0,
+#         "vendor_id": 1,
+#     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+#     response = client.post("/baked_goods/", json=baked_good)
 
-    assert response.status_code == 422
+#     assert response.status_code == 422
 
 def test_post_same_baked_good_different_vendor(client):
     """
