@@ -1,6 +1,10 @@
+import models
+
 from sqlalchemy import inspect
 
+
 from baked_good.baked_good_schema import BakedGoodSchema
+
 
 def test_baked_good_table_name():
     """
@@ -17,6 +21,7 @@ def test_baked_good_table_name():
     """
 
     assert BakedGoodSchema.__tablename__ == "baked_goods"
+
 
 def test_baked_good_columns():
     """
@@ -41,6 +46,7 @@ def test_baked_good_columns():
     assert columns["purchasing_cost"].type.python_type is float
     assert columns["retail_price"].type.python_type is float
 
+
 def test_description_is_required():
     """
     Tests that the baked good description is required.
@@ -58,6 +64,7 @@ def test_description_is_required():
     columns = inspect(BakedGoodSchema).columns
 
     assert columns["description"].nullable is False
+
 
 def test_name_is_required():
     """
@@ -77,6 +84,7 @@ def test_name_is_required():
 
     assert columns["name"].nullable is False
 
+
 def test_id_is_unique_primary_key():
     """
     Tests that the baked good ID is configured as the primary key.
@@ -94,6 +102,7 @@ def test_id_is_unique_primary_key():
 
     assert columns["id"].primary_key is True
 
+
 def test_vendor_relationship_exists():
     relationships = inspect(BakedGoodSchema).relationships
 
@@ -104,15 +113,14 @@ def test_vendor_relationship_exists():
     assert relationship.mapper.class_.__name__ == "Vendor"
     assert relationship.back_populates == "baked_goods"
 
+
 def test_vendor_id_foreign_key():
     columns = inspect(BakedGoodSchema).columns
 
     foreign_keys = columns["vendor_id"].foreign_keys
 
-    assert any(
-        fk.target_fullname == "vendor.id"
-        for fk in foreign_keys
-    )
+    assert any(fk.target_fullname == "vendor.id" for fk in foreign_keys)
+
 
 def test_vendor_id_is_required():
     """
