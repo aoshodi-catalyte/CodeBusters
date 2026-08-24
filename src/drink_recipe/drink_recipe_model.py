@@ -39,6 +39,10 @@ class RecipeIngredient(BaseModel):
     id: int
     quantity_used: float = Field(gt=0)
     unit_of_measure_used: str = Field(min_length=1, max_length=50)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 
 class DrinkRecipe(BaseModel):
     """
@@ -126,4 +130,8 @@ class DrinkRecipe(BaseModel):
     @field_validator("markup_percentage")
     def round_values(cls, v):
         """Round markup percentage using shared rounding utility."""
+<<<<<<< HEAD
         return round_float(v)
+=======
+        return round_float(v)
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

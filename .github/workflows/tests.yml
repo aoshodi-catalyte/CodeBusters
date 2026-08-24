@@ -25,7 +25,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/CodeBustersTest
+      DATABASE_URL: postgresql://neondb_owner:${{ secrets.POSTGRES_PASSWORD }}@ep-lingering-river-axz68uzz-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 
     steps:
       - name: Check out code

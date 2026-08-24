@@ -1,9 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 from fastapi import Depends, status, APIRouter, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from typing import List
 =======
+=======
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 """
 FastAPI router for baked good endpoints.
 
@@ -18,11 +21,15 @@ from fastapi import Depends, status, APIRouter, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
+<<<<<<< HEAD
 >>>>>>> 8bb3688c86749408fa79034a4abffc034ea8909c
+=======
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_response_model import BakedGoodResponseModel
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 router = APIRouter(
     prefix="/baked_goods", 
@@ -31,6 +38,11 @@ router = APIRouter(
 router = APIRouter(
     prefix="/baked_goods",
 >>>>>>> 8bb3688c86749408fa79034a4abffc034ea8909c
+=======
+
+router = APIRouter(
+    prefix="/baked_goods",
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
     tags=["baked_goods"]
 )
 
@@ -63,6 +75,10 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
     which converts it into a BakedGoodSchema SQLAlchemy model,
     adds it to the database, commits the transaction, and refreshes
     the object with its database-generated values.
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
     Args:
         baked_good: The validated baked good data received from the request.
         db: The SQLAlchemy database session provided by the get_db dependency.
@@ -81,4 +97,8 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
             detail="Cannot create baked good because the vendor does not exist."
         ) from exc
 
+<<<<<<< HEAD
     return created_baked_good
+=======
+    return created_baked_good
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

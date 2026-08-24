@@ -31,4 +31,8 @@ class BakedGoodResponseModel(BaseModel):
     retail_price: float
     vendor_id: int
 
+<<<<<<< HEAD
     model_config = ConfigDict(from_attributes=True)
+=======
+    model_config = ConfigDict(from_attributes=True)
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73

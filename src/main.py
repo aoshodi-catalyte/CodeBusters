@@ -55,6 +55,10 @@ async def lifespan(_app: FastAPI):
     # --- Shutdown logic (optional) ---
     # e.g., close global resources, flush logs, etc.
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(customer_router)
@@ -73,4 +77,8 @@ app.include_router(baked_good_router)
 app.include_router(ingredient_router)
 app.include_router(customer_router)
 app.include_router(employee_router)
+<<<<<<< HEAD
 app.include_router(promotion_router)
+=======
+app.include_router(promotion_router)
+>>>>>>> 0d25e2769e93a16f5d8d0d058327506f2bc2ee73
