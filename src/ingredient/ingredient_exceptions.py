@@ -10,8 +10,8 @@ caught and translated into appropriate API responses.
 class VendorNotFoundError(Exception):
     """Raised when the specified vendor does not exist."""
 
-    def __init__(self, vendor_id: int):
-        """Initialize the vendor-not-found exception.
+    def __init__(self, vendor_id: int) -> None:
+        """Initialize a VendorNotFoundError.
 
         Args:
             vendor_id: ID of the vendor that could not be found.
@@ -26,8 +26,8 @@ class VendorNotFoundError(Exception):
 class IngredientAlreadyExistsError(Exception):
     """Raised when an ingredient with the same name already exists."""
 
-    def __init__(self, name: str):
-        """Initialize the duplicate-ingredient exception.
+    def __init__(self, name: str) -> None:
+        """Initialize an IngredientAlreadyExistsError.
 
         Args:
             name: Name of the ingredient that already exists.
@@ -42,8 +42,8 @@ class IngredientAlreadyExistsError(Exception):
 class IngredientConstraintError(Exception):
     """Raised when an ingredient violates a database constraint."""
 
-    def __init__(self, constraint: str | None = None):
-        """Initialize the database-constraint exception.
+    def __init__(self, constraint: str | None = None) -> None:
+        """Initialize an IngredientConstraintError.
 
         Args:
             constraint: Name of the database constraint that was
