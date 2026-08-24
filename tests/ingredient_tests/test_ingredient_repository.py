@@ -1,5 +1,7 @@
 """Tests for the ingredient repository."""
 
+import models
+
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -277,9 +279,7 @@ def test_unexpected_sqlalchemy_error_is_reraised():
     """Test that unexpected SQLAlchemy errors are re-raised."""
     db = MagicMock()
 
-    db.query.side_effect = SQLAlchemyError(
-        "Unexpected database failure"
-    )
+    db.query.side_effect = SQLAlchemyError("Unexpected database failure")
 
     with pytest.raises(SQLAlchemyError):
         create_ingredient(

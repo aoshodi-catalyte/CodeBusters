@@ -10,7 +10,7 @@ from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from database import Base
-# from vendor.vendor_schema import Vendor
+
 
 class BakedGoodSchema(Base):
     """
