@@ -56,7 +56,7 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
         ) from exc
 
     return created_baked_good
-
+#trying to fix merge.
 @router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel])
 def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
     """
