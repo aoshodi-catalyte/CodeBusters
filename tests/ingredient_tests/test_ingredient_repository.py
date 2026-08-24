@@ -1,7 +1,5 @@
 """Tests for the ingredient repository."""
 
-import models
-
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -19,6 +17,7 @@ from repositories.ingredient_repository import (
     get_all_ingredients,
     get_ingredient_by_id,
     get_or_create_allergen,
+    update_ingredient,
 )
 from ingredient.ingredient_schema import (
     AllergenSchema,
@@ -288,3 +287,252 @@ def test_unexpected_sqlalchemy_error_is_reraised():
         )
 
     db.rollback.assert_called_once()
+
+
+def test_update_ingredient_success(db):
+    """Test that an existing ingredient can be updated successfully."""
+    vendor = Vendor(
+        name="Original Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="original@test.com",
+        phone="3125551000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+            purchasing_cost=Decimal("10.00"),
+            unit_amount=Decimal("25.00"),
+        ),
+    )
+
+    updated_data = make_ingredient(
+        name="Whole Wheat Flour",
+        vendor_id=vendor.id,
+        purchasing_cost=Decimal("12.50"),
+        unit_amount=Decimal("30.00"),
+        unit_of_measure="kg",
+        allergens=["Wheat"],
+    )
+
+    result = update_ingredient(
+        db=db,
+        ingredient_id=ingredient.id,
+        ingredient_data=updated_data,
+    )
+
+    assert result is not None
+    assert result.id == ingredient.id
+    assert result.name == "Whole Wheat Flour"
+    assert result.purchasing_cost == Decimal("12.50")
+    assert result.unit_amount == Decimal("30.00")
+    assert result.vendor_id == vendor.id
+    assert result.active is True
+
+
+def test_update_ingredient_is_persisted(db):
+    """Test that ingredient updates are persisted to the database."""
+    vendor = Vendor(
+        name="Persistence Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="persist@test.com",
+        phone="3125552000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    updated_data = make_ingredient(
+        name="Brown Sugar",
+        vendor_id=vendor.id,
+        purchasing_cost=Decimal("15.00"),
+        unit_amount=Decimal("20.00"),
+    )
+
+    update_ingredient(
+        db=db,
+        ingredient_id=ingredient.id,
+        ingredient_data=updated_data,
+    )
+
+    db.expire_all()
+
+    persisted = get_ingredient_by_id(
+        db=db,
+        ingredient_id=ingredient.id,
+    )
+
+    assert persisted is not None
+    assert persisted.name == "Brown Sugar"
+    assert persisted.purchasing_cost == Decimal("15.00")
+    assert persisted.unit_amount == Decimal("20.00")
+
+
+def test_update_ingredient_not_found(db):
+    """Test that updating a nonexistent ingredient returns None."""
+    vendor = Vendor(
+        name="Missing Ingredient Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="missing@test.com",
+        phone="3125553000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient_data = make_ingredient(
+        name="Flour",
+        vendor_id=vendor.id,
+    )
+
+    result = update_ingredient(
+        db=db,
+        ingredient_id=9999,
+        ingredient_data=ingredient_data,
+    )
+
+    assert result is None
+
+
+def test_update_ingredient_replaces_allergens(db):
+    """Test that updating an ingredient replaces its allergens."""
+    vendor = Vendor(
+        name="Allergen Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="allergen@test.com",
+        phone="3125554000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Chocolate",
+            vendor_id=vendor.id,
+            allergens=["Milk", "Soy"],
+        ),
+    )
+
+    assert {
+        allergen.name for allergen in ingredient.allergens
+    } == {"Milk", "Soy"}
+
+    updated_data = make_ingredient(
+        name="Dark Chocolate",
+        vendor_id=vendor.id,
+        allergens=["Soy", "Wheat"],
+    )
+
+    result = update_ingredient(
+        db=db,
+        ingredient_id=ingredient.id,
+        ingredient_data=updated_data,
+    )
+
+    assert result is not None
+    assert {
+        allergen.name for allergen in result.allergens
+    } == {"Soy", "Wheat"}
+
+
+def test_update_ingredient_duplicate_name_raises_error(db):
+    """Test that updating to an existing ingredient name raises an error."""
+    vendor = Vendor(
+        name="Duplicate Update Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="duplicateupdate@test.com",
+        phone="3125555000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    second_ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    with pytest.raises(IngredientAlreadyExistsError):
+        update_ingredient(
+            db=db,
+            ingredient_id=second_ingredient.id,
+            ingredient_data=make_ingredient(
+                name="Flour",
+                vendor_id=vendor.id,
+            ),
+        )
+
+
+def test_update_ingredient_vendor_not_found(db):
+    """Test that updating to a nonexistent vendor raises an error."""
+    vendor = Vendor(
+        name="Vendor Update Test",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="vendorupdate@test.com",
+        phone="3125556000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    with pytest.raises(VendorNotFoundError):
+        update_ingredient(
+            db=db,
+            ingredient_id=ingredient.id,
+            ingredient_data=make_ingredient(
+                name="Updated Flour",
+                vendor_id=9999,
+            ),
+        )
