@@ -36,7 +36,7 @@ class BakedGoodSchema(Base):
         A BakedGoodSchema object representing a baked good database record.
     """
 
-    __tablename__ = "baked_goods"
+    __tablename__ = "baked_good"
 
     id = Column(Integer, primary_key=True)
     active = Column(Boolean, default=True)
@@ -47,4 +47,4 @@ class BakedGoodSchema(Base):
 
     vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
 
-    vendor = relationship("Vendor", back_populates="baked_goods")
+    vendor = relationship("Vendor", back_populates="baked_good")
