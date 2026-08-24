@@ -12,7 +12,7 @@ from drink_recipe.drink_type_schema import DrinkTypeSchema
 from ingredient.ingredient_schema import IngredientSchema
 from constants.drink_types import DrinkType
 from database import Base
-from constants.UNIT_CONVERSIONS import convert
+from constants.unit_conversions import convert
 
 
 # ---------------------------

@@ -51,6 +51,7 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
     which converts it into a BakedGoodSchema SQLAlchemy model,
     adds it to the database, commits the transaction, and refreshes
     the object with its database-generated values.
+
     Args:
         baked_good: The validated baked good data received from the request.
         db: The SQLAlchemy database session provided by the get_db dependency.

@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-from vendor.vendor_model import VendorBase
-from vendor.vendor_schema import Vendor, VendorSchema
-from sqlalchemy.orm import Session
-
-class VendorRepository:
-=======
 """
 Repository layer for vendor-related database operations, including creation,
 retrieval, and persistence logic for vendor records.
@@ -22,7 +15,6 @@ class VendorRepository:
     retrieval of vendor data from the database.
     """
 
->>>>>>> 752f2f1a4ffc90eff888836022669e8b0aabd549
     def __init__(self, db: Session):
         """Initialize the VendorRepository with a database session.
 
@@ -56,11 +48,7 @@ class VendorRepository:
             contact_name=vendor_data.contact_name,
             contact_role=vendor_data.contact_role,
             email=vendor_data.email,
-<<<<<<< HEAD
-            phone=vendor_data.phone
-=======
             phone=vendor_data.phone,
->>>>>>> 752f2f1a4ffc90eff888836022669e8b0aabd549
         )
         self.db.add(db_vendor)
         self.db.commit()
@@ -95,8 +83,4 @@ class VendorRepository:
         Raises:
             SQLAlchemyError: If the query fails due to database issues.
         """
-<<<<<<< HEAD
         return self.db.query(Vendor).filter(Vendor.id == vendor_id).first()
-=======
-        return self.db.query(Vendor).filter(Vendor.id == vendor_id).first()
->>>>>>> 752f2f1a4ffc90eff888836022669e8b0aabd549
