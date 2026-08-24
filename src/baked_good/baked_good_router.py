@@ -72,8 +72,15 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
 
     return created_baked_good
 
-@router.get("/{baked_good_id}", status_code=status.HTTP_200_OK, response_model= BakedGoodResponseModel)
-def get_baked_good_by_id(baked_good_id: int, db: Session = Depends(get_db)) -> BakedGoodResponseModel:
+@router.get(
+    "/{baked_good_id}",
+    status_code=status.HTTP_200_OK,
+    response_model= BakedGoodResponseModel
+)
+def get_baked_good_by_id(
+    baked_good_id: int,
+    db: Session = Depends(get_db)
+) -> BakedGoodResponseModel:
     """
     Retrieves a baked good by its ID.
 

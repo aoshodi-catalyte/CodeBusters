@@ -97,4 +97,6 @@ class BakedGoodRepository:
             BakedGoodSchema: The baked good matching the provided ID,
                 or None if the baked good does not exist.
         """
-        return self.session.query(BakedGoodSchema).filter(BakedGoodSchema.id == baked_good_id).first()
+        return self.session.query(BakedGoodSchema).filter(
+            BakedGoodSchema.id == baked_good_id
+        ).first()
