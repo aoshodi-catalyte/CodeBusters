@@ -1,10 +1,11 @@
+import models
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from database import Base
 
-import models
 
 from database import Base
 from vendor.vendor_model import VendorBase

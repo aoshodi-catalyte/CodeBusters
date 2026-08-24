@@ -1,7 +1,8 @@
+import models
+
 import pytest
 from pydantic import ValidationError
 
-import models
 
 from vendor.vendor_schema import VendorSchema
 

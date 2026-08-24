@@ -1,3 +1,5 @@
+import models
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -7,7 +9,6 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base
 
-import models
 
 from vendor.vendor_router import router, get_db
 
