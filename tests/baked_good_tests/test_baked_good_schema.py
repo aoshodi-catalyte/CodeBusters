@@ -20,7 +20,7 @@ def test_baked_good_table_name():
         None
     """
 
-    assert BakedGoodSchema.__tablename__ == "baked_goods"
+    assert BakedGoodSchema.__tablename__ == "baked_good"
 
 
 def test_baked_good_columns():
@@ -111,7 +111,7 @@ def test_vendor_relationship_exists():
     relationship = relationships["vendor"]
 
     assert relationship.mapper.class_.__name__ == "Vendor"
-    assert relationship.back_populates == "baked_goods"
+    assert relationship.back_populates == "baked_good"
 
 
 def test_vendor_id_foreign_key():

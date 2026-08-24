@@ -38,24 +38,24 @@ class BakedGood(BaseModel):
     @classmethod
     def validate_name(cls, value):
         """
-        Validates that the baked good name is not empty and does not
-        begin or end with whitespace.
+        Validates that the baked good name is properly formatted.
 
         Args:
             value: The name of the baked good being validated.
 
         Raises:
-            ValueError: If the name is empty, contains only whitespace,
-                or begins or ends with whitespace.
+            ValueError: If the name is empty, contains leading or trailing
+                whitespace, or is not in title case.
 
         Returns:
             The validated baked good name.
         """
+        stripped_value = value.strip()
 
-        if not value.strip():
+        if not stripped_value:
             raise ValueError("Name cannot be empty")
 
-        if value != value.strip():
+        if stripped_value != value:
             raise ValueError("Name cannot begin or end with a space")
 
         return value
