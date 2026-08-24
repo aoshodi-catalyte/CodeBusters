@@ -10,6 +10,7 @@ HTTP responses for ingredient‑related actions.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from database import get_db
 from ingredient.ingredient_exceptions import (
@@ -110,7 +111,7 @@ def create(
 
 
 @router.get(
-    "/all",
+    "/",
     response_model=IngredientListResponse,
 )
 def read_all_ingredients(
@@ -259,3 +260,45 @@ def update(
                 ),
             },
         ) from exc
+class IngredientDeleteResponse(BaseModel):
+    """Schema used when confirming an ingredient soft delete."""
+    message: str
+    id: int
+
+
+@router.delete(
+    "/{ingredient_id}",
+    response_model=IngredientDeleteResponse,
+)
+def delete_ingredient_endpoint(
+    ingredient_id: int,
+    db: Session = Depends(get_db),
+):
+    """Soft delete an ingredient by its ID.
+
+    Args:
+        ingredient_id: ID of the ingredient to deactivate.
+        db: Database session provided by FastAPI.
+
+    Returns:
+        A confirmation message and the ID of the deactivated ingredient.
+
+    Raises:
+        HTTPException:
+            404 if the ingredient does not exist.
+    """
+    ingredient = soft_delete_ingredient(db=db, ingredient_id=ingredient_id)
+
+    if ingredient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "ingredient_not_found",
+                "message": f"Ingredient with ID {ingredient_id} was not found.",
+            },
+        )
+
+    return {
+        "message": "Ingredient successfully deactivated.",
+        "id": ingredient.id,
+    }

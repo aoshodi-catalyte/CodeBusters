@@ -263,3 +263,26 @@ def update_ingredient(
     except SQLAlchemyError as exc:
         db.rollback()
         raise exc
+def soft_delete_ingredient(
+    db: Session,
+    ingredient_id: int,
+) -> IngredientSchema | None:
+    """Soft delete an ingredient by setting active to False.
+
+    Args:
+        db: Active SQLAlchemy database session.
+        ingredient_id: ID of the ingredient to deactivate.
+
+    Returns:
+        The deactivated ingredient, or None if it does not exist.
+    """
+    ingredient = get_ingredient_by_id(db=db, ingredient_id=ingredient_id)
+
+    if ingredient is None:
+        return None
+
+    ingredient.active = False
+    db.commit()
+    db.refresh(ingredient)
+
+    return ingredient
