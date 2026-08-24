@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
-import ingredient.ingredient_router as ingredient_router
 from constants.ingredient_types import CafeAllergen, UnitOfMeasure
 from database import get_db
 from ingredient.ingredient_exceptions import (
@@ -15,7 +14,6 @@ from ingredient.ingredient_exceptions import (
     IngredientConstraintError,
     VendorNotFoundError,
 )
-from ingredient.ingredient_router import router
 from routers.ingredient_router import router
 import routers.ingredient_router as ingredient_router
 
