@@ -1,530 +1,538 @@
-"""Tests for the ingredient API router."""
+"""Tests for the ingredient repository."""
 
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-import ingredient.ingredient_router as ingredient_router
-from constants.ingredient_types import CafeAllergen, UnitOfMeasure
-from database import get_db
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
 )
-from ingredient.ingredient_router import router
+from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_repository import (
+    create_ingredient,
+    get_all_ingredients,
+    get_ingredient_by_id,
+    get_or_create_allergen,
+    update_ingredient,
+)
+from ingredient.ingredient_schema import (
+    AllergenSchema,
+    IngredientSchema,
+)
+from vendor.vendor_schema import Vendor
 
 
-app = FastAPI()
-app.include_router(router)
+def make_ingredient(
+    name="Flour",
+    vendor_id=1,
+    purchasing_cost=Decimal("10.00"),
+    unit_amount=Decimal("25.00"),
+    unit_of_measure="lb",
+    allergens=None,
+):
+    """Create an Ingredient object for testing.
+
+    Args:
+        name: Ingredient name.
+        vendor_id: ID of the ingredient vendor.
+        purchasing_cost: Ingredient purchasing cost.
+        unit_amount: Quantity of the ingredient.
+        unit_of_measure: Unit used to measure the ingredient.
+        allergens: List of ingredient allergens.
+
+    Returns:
+        A validated Ingredient object.
+    """
+    if allergens is None:
+        allergens = ["Wheat"]
+
+    return Ingredient(
+        active=True,
+        name=name,
+        purchasing_cost=purchasing_cost,
+        unit_amount=unit_amount,
+        unit_of_measure=unit_of_measure,
+        allergens=allergens,
+        vendor_id=vendor_id,
+    )
 
 
-def override_get_db():
-    """Provide a mock database session for router tests."""
+def test_create_ingredient_success(db):
+    """Test that an ingredient can be created successfully."""
+    vendor = Vendor(
+        name="Test Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="john@testvendor.com",
+        phone="3125551234",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    result = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    assert result.id is not None
+    assert result.name == "Flour"
+    assert result.vendor_id == vendor.id
+    assert result.active is True
+
+
+def test_create_ingredient_with_vendor(db):
+    """Test that an ingredient is associated with the correct vendor."""
+    vendor = Vendor(
+        name="ABC Foods",
+        contact_name="Jane Smith",
+        contact_role="Sales Manager",
+        email="jane@abcfoods.com",
+        phone="3125551111",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    result = create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    assert result.vendor_id == vendor.id
+    assert result.vendor.id == vendor.id
+    assert result.vendor.name == "ABC Foods"
+
+
+def test_create_ingredient_vendor_not_found(db):
+    """Test that a missing vendor raises VendorNotFoundError."""
+    with pytest.raises(VendorNotFoundError):
+        create_ingredient(
+            db,
+            make_ingredient(
+                name="Flour",
+                vendor_id=9999,
+            ),
+        )
+
+
+def test_get_or_create_allergen_creates_new_allergen(db):
+    """Test that a missing allergen is created."""
+    result = get_or_create_allergen(db, "Milk")
+
+    assert result.id is not None
+    assert result.name == "Milk"
+
+
+def test_get_or_create_allergen_returns_existing_allergen(db):
+    """Test that an existing allergen is returned."""
+    allergen = AllergenSchema(name="Milk")
+
+    db.add(allergen)
+    db.commit()
+    db.refresh(allergen)
+
+    result = get_or_create_allergen(db, "Milk")
+
+    assert result.id == allergen.id
+    assert result.name == "Milk"
+
+
+def test_create_ingredient_with_allergens(db):
+    """Test that an ingredient is associated with its allergens."""
+    vendor = Vendor(
+        name="Ingredient Supplier",
+        contact_name="Bob Smith",
+        contact_role="Sales",
+        email="bob@supplier.com",
+        phone="3125552222",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    result = create_ingredient(
+        db,
+        make_ingredient(
+            name="Chocolate",
+            vendor_id=vendor.id,
+            allergens=["Milk", "Soy"],
+        ),
+    )
+
+    assert {allergen.name for allergen in result.allergens} == {
+        "Milk",
+        "Soy",
+    }
+
+
+def test_duplicate_allergens_are_removed(db):
+    """Test that duplicate allergens are removed."""
+    vendor = Vendor(
+        name="Duplicate Test Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="duplicate@test.com",
+        phone="3125553333",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    result = create_ingredient(
+        db,
+        make_ingredient(
+            name="Butter",
+            vendor_id=vendor.id,
+            allergens=["Milk", "Milk", "Milk"],
+        ),
+    )
+
+    assert len(result.allergens) == 1
+    assert result.allergens[0].name == "Milk"
+
+
+def test_duplicate_ingredient_raises_error(db):
+    """Test that duplicate ingredient names raise an exception."""
+    vendor = Vendor(
+        name="Duplicate Ingredient Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="duplicateingredient@test.com",
+        phone="3125554444",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    with pytest.raises(IngredientAlreadyExistsError):
+        create_ingredient(
+            db,
+            make_ingredient(
+                name="Flour",
+                vendor_id=vendor.id,
+            ),
+        )
+
+
+def test_invalid_purchasing_cost_raises_constraint_error(db):
+    """Test that a negative purchasing cost violates the database constraint."""
+    vendor = Vendor(
+        name="Constraint Test Vendor",
+        contact_name="Test Person",
+        contact_role="Sales",
+        email="constraint@test.com",
+        phone="3125555555",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient_data = make_ingredient(
+        name="Invalid Flour",
+        vendor_id=vendor.id,
+    )
+
+    # Bypass Pydantic validation so the database constraint
+    # is responsible for rejecting the invalid value.
+    ingredient_data.purchasing_cost = Decimal("-5.00")
+
+    with pytest.raises(IngredientConstraintError):
+        create_ingredient(
+            db,
+            ingredient_data,
+        )
+
+
+def test_unexpected_sqlalchemy_error_is_reraised():
+    """Test that unexpected SQLAlchemy errors are re-raised."""
     db = MagicMock()
-    yield db
+
+    db.query.side_effect = SQLAlchemyError("Unexpected database failure")
+
+    with pytest.raises(SQLAlchemyError):
+        create_ingredient(
+            db,
+            make_ingredient(),
+        )
+
+    db.rollback.assert_called_once()
 
 
-app.dependency_overrides[get_db] = override_get_db
-
-client = TestClient(app)
-
-VALID_UNIT_OF_MEASURE = next(iter(UnitOfMeasure)).value
-VALID_ALLERGEN = next(iter(CafeAllergen)).value
-
-
-def valid_ingredient_payload():
-    """Return a valid ingredient request body."""
-    return {
-        "active": True,
-        "name": "Flour",
-        "purchasing_cost": "10.50",
-        "unit_amount": "25.00",
-        "unit_of_measure": VALID_UNIT_OF_MEASURE,
-        "allergens": [VALID_ALLERGEN],
-        "vendor_id": 1,
-    }
-
-
-def valid_ingredient_response():
-    """Return the data that the mocked repository would return."""
-    payload = valid_ingredient_payload()
-
-    return {
-        "id": 1,
-        "name": payload["name"],
-        "active": payload["active"],
-        "purchasing_cost": Decimal(payload["purchasing_cost"]),
-        "unit_amount": Decimal(payload["unit_amount"]),
-        "unit_of_measure": payload["unit_of_measure"],
-        "allergens": [
-            {"name": allergen.title()}
-            for allergen in payload["allergens"]
-        ],
-        "vendor_id": payload["vendor_id"],
-    }
-
-
-def test_create_ingredient_success(monkeypatch):
-    """Test that a valid ingredient is successfully created."""
-    expected_ingredient = valid_ingredient_response()
-    mock_create = MagicMock(return_value=expected_ingredient)
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "create_ingredient",
-        mock_create,
+def test_update_ingredient_success(db):
+    """Test that an existing ingredient can be updated successfully."""
+    vendor = Vendor(
+        name="Original Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="original@test.com",
+        phone="3125551000",
+        active=True,
     )
 
-    response = client.post(
-        "/ingredients/",
-        json=valid_ingredient_payload(),
-    )
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
 
-    assert response.status_code == 201
-
-    data = response.json()
-
-    assert data["id"] == 1
-    assert data["name"] == "Flour"
-    assert data["active"] is True
-    assert data["vendor_id"] == 1
-
-    mock_create.assert_called_once()
-
-
-def test_create_ingredient_vendor_not_found(monkeypatch):
-    """Test that a missing vendor returns HTTP 404."""
-    mock_create = MagicMock(
-        side_effect=VendorNotFoundError(999),
-    )
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "create_ingredient",
-        mock_create,
-    )
-
-    payload = valid_ingredient_payload()
-    payload["vendor_id"] = 999
-
-    response = client.post(
-        "/ingredients/",
-        json=payload,
-    )
-
-    assert response.status_code == 404
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "vendor_not_found"
-
-
-def test_create_ingredient_already_exists(monkeypatch):
-    """Test that a duplicate ingredient returns HTTP 409."""
-    mock_create = MagicMock(
-        side_effect=IngredientAlreadyExistsError("Flour"),
-    )
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "create_ingredient",
-        mock_create,
-    )
-
-    response = client.post(
-        "/ingredients/",
-        json=valid_ingredient_payload(),
-    )
-
-    assert response.status_code == 409
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "ingredient_already_exists"
-
-
-def test_create_ingredient_constraint_error(monkeypatch):
-    """Test that a database constraint violation returns HTTP 409."""
-    mock_create = MagicMock(
-        side_effect=IngredientConstraintError(
-            "ck_ingredient_unit_amount_positive",
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+            purchasing_cost=Decimal("10.00"),
+            unit_amount=Decimal("25.00"),
         ),
     )
 
-    monkeypatch.setattr(
-        ingredient_router,
-        "create_ingredient",
-        mock_create,
+    updated_data = make_ingredient(
+        name="Whole Wheat Flour",
+        vendor_id=vendor.id,
+        purchasing_cost=Decimal("12.50"),
+        unit_amount=Decimal("30.00"),
+        unit_of_measure="kg",
+        allergens=["Wheat"],
     )
 
-    response = client.post(
-        "/ingredients/",
-        json=valid_ingredient_payload(),
+    result = update_ingredient(
+        db=db,
+        ingredient_id=ingredient.id,
+        ingredient_data=updated_data,
     )
 
-    assert response.status_code == 409
+    assert result is not None
+    assert result.id == ingredient.id
+    assert result.name == "Whole Wheat Flour"
+    assert result.purchasing_cost == Decimal("12.50")
+    assert result.unit_amount == Decimal("30.00")
+    assert result.vendor_id == vendor.id
+    assert result.active is True
 
-    data = response.json()
 
-    assert data["detail"]["error"] == "database_constraint_violation"
-
-
-def test_create_ingredient_database_error(monkeypatch):
-    """Test that an unexpected SQLAlchemy error returns HTTP 500."""
-    mock_create = MagicMock(
-        side_effect=SQLAlchemyError("Database connection failed"),
+def test_update_ingredient_is_persisted(db):
+    """Test that ingredient updates are persisted to the database."""
+    vendor = Vendor(
+        name="Persistence Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="persist@test.com",
+        phone="3125552000",
+        active=True,
     )
 
-    monkeypatch.setattr(
-        ingredient_router,
-        "create_ingredient",
-        mock_create,
-    )
-
-    response = client.post(
-        "/ingredients/",
-        json=valid_ingredient_payload(),
-    )
-
-    assert response.status_code == 500
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "database_error"
-    assert (
-        data["detail"]["message"]
-        == "An unexpected database error occurred "
-        "while creating the ingredient."
-    )
-
-
-def test_create_ingredient_invalid_vendor_id():
-    """Test that vendor_id must be greater than zero."""
-    payload = valid_ingredient_payload()
-    payload["vendor_id"] = 0
-
-    response = client.post(
-        "/ingredients/",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_create_ingredient_negative_purchasing_cost():
-    """Test that purchasing_cost cannot be negative."""
-    payload = valid_ingredient_payload()
-    payload["purchasing_cost"] = "-5.00"
-
-    response = client.post(
-        "/ingredients/",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_create_ingredient_zero_unit_amount():
-    """Test that unit_amount must be greater than zero."""
-    payload = valid_ingredient_payload()
-    payload["unit_amount"] = "0"
-
-    response = client.post(
-        "/ingredients/",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_create_ingredient_missing_name():
-    """Test that name is required."""
-    payload = valid_ingredient_payload()
-    del payload["name"]
-
-    response = client.post(
-        "/ingredients/",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_create_ingredient_empty_name():
-    """Test that ingredient name cannot be empty."""
-    payload = valid_ingredient_payload()
-    payload["name"] = ""
-
-    response = client.post(
-        "/ingredients/",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_success(monkeypatch):
-    """Test that a valid PUT updates and returns the ingredient."""
-    expected_ingredient = valid_ingredient_response()
-    expected_ingredient["name"] = "Whole Wheat Flour"
-    expected_ingredient["purchasing_cost"] = Decimal("12.50")
-    expected_ingredient["unit_amount"] = Decimal("30.00")
-
-    mock_update = MagicMock(return_value=expected_ingredient)
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "update_ingredient",
-        mock_update,
-    )
-
-    payload = valid_ingredient_payload()
-    payload["name"] = "Whole Wheat Flour"
-    payload["purchasing_cost"] = "12.50"
-    payload["unit_amount"] = "30.00"
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["id"] == 1
-    assert data["name"] == "Whole Wheat Flour"
-    assert data["purchasing_cost"] == 12.50
-    assert data["unit_amount"] == 30.00
-    assert data["vendor_id"] == 1
-
-    mock_update.assert_called_once()
-
-
-def test_update_ingredient_not_found(monkeypatch):
-    """Test that updating a nonexistent ingredient returns HTTP 404."""
-    mock_update = MagicMock(return_value=None)
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "update_ingredient",
-        mock_update,
-    )
-
-    response = client.put(
-        "/ingredients/9999",
-        json=valid_ingredient_payload(),
-    )
-
-    assert response.status_code == 404
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "ingredient_not_found"
-    assert (
-        data["detail"]["message"]
-        == "Ingredient with ID 9999 was not found."
-    )
-
-    mock_update.assert_called_once()
-
-
-def test_update_ingredient_negative_purchasing_cost():
-    """Test that PUT rejects a negative purchasing cost."""
-    payload = valid_ingredient_payload()
-    payload["purchasing_cost"] = "-5.00"
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_zero_unit_amount():
-    """Test that PUT rejects a zero unit amount."""
-    payload = valid_ingredient_payload()
-    payload["unit_amount"] = "0"
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_invalid_unit_of_measure():
-    """Test that PUT rejects an invalid unit of measure."""
-    payload = valid_ingredient_payload()
-    payload["unit_of_measure"] = "invalid_unit"
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_invalid_allergen():
-    """Test that PUT rejects an invalid allergen."""
-    payload = valid_ingredient_payload()
-    payload["allergens"] = ["Kryptonite"]
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_missing_name():
-    """Test that PUT rejects a payload without a name."""
-    payload = valid_ingredient_payload()
-    del payload["name"]
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_empty_name():
-    """Test that PUT rejects an empty ingredient name."""
-    payload = valid_ingredient_payload()
-    payload["name"] = ""
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_invalid_vendor_id():
-    """Test that PUT rejects an invalid vendor ID."""
-    payload = valid_ingredient_payload()
-    payload["vendor_id"] = 0
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 422
-
-
-def test_update_ingredient_vendor_not_found(monkeypatch):
-    """Test that a missing vendor returns HTTP 404."""
-    mock_update = MagicMock(
-        side_effect=VendorNotFoundError(999),
-    )
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "update_ingredient",
-        mock_update,
-    )
-
-    payload = valid_ingredient_payload()
-    payload["vendor_id"] = 999
-
-    response = client.put(
-        "/ingredients/1",
-        json=payload,
-    )
-
-    assert response.status_code == 404
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "vendor_not_found"
-
-
-def test_update_ingredient_already_exists(monkeypatch):
-    """Test that a duplicate ingredient name returns HTTP 409."""
-    mock_update = MagicMock(
-        side_effect=IngredientAlreadyExistsError("Flour"),
-    )
-
-    monkeypatch.setattr(
-        ingredient_router,
-        "update_ingredient",
-        mock_update,
-    )
-
-    response = client.put(
-        "/ingredients/1",
-        json=valid_ingredient_payload(),
-    )
-
-    assert response.status_code == 409
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "ingredient_already_exists"
-
-
-def test_update_ingredient_constraint_error(monkeypatch):
-    """Test that a database constraint violation returns HTTP 409."""
-    mock_update = MagicMock(
-        side_effect=IngredientConstraintError(
-            "ck_ingredient_unit_amount_positive",
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
         ),
     )
 
-    monkeypatch.setattr(
-        ingredient_router,
-        "update_ingredient",
-        mock_update,
+    updated_data = make_ingredient(
+        name="Brown Sugar",
+        vendor_id=vendor.id,
+        purchasing_cost=Decimal("15.00"),
+        unit_amount=Decimal("20.00"),
     )
 
-    response = client.put(
-        "/ingredients/1",
-        json=valid_ingredient_payload(),
+    update_ingredient(
+        db=db,
+        ingredient_id=ingredient.id,
+        ingredient_data=updated_data,
     )
 
-    assert response.status_code == 409
+    db.expire_all()
 
-    data = response.json()
-
-    assert data["detail"]["error"] == "database_constraint_violation"
-
-
-def test_update_ingredient_database_error(monkeypatch):
-    """Test that an unexpected SQLAlchemy error returns HTTP 500."""
-    mock_update = MagicMock(
-        side_effect=SQLAlchemyError("Database connection failed"),
+    persisted = get_ingredient_by_id(
+        db=db,
+        ingredient_id=ingredient.id,
     )
 
-    monkeypatch.setattr(
-        ingredient_router,
-        "update_ingredient",
-        mock_update,
+    assert persisted is not None
+    assert persisted.name == "Brown Sugar"
+    assert persisted.purchasing_cost == Decimal("15.00")
+    assert persisted.unit_amount == Decimal("20.00")
+
+
+def test_update_ingredient_not_found(db):
+    """Test that updating a nonexistent ingredient returns None."""
+    vendor = Vendor(
+        name="Missing Ingredient Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="missing@test.com",
+        phone="3125553000",
+        active=True,
     )
 
-    response = client.put(
-        "/ingredients/1",
-        json=valid_ingredient_payload(),
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient_data = make_ingredient(
+        name="Flour",
+        vendor_id=vendor.id,
     )
 
-    assert response.status_code == 500
-
-    data = response.json()
-
-    assert data["detail"]["error"] == "database_error"
-    assert (
-        data["detail"]["message"]
-        == "An unexpected database error occurred "
-        "while updating the ingredient."
+    result = update_ingredient(
+        db=db,
+        ingredient_id=9999,
+        ingredient_data=ingredient_data,
     )
+
+    assert result is None
+
+
+def test_update_ingredient_replaces_allergens(db):
+    """Test that updating an ingredient replaces its allergens."""
+    vendor = Vendor(
+        name="Allergen Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="allergen@test.com",
+        phone="3125554000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Chocolate",
+            vendor_id=vendor.id,
+            allergens=["Milk", "Soy"],
+        ),
+    )
+
+    assert {
+        allergen.name for allergen in ingredient.allergens
+    } == {"Milk", "Soy"}
+
+    updated_data = make_ingredient(
+        name="Dark Chocolate",
+        vendor_id=vendor.id,
+        allergens=["Soy", "Wheat"],
+    )
+
+    result = update_ingredient(
+        db=db,
+        ingredient_id=ingredient.id,
+        ingredient_data=updated_data,
+    )
+
+    assert result is not None
+    assert {
+        allergen.name for allergen in result.allergens
+    } == {"Soy", "Wheat"}
+
+
+def test_update_ingredient_duplicate_name_raises_error(db):
+    """Test that updating to an existing ingredient name raises an error."""
+    vendor = Vendor(
+        name="Duplicate Update Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="duplicateupdate@test.com",
+        phone="3125555000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    second_ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Sugar",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    with pytest.raises(IngredientAlreadyExistsError):
+        update_ingredient(
+            db=db,
+            ingredient_id=second_ingredient.id,
+            ingredient_data=make_ingredient(
+                name="Flour",
+                vendor_id=vendor.id,
+            ),
+        )
+
+
+def test_update_ingredient_vendor_not_found(db):
+    """Test that updating to a nonexistent vendor raises an error."""
+    vendor = Vendor(
+        name="Vendor Update Test",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="vendorupdate@test.com",
+        phone="3125556000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = create_ingredient(
+        db,
+        make_ingredient(
+            name="Flour",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    with pytest.raises(VendorNotFoundError):
+        update_ingredient(
+            db=db,
+            ingredient_id=ingredient.id,
+            ingredient_data=make_ingredient(
+                name="Updated Flour",
+                vendor_id=9999,
+            ),
+        )
