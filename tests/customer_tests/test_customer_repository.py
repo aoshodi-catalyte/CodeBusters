@@ -46,7 +46,7 @@ def repository(db):
     return CustomerRepository(db)
 
 
-def test_create_customer(repository, db):
+def test_create_customer(repository):
     """Repository should create and persist a customer."""
 
     customer = CustomerCreate(
@@ -128,3 +128,75 @@ def test_get_customers_returns_empty_list(repository):
     customers = repository.get_customers()
 
     assert customers == []
+
+
+def test_get_customer_by_email(repository, db):
+    """Repository should return a customer matching the email."""
+
+    customer = CustomerSchema(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+        active=True,
+        loyalty_points=100
+    )
+
+    db.add(customer)
+    db.commit()
+
+    found_customer = repository.get_customer_by_email(
+        "john@example.com"
+    )
+
+    assert found_customer is not None
+    assert found_customer.id == customer.id
+    assert found_customer.email == "john@example.com"
+
+
+def test_get_customer_by_email_returns_none_when_not_found(
+    repository
+):
+    """Repository should return None when the email does not exist."""
+
+    found_customer = repository.get_customer_by_email(
+        "missing@example.com"
+    )
+
+    assert found_customer is None
+
+
+def test_get_customer_by_phone(repository, db):
+    """Repository should return a customer matching the phone number."""
+
+    customer = CustomerSchema(
+        first_name="Jane",
+        last_name="Doe",
+        email="jane@example.com",
+        phone_number="7735551234",
+        active=True,
+        loyalty_points=50
+    )
+
+    db.add(customer)
+    db.commit()
+
+    found_customer = repository.get_customer_by_phone(
+        "7735551234"
+    )
+
+    assert found_customer is not None
+    assert found_customer.id == customer.id
+    assert found_customer.phone_number == "7735551234"
+
+
+def test_get_customer_by_phone_returns_none_when_not_found(
+    repository
+):
+    """Repository should return None when the phone number does not exist."""
+
+    found_customer = repository.get_customer_by_phone(
+        "5559999999"
+    )
+
+    assert found_customer is None
