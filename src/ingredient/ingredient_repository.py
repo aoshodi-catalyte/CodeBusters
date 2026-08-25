@@ -1,8 +1,9 @@
 """Repository functions for ingredient database operations."""
 
+import models
+
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
-import models
 
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
