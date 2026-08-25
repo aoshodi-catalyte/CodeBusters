@@ -10,7 +10,6 @@ from ingredient.ingredient_exceptions import (
 )
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
-import models # noqa: F401
 from vendor.vendor_schema import Vendor
 
 

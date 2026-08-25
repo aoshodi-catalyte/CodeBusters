@@ -12,11 +12,12 @@ from ingredient.ingredient_exceptions import (
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import get_or_create_allergen, IngredientRepository
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
+from ingredient.ingredient_repository import (
+    IngredientRepository,
+    get_or_create_allergen,
 )
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+import models
 from vendor.vendor_schema import Vendor
 
 
