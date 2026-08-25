@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
+from utils.response import to_response
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
@@ -22,12 +23,7 @@ from ingredient.ingredient_model import (
     IngredientListResponse,
     IngredientOut,
 )
-from ingredient.ingredient_repository import (
-    create_ingredient,
-    get_all_ingredients,
-    get_ingredient_by_id,
-    update_ingredient,
-)
+from ingredient.ingredient_repository import IngredientRepository
 
 
 router = APIRouter(
@@ -63,11 +59,10 @@ def create(
         HTTPException:
             500 if an unexpected database error occurs.
     """
+    repo = IngredientRepository(db)
     try:
-        return create_ingredient(
-            db=db,
-            ingredient_data=ingredient,
-        )
+        created = repo.create_ingredient(ingredient)
+        return to_response(IngredientOut, created)
 
     except VendorNotFoundError as exc:
         raise HTTPException(
@@ -110,7 +105,7 @@ def create(
 
 
 @router.get(
-    "/all",
+    "/",
     response_model=IngredientListResponse,
 )
 def read_all_ingredients(
@@ -124,7 +119,8 @@ def read_all_ingredients(
     Returns:
         A response containing a message and a list of all ingredients.
     """
-    ingredients = get_all_ingredients(db)
+    repo = IngredientRepository(db)
+    ingredients = repo.get_all_ingredients()
 
     return {
         "message": "These are all the ingredients in your inventory!",
@@ -153,10 +149,8 @@ def read_ingredient(
         HTTPException:
             404 if the ingredient does not exist.
     """
-    ingredient = get_ingredient_by_id(
-        db=db,
-        ingredient_id=ingredient_id,
-    )
+    repo = IngredientRepository(db)
+    ingredient = repo.get_ingredient_by_id(ingredient_id)
 
     if ingredient is None:
         raise HTTPException(
@@ -200,12 +194,9 @@ def update(
         HTTPException:
             500 if an unexpected database error occurs.
     """
+    repo = IngredientRepository(db)
     try:
-        result = update_ingredient(
-            db=db,
-            ingredient_id=ingredient_id,
-            ingredient_data=ingredient,
-        )
+        result = repo.update_ingredient(ingredient_id,ingredient)
 
         if result is None:
             raise HTTPException(
