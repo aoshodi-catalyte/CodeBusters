@@ -283,46 +283,6 @@ def test_post_duplicate_baked_good(client):
 
     assert second_response.status_code == 409
 
-# def test_post_baked_good_lowercase_name(client):
-#     """
-#     Tests that a baked good name cannot be entered in lowercase.
-
-#     Creates a test vendor and attempts to create a baked good with a
-#     lowercase name, then verifies that the response has a 422 status code.
-
-#     Args:
-#         client: FastAPI test client provided by the client fixture.
-
-#     Returns:
-#         None
-#     """
-
-#     vendor = {
-#         "active": True,
-#         "name": "Test Vendor",
-#         "contact_name": "Christian Robinson",
-#         "contact_role": "Manager",
-#         "email": "Christian@Robinsonvendor.com",
-#         "phone": "5551234567",
-#     }
-
-#     vendor_response = client.post("/vendors", json=vendor)
-
-#     assert vendor_response.status_code == 201
-
-#     baked_good = {
-#         "active": True,
-#         "name": "blueberry muffin",
-#         "description": "A fresh blueberry muffin",
-#         "purchasing_cost": 2.0,
-#         "retail_price": 4.0,
-#         "vendor_id": 1,
-#     }
-
-#     response = client.post("/baked_goods/", json=baked_good)
-
-#     assert response.status_code == 422
-
 def test_post_same_baked_good_different_vendor(client):
     """
     Tests that different vendors can have the same baked good.
@@ -384,3 +344,81 @@ def test_post_same_baked_good_different_vendor(client):
 
     assert response_1.status_code == 201
     assert response_2.status_code == 409
+
+def test_get_baked_good_by_id(client):
+    """
+    Tests that the GET baked good by ID endpoint returns the
+    baked good matching the provided ID.
+
+    Creates a test vendor and baked good, then sends a GET request
+    using the baked good ID and verifies that the response has a
+    200 status code and contains the expected baked good.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "Christian@Robinsonvendor.com",
+        "phone": "5551234567",
+    }
+
+    vendor_response = client.post("/vendors", json=vendor)
+
+    assert vendor_response.status_code == 201
+
+    baked_good = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    baked_good_response = client.post(
+        "/baked_goods/",
+        json=baked_good
+    )
+
+    assert baked_good_response.status_code == 201
+
+    baked_good_id = baked_good_response.json()["id"]
+
+    response = client.get(f"/baked_goods/{baked_good_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == baked_good_id
+    assert data["name"] == "Blueberry Muffin"
+    assert data["description"] == "A fresh blueberry muffin"
+    assert data["vendor_id"] == 1
+
+def test_get_baked_good_by_id_invalid_id(client):
+    """
+    Tests that the GET baked good by ID endpoint returns a 404
+    status code when the baked good does not exist.
+
+    Sends a GET request using an ID that does not exist and verifies
+    that the response has a 404 status code.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    response = client.get("/baked_goods/9999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Invalid Baked Good ID"

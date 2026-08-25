@@ -2,8 +2,8 @@
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
-import models
 
+import models
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
@@ -35,6 +35,7 @@ def get_or_create_allergen(
 
 class IngredientRepository:
     """Repository for managing ingredient-related database operations."""
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -206,6 +207,7 @@ class IngredientRepository:
         except SQLAlchemyError as exc:
             self.db.rollback()
             raise exc
+
     def soft_delete_ingredient(
         self,
         ingredient_id: int,

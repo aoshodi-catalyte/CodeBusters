@@ -92,6 +92,18 @@ class CustomerCreate(BaseModel):
 
         return email.lower()
 
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        """
+        Normalize customer names by removing leading/trailing whitespace
+        and converting multiple consecutive spaces into a single space.
+        """
+        if value is None:
+            return None
+
+        return re.sub(r"\s+", " ", str(value)).strip()
+
     @field_validator("phone_number")
     @classmethod
     def validate_phone_number(
