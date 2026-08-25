@@ -33,6 +33,7 @@ def get_or_create_allergen(
 
 
 class IngredientRepository:
+    """Repository for managing ingredient-related database operations."""
     def __init__(self, db: Session):
         self.db = db
 
