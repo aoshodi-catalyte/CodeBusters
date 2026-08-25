@@ -59,7 +59,7 @@ def post_promotion(
     return post_promotions
 
 @router.get("/", response_model= List[PromotionResponseModel], status_code=200)
-def get_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseModel]:
+def get_all_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseModel]:
     """
     Retrieve all promotions.
 

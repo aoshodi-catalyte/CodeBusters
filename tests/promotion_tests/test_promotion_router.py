@@ -161,3 +161,46 @@ def test_post_promotion_duplicate_promo_code(client):
     assert second_response.json() == {
         "detail": "Promotion with promo code 'SUMMER2026' already exists."
     }
+
+def test_get_all_promotions(client):
+    """
+    Test that all promotions are returned successfully.
+    """
+    promotion_1 = {
+        "active": True,
+        "promo_code": "SAVE10",
+        "discount_percentage": 10.0,
+        "start_datetime": "08/01/2026 10:00 AM",
+        "end_datetime": "08/31/2026 11:59 PM"
+    }
+
+    promotion_2 = {
+        "active": True,
+        "promo_code": "SAVE20",
+        "discount_percentage": 20.0,
+        "start_datetime": "08/05/2026 09:00 AM",
+        "end_datetime": "08/25/2026 10:00 PM"
+    }
+
+    client.post("/promotions/", json=promotion_1)
+    client.post("/promotions/", json=promotion_2)
+
+    response = client.get("/promotions/")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 2
+    assert data[0]["promo_code"] == "SAVE10"
+    assert data[0]["discount_percentage"] == 10.0
+    assert data[1]["promo_code"] == "SAVE20"
+    assert data[1]["discount_percentage"] == 20.0
+
+
+def test_get_all_promotions_empty(client):
+    """Test that an empty list is returned when no promotions exist."""
+    response = client.get("/promotions/")
+
+    assert response.status_code == 200
+    assert response.json() == []
