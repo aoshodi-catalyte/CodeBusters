@@ -8,11 +8,12 @@ HTTP responses for ingredient‑related actions.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 
 from database import get_db
+from utils.response import to_response
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
@@ -20,15 +21,9 @@ from ingredient.ingredient_exceptions import (
 )
 from ingredient.ingredient_model import (
     Ingredient,
-    IngredientListResponse,
     IngredientOut,
 )
-from ingredient.ingredient_repository import (
-    create_ingredient,
-    get_all_ingredients,
-    get_ingredient_by_id,
-    update_ingredient,
-)
+from ingredient.ingredient_repository import IngredientRepository
 
 
 router = APIRouter(
@@ -64,11 +59,10 @@ def create(
         HTTPException:
             500 if an unexpected database error occurs.
     """
+    repo = IngredientRepository(db)
     try:
-        return create_ingredient(
-            db=db,
-            ingredient_data=ingredient,
-        )
+        created = repo.create_ingredient(ingredient)
+        return to_response(IngredientOut, created)
 
     except VendorNotFoundError as exc:
         raise HTTPException(
@@ -112,7 +106,7 @@ def create(
 
 @router.get(
     "/",
-    response_model=IngredientListResponse,
+    response_model=list[IngredientOut],
 )
 def read_all_ingredients(
     db: Session = Depends(get_db),
@@ -125,12 +119,13 @@ def read_all_ingredients(
     Returns:
         A response containing a message and a list of all ingredients.
     """
-    ingredients = get_all_ingredients(db)
+    repo = IngredientRepository(db)
+    ingredients = repo.get_all_ingredients()
 
-    return {
-        "message": "These are all the ingredients in your inventory!",
-        "ingredients": ingredients,
-    }
+    return [
+        to_response(IngredientOut, ingredient)
+        for ingredient in ingredients
+    ]
 
 
 @router.get(
@@ -154,10 +149,8 @@ def read_ingredient(
         HTTPException:
             404 if the ingredient does not exist.
     """
-    ingredient = get_ingredient_by_id(
-        db=db,
-        ingredient_id=ingredient_id,
-    )
+    repo = IngredientRepository(db)
+    ingredient = repo.get_ingredient_by_id(ingredient_id)
 
     if ingredient is None:
         raise HTTPException(
@@ -171,7 +164,7 @@ def read_ingredient(
             },
         )
 
-    return ingredient
+    return to_response(IngredientOut, ingredient)
 
 
 @router.put(
@@ -201,12 +194,9 @@ def update(
         HTTPException:
             500 if an unexpected database error occurs.
     """
+    repo = IngredientRepository(db)
     try:
-        result = update_ingredient(
-            db=db,
-            ingredient_id=ingredient_id,
-            ingredient_data=ingredient,
-        )
+        result = repo.update_ingredient(ingredient_id,ingredient)
 
         if result is None:
             raise HTTPException(
@@ -220,7 +210,7 @@ def update(
                 },
             )
 
-        return result
+        return to_response(IngredientOut, result)
 
     except VendorNotFoundError as exc:
         raise HTTPException(
@@ -286,19 +276,39 @@ def delete_ingredient_endpoint(
     Raises:
         HTTPException:
             404 if the ingredient does not exist.
+        HTTPException:
+            500 if a database error occurs.
     """
-    ingredient = soft_delete_ingredient(db=db, ingredient_id=ingredient_id)
+    repo = IngredientRepository(db)
 
-    if ingredient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error": "ingredient_not_found",
-                "message": f"Ingredient with ID {ingredient_id} was not found.",
-            },
+    try:
+        ingredient = repo.soft_delete_ingredient(ingredient_id)
+
+        if ingredient is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "ingredient_not_found",
+                    "message": (
+                        f"Ingredient with ID {ingredient_id} "
+                        "was not found."
+                    ),
+                },
+            )
+
+        return IngredientDeleteResponse(
+            message="Ingredient successfully deactivated.",
+            id=ingredient.id,
         )
 
-    return {
-        "message": "Ingredient successfully deactivated.",
-        "id": ingredient.id,
-    }
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "database_error",
+                "message": (
+                    "An unexpected database error occurred "
+                    "while deactivating the ingredient."
+                ),
+            },
+        ) from exc

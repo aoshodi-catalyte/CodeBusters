@@ -2,6 +2,7 @@
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
+import models
 
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
@@ -206,26 +207,23 @@ class IngredientRepository:
             self.db.rollback()
             raise exc
     def soft_delete_ingredient(
-        db: Session,
+        self,
         ingredient_id: int,
     ) -> IngredientSchema | None:
-        """Soft delete an ingredient by setting active to False.
+        """Soft delete an ingredient by setting active to False."""
+        try:
+            ingredient = self.get_ingredient_by_id(ingredient_id)
 
-        Args:
-            db: Active SQLAlchemy database session.
-            ingredient_id: ID of the ingredient to deactivate.
+            if ingredient is None:
+                return None
 
-        Returns:
-            The deactivated ingredient, or None if it does not exist.
-        """
-        
-        ingredient = get_ingredient_by_id(db=db, ingredient_id=ingredient_id)
+            ingredient.active = False
 
-        if ingredient is None:
-            return None
+            self.db.commit()
+            self.db.refresh(ingredient)
 
-        ingredient.active = False
-        db.commit()
-        db.refresh(ingredient)
+            return ingredient
 
-        return ingredient
+        except SQLAlchemyError as exc:
+            self.db.rollback()
+            raise exc
