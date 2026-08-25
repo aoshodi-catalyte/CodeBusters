@@ -51,6 +51,8 @@ class VendorBase(BaseModel):
         if not value:
             raise ValueError("Must not be blank")
 
+        value = " ".join(value.split())
+
         return value
 
     @field_validator("email", mode="before")

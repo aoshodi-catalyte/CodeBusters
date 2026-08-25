@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from baked_good.baked_good_model import BakedGood
 from repositories.baked_good_repository import BakedGoodRepository
 from database import Base
+from baked_good.baked_good_exceptions import VendorNotFoundError
 from vendor.vendor_schema import Vendor
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -157,5 +158,5 @@ def test_create_baked_good_invalid_vendor(db):
         vendor_id=9999,
     )
 
-    with pytest.raises(ValueError, match="Vendor not found"):
+    with pytest.raises(VendorNotFoundError, match="Vendor not found"):
         repository.create_baked_good(baked_good)
