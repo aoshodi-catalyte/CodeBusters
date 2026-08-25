@@ -13,16 +13,11 @@ from ingredient.ingredient_exceptions import (
 )
 from ingredient.ingredient_model import Ingredient
 from repositories.ingredient_repository import (
-    create_ingredient,
-    get_all_ingredients,
-    get_ingredient_by_id,
+    IngredientRepository,
     get_or_create_allergen,
-    update_ingredient,
 )
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
-)
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+import models
 from vendor.vendor_schema import Vendor
 
 
@@ -75,9 +70,8 @@ def test_create_ingredient_success(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    result = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    result = repo.create_ingredient(
         make_ingredient(
             name="Flour",
             vendor_id=vendor.id,
@@ -104,9 +98,8 @@ def test_create_ingredient_with_vendor(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    result = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    result = repo.create_ingredient(
         make_ingredient(
             name="Sugar",
             vendor_id=vendor.id,
@@ -121,8 +114,8 @@ def test_create_ingredient_with_vendor(db):
 def test_create_ingredient_vendor_not_found(db):
     """Test that a missing vendor raises VendorNotFoundError."""
     with pytest.raises(VendorNotFoundError):
-        create_ingredient(
-            db,
+        repo = IngredientRepository(db)
+        repo.create_ingredient(
             make_ingredient(
                 name="Flour",
                 vendor_id=9999,
@@ -167,8 +160,8 @@ def test_create_ingredient_with_allergens(db):
     db.commit()
     db.refresh(vendor)
 
-    result = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    result = repo.create_ingredient(
         make_ingredient(
             name="Chocolate",
             vendor_id=vendor.id,
@@ -197,8 +190,8 @@ def test_duplicate_allergens_are_removed(db):
     db.commit()
     db.refresh(vendor)
 
-    result = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    result = repo.create_ingredient(
         make_ingredient(
             name="Butter",
             vendor_id=vendor.id,
@@ -224,9 +217,8 @@ def test_duplicate_ingredient_raises_error(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    repo.create_ingredient(
         make_ingredient(
             name="Flour",
             vendor_id=vendor.id,
@@ -234,8 +226,8 @@ def test_duplicate_ingredient_raises_error(db):
     )
 
     with pytest.raises(IngredientAlreadyExistsError):
-        create_ingredient(
-            db,
+        repo = IngredientRepository(db)
+        repo.create_ingredient(
             make_ingredient(
                 name="Flour",
                 vendor_id=vendor.id,
@@ -268,8 +260,8 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
     ingredient_data.purchasing_cost = Decimal("-5.00")
 
     with pytest.raises(IngredientConstraintError):
-        create_ingredient(
-            db,
+        repo = IngredientRepository(db)
+        repo.create_ingredient(
             ingredient_data,
         )
 
@@ -281,8 +273,8 @@ def test_unexpected_sqlalchemy_error_is_reraised():
     db.query.side_effect = SQLAlchemyError("Unexpected database failure")
 
     with pytest.raises(SQLAlchemyError):
-        create_ingredient(
-            db,
+        repo = IngredientRepository(db)
+        repo.create_ingredient(
             make_ingredient(),
         )
 
@@ -303,9 +295,8 @@ def test_update_ingredient_success(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    ingredient = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    ingredient = repo.create_ingredient(
         make_ingredient(
             name="Flour",
             vendor_id=vendor.id,
@@ -323,8 +314,7 @@ def test_update_ingredient_success(db):
         allergens=["Wheat"],
     )
 
-    result = update_ingredient(
-        db=db,
+    result = repo.update_ingredient(
         ingredient_id=ingredient.id,
         ingredient_data=updated_data,
     )
@@ -352,9 +342,8 @@ def test_update_ingredient_is_persisted(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    ingredient = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    ingredient = repo.create_ingredient(
         make_ingredient(
             name="Sugar",
             vendor_id=vendor.id,
@@ -368,16 +357,14 @@ def test_update_ingredient_is_persisted(db):
         unit_amount=Decimal("20.00"),
     )
 
-    update_ingredient(
-        db=db,
+    repo.update_ingredient(
         ingredient_id=ingredient.id,
         ingredient_data=updated_data,
     )
 
     db.expire_all()
-
-    persisted = get_ingredient_by_id(
-        db=db,
+    repo = IngredientRepository(db)
+    persisted = repo.get_ingredient_by_id(
         ingredient_id=ingredient.id,
     )
 
@@ -406,9 +393,8 @@ def test_update_ingredient_not_found(db):
         name="Flour",
         vendor_id=vendor.id,
     )
-
-    result = update_ingredient(
-        db=db,
+    repo = IngredientRepository(db)
+    result = repo.update_ingredient(
         ingredient_id=9999,
         ingredient_data=ingredient_data,
     )
@@ -430,9 +416,8 @@ def test_update_ingredient_replaces_allergens(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    ingredient = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    ingredient = repo.create_ingredient(
         make_ingredient(
             name="Chocolate",
             vendor_id=vendor.id,
@@ -440,9 +425,7 @@ def test_update_ingredient_replaces_allergens(db):
         ),
     )
 
-    assert {
-        allergen.name for allergen in ingredient.allergens
-    } == {"Milk", "Soy"}
+    assert {allergen.name for allergen in ingredient.allergens} == {"Milk", "Soy"}
 
     updated_data = make_ingredient(
         name="Dark Chocolate",
@@ -450,16 +433,13 @@ def test_update_ingredient_replaces_allergens(db):
         allergens=["Soy", "Wheat"],
     )
 
-    result = update_ingredient(
-        db=db,
+    result = repo.update_ingredient(
         ingredient_id=ingredient.id,
         ingredient_data=updated_data,
     )
 
     assert result is not None
-    assert {
-        allergen.name for allergen in result.allergens
-    } == {"Soy", "Wheat"}
+    assert {allergen.name for allergen in result.allergens} == {"Soy", "Wheat"}
 
 
 def test_update_ingredient_duplicate_name_raises_error(db):
@@ -476,17 +456,15 @@ def test_update_ingredient_duplicate_name_raises_error(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    repo.create_ingredient(
         make_ingredient(
             name="Flour",
             vendor_id=vendor.id,
         ),
     )
 
-    second_ingredient = create_ingredient(
-        db,
+    second_ingredient = repo.create_ingredient(
         make_ingredient(
             name="Sugar",
             vendor_id=vendor.id,
@@ -494,8 +472,7 @@ def test_update_ingredient_duplicate_name_raises_error(db):
     )
 
     with pytest.raises(IngredientAlreadyExistsError):
-        update_ingredient(
-            db=db,
+        repo.update_ingredient(
             ingredient_id=second_ingredient.id,
             ingredient_data=make_ingredient(
                 name="Flour",
@@ -518,9 +495,8 @@ def test_update_ingredient_vendor_not_found(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
-
-    ingredient = create_ingredient(
-        db,
+    repo = IngredientRepository(db)
+    ingredient = repo.create_ingredient(
         make_ingredient(
             name="Flour",
             vendor_id=vendor.id,
@@ -528,8 +504,7 @@ def test_update_ingredient_vendor_not_found(db):
     )
 
     with pytest.raises(VendorNotFoundError):
-        update_ingredient(
-            db=db,
+        repo.update_ingredient(
             ingredient_id=ingredient.id,
             ingredient_data=make_ingredient(
                 name="Updated Flour",
