@@ -175,15 +175,3 @@ class Ingredient(BaseModel):
             ValueError: If the supplied value is not a valid unit.
         """
         return UnitOfMeasure.from_string(value)
-
-
-class IngredientListResponse(BaseModel):
-    """Schema used when returning a list of ingredients.
-
-    Attributes:
-        message: Message describing the response.
-        ingredients: List of ingredients returned by the API.
-    """
-
-    message: str
-    ingredients: list[IngredientOut]

@@ -20,7 +20,6 @@ from ingredient.ingredient_exceptions import (
 )
 from ingredient.ingredient_model import (
     Ingredient,
-    IngredientListResponse,
     IngredientOut,
 )
 from ingredient.ingredient_repository import IngredientRepository
@@ -106,7 +105,7 @@ def create(
 
 @router.get(
     "/",
-    response_model=IngredientListResponse,
+    response_model=list[IngredientOut],
 )
 def read_all_ingredients(
     db: Session = Depends(get_db),
@@ -122,10 +121,10 @@ def read_all_ingredients(
     repo = IngredientRepository(db)
     ingredients = repo.get_all_ingredients()
 
-    return {
-        "message": "These are all the ingredients in your inventory!",
-        "ingredients": ingredients,
-    }
+    return [
+        to_response(IngredientOut, ingredient)
+        for ingredient in ingredients
+    ]
 
 
 @router.get(
@@ -164,7 +163,7 @@ def read_ingredient(
             },
         )
 
-    return ingredient
+    return to_response(IngredientOut, ingredient)
 
 
 @router.put(
@@ -210,7 +209,7 @@ def update(
                 },
             )
 
-        return result
+        return to_response(IngredientOut, result)
 
     except VendorNotFoundError as exc:
         raise HTTPException(

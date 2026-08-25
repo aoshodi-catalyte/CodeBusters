@@ -179,15 +179,14 @@ def test_read_all_ingredients_success(client):
     response = client.get("/ingredients/")
     
     assert response.status_code == 200
-    assert response.json()["message"] == "These are all the ingredients in your inventory!"
-    assert len(response.json()["ingredients"]) == 1
+    assert len(response.json()) == 1
 
 
 def test_read_all_ingredients_empty(client):
     """Test 7: Retrieving inventory when empty returns 200 OK with an empty list."""
     response = client.get("/ingredients/")
     assert response.status_code == 200
-    assert response.json()["ingredients"] == []
+    assert response.json() == []
 
 
 # --- GET /ingredients/{id} Tests (8 to 9) ---
@@ -372,4 +371,4 @@ def test_get_all_ingredients_multiple(client):
 
     response = client.get("/ingredients/")
     assert response.status_code == 200
-    assert len(response.json()["ingredients"]) == 3
+    assert len(response.json()) == 3
