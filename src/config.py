@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     model_config = ConfigDict(env_file=".env")
     DATABASE_URL: str
-    JWT_SECRET_KEY: str
+    JWT_SECRET_KEY: str | None = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 

@@ -26,7 +26,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://neondb_owner:${{ secrets.POSTGRES_PASSWORD }}@ep-lingering-river-axz68uzz-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-
+      JWT_SECRET_KEY: "test-secret"
     steps:
       - name: Check out code
         uses: actions/checkout@v4
