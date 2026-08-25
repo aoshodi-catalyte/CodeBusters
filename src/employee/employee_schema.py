@@ -5,6 +5,7 @@ to employee roles.
 
 from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+from secure_login.secure_login_schema import EmployeeAuth
 
 from database import Base
 
@@ -32,3 +33,4 @@ class EmployeeSchema(Base):
     term_date = Column(Date, index=True, nullable=True)
 
     role = relationship("EmployeeRoleSchema", back_populates="employees")
+    auth = relationship("EmployeeAuth", back_populates="employee", uselist=False)

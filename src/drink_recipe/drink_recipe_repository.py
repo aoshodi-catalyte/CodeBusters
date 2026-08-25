@@ -21,17 +21,18 @@ Responsibilities:
     • Retrieve all drink recipes stored in the database.
 """
 
-from sqlalchemy.orm import Session
+import re
 
-from ingredient.ingredient_schema import IngredientSchema
-from drink_recipe.drink_type_schema import DrinkTypeSchema
-from drink_recipe.drink_recipe_model import DrinkRecipe
-from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
-from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from constants.drink_types import DrinkType
 from constants.unit_conversions import convert
-
+from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
+from drink_recipe.drink_recipe_model import DrinkRecipe
+from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+from drink_recipe.drink_type_schema import DrinkTypeSchema
+from ingredient.ingredient_schema import IngredientSchema
 from utils.validators import round_float
 
 
@@ -75,10 +76,15 @@ class DrinkRecipeRepository:
         """
         drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
 
-        # Reject duplicate recipe names (case-insensitive)
+        normalized_input = re.sub(r"\s+", "", drink_recipe.name).lower()
+
         existing = (
             self.session.query(DrinkRecipeSchema)
-            .filter(DrinkRecipeSchema.name.ilike(drink_recipe.name.strip()))
+            .filter(
+                func.lower(
+                    func.replace(DrinkRecipeSchema.name, " ", "")
+                ) == normalized_input
+            )
             .first()
         )
 
