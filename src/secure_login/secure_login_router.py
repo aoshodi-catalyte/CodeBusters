@@ -1,5 +1,15 @@
-# secure_login_router.py
-import os
+"""
+Authentication router providing login, registration, and JWT-based
+employee authentication for the application.
+
+This module handles:
+- Password hashing and verification
+- User authentication against stored credentials
+- JWT access token creation
+- Fetching the currently authenticated employee
+- Registering new login credentials for existing employees
+"""
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -20,10 +30,31 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str):
+    """
+    Hash a plaintext password using bcrypt.
+
+    Args:
+        password (str): The plaintext password.
+
+    Returns:
+        str: The hashed password.
+    """
+
     return pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str):
+    """
+    Verify a plaintext password against a stored bcrypt hash.
+
+    Args:
+        plain (str): The plaintext password.
+        hashed (str): The stored hashed password.
+
+    Returns:
+        bool: True if the password matches, otherwise False.
+    """
+
     return pwd_context.verify(plain, hashed)
 
 
@@ -35,6 +66,18 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 def authenticate_user(db: Session, username: str, password: str):
+    """
+    Authenticate a user by username and password.
+
+    Args:
+        db (Session): Database session.
+        username (str): Username provided during login.
+        password (str): Password provided during login.
+
+    Returns:
+        EmployeeAuth | None: The authenticated user record, or None if invalid.
+    """
+
     auth = db.query(EmployeeAuth).filter(EmployeeAuth.username == username).first()
 
     if not auth:
@@ -48,6 +91,16 @@ def authenticate_user(db: Session, username: str, password: str):
 
 
 def create_access_token(data: dict):
+    """
+    Create a signed JWT access token.
+
+    Args:
+        data (dict): Payload to encode into the token.
+
+    Returns:
+        str: The encoded JWT token.
+    """
+
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
@@ -58,6 +111,20 @@ def create_access_token(data: dict):
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
+    """
+    Authenticate an employee and return a JWT access token.
+
+    Args:
+        form_data (OAuth2PasswordRequestForm): Login form containing username and password.
+        db (Session): Database session.
+
+    Returns:
+        dict: Access token and token type.
+
+    Raises:
+        HTTPException: If authentication fails.
+    """
+
     auth = authenticate_user(db, form_data.username, form_data.password)
 
     if not auth:
@@ -80,6 +147,20 @@ def login(
 def get_current_employee(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
+    """
+    Retrieve the currently authenticated employee from a JWT token.
+
+    Args:
+        token (str): JWT access token.
+        db (Session): Database session.
+
+    Returns:
+        EmployeeSchema: The authenticated employee.
+
+    Raises:
+        HTTPException: If token is invalid or employee no longer exists.
+    """
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         employee_id: int = payload.get("employee_id")
@@ -95,6 +176,20 @@ def get_current_employee(
 
 @router.post("/register")
 def register_employee_auth(data: EmployeeAuthCreate, db: Session = Depends(get_db)):
+    """
+    Register login credentials for an existing employee.
+
+    Args:
+        data (EmployeeAuthCreate): Registration payload containing username, password, and employee ID.
+        db (Session): Database session.
+
+    Returns:
+        dict: Confirmation message and created credential details.
+
+    Raises:
+        HTTPException: If employee does not exist, username is taken, or credentials already exist.
+    """
+
     employee = (
         db.query(EmployeeSchema).filter(EmployeeSchema.id == data.employee_id).first()
     )

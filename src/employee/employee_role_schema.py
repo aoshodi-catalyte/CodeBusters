@@ -7,8 +7,6 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from database import Base
 
-# from secure_login.secure_login_model import EmployeeAuth
-
 
 class EmployeeRoleSchema(Base):
     """
