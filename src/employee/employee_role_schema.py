@@ -6,7 +6,8 @@ to employee records.
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from database import Base
-from secure_login.secure_login_schema import EmployeeAuth
+
+# from secure_login.secure_login_model import EmployeeAuth
 
 
 class EmployeeRoleSchema(Base):
@@ -22,4 +23,3 @@ class EmployeeRoleSchema(Base):
     id = Column(Integer, primary_key=True, index=True)
     role = Column(String, unique=True, nullable=False)
     employees = relationship("EmployeeSchema", back_populates="role")
-    # auths = relationship("EmployeeAuth", back_populates="role")

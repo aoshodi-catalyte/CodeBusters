@@ -10,7 +10,8 @@ from jose import JWTError, jwt  # type: ignore
 
 from database import get_db
 from employee.employee_schema import EmployeeSchema
-from secure_login.secure_login_schema import EmployeeAuth, EmployeeAuthCreate
+from secure_login.secure_login_schema import EmployeeAuth
+from secure_login.secure_login_model import EmployeeAuthCreate
 from config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
