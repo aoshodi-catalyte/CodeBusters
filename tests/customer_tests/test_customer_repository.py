@@ -200,3 +200,40 @@ def test_get_customer_by_phone_returns_none_when_not_found(
     )
 
     assert found_customer is None
+
+
+def test_get_customer_by_id(repository, db):
+    """Repository should return a customer matching the ID."""
+
+    customer = CustomerSchema(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+        active=True,
+        loyalty_points=100
+    )
+
+    db.add(customer)
+    db.commit()
+
+    found_customer = repository.get_customer_by_id(
+        customer.id
+    )
+
+    assert found_customer is not None
+    assert found_customer.id == customer.id
+    assert found_customer.first_name == "John"
+    assert found_customer.email == "john@example.com"
+
+
+def test_get_customer_by_id_returns_none_when_not_found(
+    repository
+):
+    """Repository should return None when the customer ID does not exist."""
+
+    found_customer = repository.get_customer_by_id(
+        999
+    )
+
+    assert found_customer is None

@@ -149,6 +149,65 @@ def test_get_customers_when_empty(client):
     assert response.json() == []
 
 
+def test_get_customer_by_id(client):
+    """
+    Verifies that the API returns a single customer when a valid
+    customer ID is provided.
+    """
+
+    customer = {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@example.com",
+        "phone_number": "5551234567",
+        "active": True,
+        "loyalty_points": 100
+    }
+
+    create_response = client.post(
+        "/customers",
+        json=customer
+    )
+
+    assert create_response.status_code == 201
+
+    created_customer = create_response.json()
+    customer_id = created_customer["id"]
+
+    response = client.get(
+        f"/customers/{customer_id}"
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["id"] == customer_id
+    assert result["first_name"] == "John"
+    assert result["last_name"] == "Doe"
+    assert result["email"] == "john@example.com"
+    assert result["phone_number"] == "555-123-4567"
+    assert result["active"] is True
+    assert result["loyalty_points"] == 100
+
+
+def test_get_customer_by_nonexistent_id(client):
+    """
+    Verifies that requesting a customer with an ID that does not exist
+    returns HTTP 404.
+    """
+
+    response = client.get(
+        "/customers/999"
+    )
+
+    assert response.status_code == 404
+
+    assert response.json() == {
+        "detail": "Customer with ID 999 was not found."
+    }
+
+
 def test_create_customer_with_duplicate_email(client):
     """
     Verifies that creating a customer with an existing email returns
