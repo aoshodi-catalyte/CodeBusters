@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
 from database import SessionLocal, create_db
-from drink_recipe.drink_recipe_router import router as drink_recipe_router
+from routers.drink_recipe_router import router as drink_recipe_router
 
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
