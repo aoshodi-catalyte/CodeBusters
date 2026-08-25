@@ -164,8 +164,8 @@ def get_current_employee(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         employee_id: int = payload.get("employee_id")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
     employee = db.query(EmployeeSchema).filter(EmployeeSchema.id == employee_id).first()
     if not employee:
