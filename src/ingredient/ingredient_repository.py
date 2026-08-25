@@ -1,6 +1,6 @@
 """Repository functions for ingredient database operations."""
 
-import models
+import models # noqa: F401
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
