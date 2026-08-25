@@ -1,8 +1,9 @@
+import models
 import pytest
 
 from fastapi import FastAPI
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker 
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
@@ -14,20 +15,15 @@ from vendor.vendor_router import router as vendor_router
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
 test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
+    TEST_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
 )
 
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=test_engine
-)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 app = FastAPI()
 app.include_router(vendor_router)
 app.include_router(baked_good_router)
+
 
 @pytest.fixture(scope="function")
 def client():
@@ -36,7 +32,6 @@ def client():
     """
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
-    
 
     def override_get_db():
         db = TestingSessionLocal()
@@ -56,20 +51,7 @@ def client():
 
 
 def test_post_baked_good(client):
-    """
-    Tests that a valid baked good can be created through the API.
-
-    Creates a test vendor first because the baked good requires a valid
-    vendor_id. Then sends a POST request containing valid baked good data
-    and verifies that the API returns a 201 status code and the expected
-    baked good information.
-
-    Args:
-        client: FastAPI test client provided by the client fixture.
-
-    Returns:
-        None
-    """
+    """Tests that a valid baked good can be created through the API."""
 
     vendor = {
         "active": True,
@@ -92,7 +74,7 @@ def test_post_baked_good(client):
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 1.00,
         "retail_price": 2.50,
-        "vendor_id": vendor_id
+        "vendor_id": vendor_id,
     }
     baked_good_response = client.post("/baked_goods/", json=baked_good)
     assert baked_good_response.status_code == 201
@@ -105,7 +87,8 @@ def test_post_baked_good(client):
     assert data["description"] == "A cookie with chocolate chips."
     assert data["purchasing_cost"] == 1.00
     assert data["retail_price"] == 2.50
-    assert data["vendor_id"] == 1
+    assert data["vendor_id"] == vendor_id
+
 
 def test_post_baked_good_missing_description(client):
     """
@@ -118,15 +101,13 @@ def test_post_baked_good_missing_description(client):
         "description": "",
         "purchasing_cost": 1.00,
         "retail_price": 2.50,
-        "vendor_id": 1
+        "vendor_id": 1,
     }
 
-    response = client.post(
-        "/baked_goods/",
-        json=baked_good
-    )
+    response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 422
+
 
 def test_post_baked_good_invalid_retail_price(client):
     """
@@ -140,15 +121,13 @@ def test_post_baked_good_invalid_retail_price(client):
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 3.00,
         "retail_price": 2.00,
-        "vendor_id": 1
+        "vendor_id": 1,
     }
 
-    response = client.post(
-        "/baked_goods/",
-        json=baked_good
-    )
+    response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 422
+
 
 def test_post_baked_good_empty_name(client):
     """
@@ -161,13 +140,10 @@ def test_post_baked_good_empty_name(client):
         "description": "A cookie with chocolate chips.",
         "purchasing_cost": 1.00,
         "retail_price": 2.50,
-        "vendor_id": 1
+        "vendor_id": 1,
     }
 
-    response = client.post(
-        "/baked_goods/",
-        json=baked_good
-    )
+    response = client.post("/baked_goods/", json=baked_good)
 
     assert response.status_code == 422
 
@@ -188,6 +164,7 @@ def test_get_baked_goods_empty(client):
 
     assert response.status_code == 200
     assert response.json() == []
+
 
 def test_get_baked_goods(client):
     """
@@ -210,13 +187,10 @@ def test_get_baked_goods(client):
         "contact_name": "Christian Robinson",
         "contact_role": "Manager",
         "email": "Christian@Robinsonvendor.com",
-        "phone": "5551234567"
+        "phone": "5551234567",
     }
 
-    vendor_response = client.post(
-        "/vendors",
-        json=vendor
-    )
+    vendor_response = client.post("/vendors", json=vendor)
 
     assert vendor_response.status_code == 201
 
@@ -226,13 +200,10 @@ def test_get_baked_goods(client):
         "description": "A chocolate cake",
         "purchasing_cost": 5.0,
         "retail_price": 10.0,
-        "vendor_id": 1
+        "vendor_id": 1,
     }
 
-    baked_good_response = client.post(
-        "/baked_goods/",
-        json=baked_good
-    )
+    baked_good_response = client.post("/baked_goods/", json=baked_good)
 
     assert baked_good_response.status_code == 201
 
@@ -247,6 +218,7 @@ def test_get_baked_goods(client):
     assert data[0]["name"] == "Chocolate Cake"
     assert data[0]["vendor_id"] == 1
 
+
 def test_post_baked_good_invalid_vendor(client):
     """
     Tests that a baked good cannot be created when the vendor
@@ -259,12 +231,194 @@ def test_post_baked_good_invalid_vendor(client):
         "description": "A chocolate cake",
         "purchasing_cost": 5.0,
         "retail_price": 10.0,
-        "vendor_id": 9999
+        "vendor_id": 9999,
     }
 
-    response = client.post(
+    response = client.post("/baked_goods/", json=baked_good)
+
+    assert response.status_code == 404
+
+def test_post_duplicate_baked_good(client):
+    """
+    Tests that a vendor cannot create the same baked good more than once.
+
+    Creates a test vendor and baked good, then attempts to create the
+    same baked good again for the same vendor and verifies that the
+    response has a 409 status code.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "Christian@Robinsonvendor.com",
+        "phone": "5551234567",
+    }
+
+    vendor_response = client.post("/vendors", json=vendor)
+
+    assert vendor_response.status_code == 201
+
+    baked_good = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    first_response = client.post("/baked_goods/", json=baked_good)
+
+    assert first_response.status_code == 201
+
+    second_response = client.post("/baked_goods/", json=baked_good)
+
+    assert second_response.status_code == 409
+
+def test_post_same_baked_good_different_vendor(client):
+    """
+    Tests that different vendors can have the same baked good.
+
+    Creates two test vendors and creates the same baked good for each
+    vendor, then verifies that both requests are successful.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor_1 = {
+        "active": True,
+        "name": "Test Vendor One",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "vendorone@example.com",
+        "phone": "5551234567",
+    }
+
+    vendor_2 = {
+        "active": True,
+        "name": "Test Vendor Two",
+        "contact_name": "John Smith",
+        "contact_role": "Manager",
+        "email": "vendortwo@example.com",
+        "phone": "5551234568",
+    }
+
+    vendor_1_response = client.post("/vendors", json=vendor_1)
+    vendor_2_response = client.post("/vendors", json=vendor_2)
+
+    assert vendor_1_response.status_code == 201
+    assert vendor_2_response.status_code == 201
+
+    baked_good_1 = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    baked_good_2 = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 2,
+    }
+
+    response_1 = client.post("/baked_goods/", json=baked_good_1)
+    response_2 = client.post("/baked_goods/", json=baked_good_2)
+
+    assert response_1.status_code == 201
+    assert response_2.status_code == 409
+
+def test_get_baked_good_by_id(client):
+    """
+    Tests that the GET baked good by ID endpoint returns the
+    baked good matching the provided ID.
+
+    Creates a test vendor and baked good, then sends a GET request
+    using the baked good ID and verifies that the response has a
+    200 status code and contains the expected baked good.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    vendor = {
+        "active": True,
+        "name": "Test Vendor",
+        "contact_name": "Christian Robinson",
+        "contact_role": "Manager",
+        "email": "Christian@Robinsonvendor.com",
+        "phone": "5551234567",
+    }
+
+    vendor_response = client.post("/vendors", json=vendor)
+
+    assert vendor_response.status_code == 201
+
+    baked_good = {
+        "active": True,
+        "name": "Blueberry Muffin",
+        "description": "A fresh blueberry muffin",
+        "purchasing_cost": 2.0,
+        "retail_price": 4.0,
+        "vendor_id": 1,
+    }
+
+    baked_good_response = client.post(
         "/baked_goods/",
         json=baked_good
     )
 
+    assert baked_good_response.status_code == 201
+
+    baked_good_id = baked_good_response.json()["id"]
+
+    response = client.get(f"/baked_goods/{baked_good_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == baked_good_id
+    assert data["name"] == "Blueberry Muffin"
+    assert data["description"] == "A fresh blueberry muffin"
+    assert data["vendor_id"] == 1
+
+def test_get_baked_good_by_id_invalid_id(client):
+    """
+    Tests that the GET baked good by ID endpoint returns a 404
+    status code when the baked good does not exist.
+
+    Sends a GET request using an ID that does not exist and verifies
+    that the response has a 404 status code.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    response = client.get("/baked_goods/9999")
+
     assert response.status_code == 404
+    assert response.json()["detail"] == "Invalid Baked Good ID"

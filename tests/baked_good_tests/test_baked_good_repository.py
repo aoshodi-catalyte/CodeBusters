@@ -1,26 +1,27 @@
+import models
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
 from database import Base
+from baked_good.baked_good_exceptions import VendorNotFoundError
 from vendor.vendor_schema import Vendor
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
 test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
+    TEST_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
 )
 
 TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=test_engine
-) # pylint: disable=invalid-name
+    autocommit=False, autoflush=False, bind=test_engine
+)  # pylint: disable=invalid-name
+
 
 @pytest.fixture
 def db():
@@ -33,6 +34,7 @@ def db():
     finally:
         session.close()
         Base.metadata.drop_all(bind=test_engine)
+
 
 def test_create_baked_good_repository(db):
     """
@@ -56,7 +58,7 @@ def test_create_baked_good_repository(db):
         contact_name="John Doe",
         contact_role="Manager",
         email="john@testvendor.com",
-        phone="555-123-4567"
+        phone="555-123-4567",
     )
 
     db.add(vendor)
@@ -65,19 +67,20 @@ def test_create_baked_good_repository(db):
 
     repository = BakedGoodRepository(db)
 
-    baked_good = BakedGood (
+    baked_good = BakedGood(
         active=True,
         name="Chocolate Cake",
         description="A chocolate cake",
         purchasing_cost=5.00,
         retail_price=10.00,
-        vendor_id=1
+        vendor_id=1,
     )
 
     created = repository.create_baked_good(baked_good)
 
     assert created.id is not None
     assert created.name == "Chocolate Cake"
+
 
 def test_create_baked_good_returns_baked_good(db):
     """
@@ -101,7 +104,7 @@ def test_create_baked_good_returns_baked_good(db):
         contact_name="John Doe",
         contact_role="Manager",
         email="john@testvendor.com",
-        phone="555-123-4567"
+        phone="555-123-4567",
     )
 
     db.add(vendor)
@@ -115,7 +118,7 @@ def test_create_baked_good_returns_baked_good(db):
         description="A chocolate cake",
         purchasing_cost=5.00,
         retail_price=10.00,
-        vendor_id=vendor.id
+        vendor_id=vendor.id,
     )
 
     result = repository.create_baked_good(baked_good)
@@ -126,6 +129,7 @@ def test_create_baked_good_returns_baked_good(db):
     assert result.retail_price == baked_good.retail_price
     assert result.vendor_id == baked_good.vendor_id
     assert result.active == baked_good.active
+
 
 def test_create_baked_good_invalid_vendor(db):
     """
@@ -151,8 +155,8 @@ def test_create_baked_good_invalid_vendor(db):
         description="A chocolate cake",
         purchasing_cost=5.00,
         retail_price=10.00,
-        vendor_id=9999
+        vendor_id=9999,
     )
 
-    with pytest.raises(ValueError, match="Vendor not found"):
+    with pytest.raises(VendorNotFoundError, match="Vendor not found"):
         repository.create_baked_good(baked_good)

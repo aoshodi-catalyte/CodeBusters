@@ -202,3 +202,109 @@ def test_customer_response_from_attributes():
     response = customer.model_dump()
 
     assert response["phone_number"] == "312-555-1234"
+
+
+def test_first_name_removes_leading_whitespace():
+    """Leading whitespace is removed from the first name."""
+
+    customer = CustomerCreate(
+        first_name="   Billy",
+        last_name="Smith",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.first_name == "Billy"
+
+
+def test_first_name_removes_trailing_whitespace():
+    """Trailing whitespace is removed from the first name."""
+
+    customer = CustomerCreate(
+        first_name="Billy   ",
+        last_name="Smith",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.first_name == "Billy"
+
+
+def test_first_name_converts_multiple_spaces_to_single_space():
+    """Multiple spaces between first-name words are converted to one space."""
+
+    customer = CustomerCreate(
+        first_name="Billy    Bob",
+        last_name="Smith",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.first_name == "Billy Bob"
+
+
+def test_last_name_removes_leading_whitespace():
+    """Leading whitespace is removed from the last name."""
+
+    customer = CustomerCreate(
+        first_name="Billy",
+        last_name="   Smith",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.last_name == "Smith"
+
+
+def test_last_name_removes_trailing_whitespace():
+    """Trailing whitespace is removed from the last name."""
+
+    customer = CustomerCreate(
+        first_name="Billy",
+        last_name="Smith   ",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.last_name == "Smith"
+
+
+def test_last_name_converts_multiple_spaces_to_single_space():
+    """Multiple spaces between last-name words are converted to one space."""
+
+    customer = CustomerCreate(
+        first_name="Billy",
+        last_name="Van    Buren",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.last_name == "Van Buren"
+
+
+def test_name_normalization_handles_multiple_whitespace_characters():
+    """Tabs and newlines are normalized to a single space."""
+
+    customer = CustomerCreate(
+        first_name="Billy\t\nBob",
+        last_name="Van\t\nBuren",
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.first_name == "Billy Bob"
+    assert customer.last_name == "Van Buren"
+
+
+def test_last_name_can_be_none():
+    """None remains None for the optional last name."""
+
+    customer = CustomerCreate(
+        first_name="Billy",
+        last_name=None,
+        email="billy@example.com",
+        phone_number="3125551234",
+    )
+
+    assert customer.last_name is None
+    
