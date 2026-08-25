@@ -103,7 +103,7 @@ class CustomerCreate(BaseModel):
             return None
 
         return re.sub(r"\s+", " ", str(value)).strip()
-        
+    
 
     @field_validator("phone_number")
     @classmethod
