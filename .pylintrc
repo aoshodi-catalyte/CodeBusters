@@ -8,3 +8,6 @@ disable= too-few-public-methods, no-self-argument
 
 [BASIC]
 no-docstring-rgx=^(test|_)
+
+[TYPECHECK]
+ignored-modules=passlib,jose

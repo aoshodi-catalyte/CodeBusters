@@ -5,7 +5,7 @@ to employee roles.
 
 from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from secure_login.secure_login_schema import EmployeeAuth
+
 
 from database import Base
 

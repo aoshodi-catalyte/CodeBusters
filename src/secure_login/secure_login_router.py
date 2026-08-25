@@ -180,7 +180,8 @@ def register_employee_auth(data: EmployeeAuthCreate, db: Session = Depends(get_d
     Register login credentials for an existing employee.
 
     Args:
-        data (EmployeeAuthCreate): Registration payload containing username, password, and employee ID.
+        data (EmployeeAuthCreate): Registration payload containing username,
+        password, and employee ID.
         db (Session): Database session.
 
     Returns:
@@ -228,9 +229,4 @@ def register_employee_auth(data: EmployeeAuthCreate, db: Session = Depends(get_d
     db.commit()
     db.refresh(auth_record)
 
-    return {
-        "message": "Login credentials created successfully",
-        "employee_id": auth_record.employee_id,
-        "username": auth_record.username,
-        "role": auth_record.role,
-    }
+    return {"message": "Login credentials created successfully"}
