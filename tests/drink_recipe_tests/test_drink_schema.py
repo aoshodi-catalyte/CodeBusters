@@ -1,5 +1,7 @@
-from sqlalchemy import Integer, String, Float, Boolean
-from drink_recipe.drink_recipe_schema import DrinkRecipeSchema # type: ignore
+from sqlalchemy import Boolean, Float, Integer, String
+
+from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+import models
 
 
 def test_table_name():
