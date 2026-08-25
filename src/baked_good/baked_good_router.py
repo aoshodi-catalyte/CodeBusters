@@ -56,7 +56,7 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
         ) from exc
 
     return created_baked_good
-#trying to fix merge.
+
 @router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel])
 def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
     """
@@ -75,3 +75,34 @@ def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponse
     baked_goods = repo.get_all_baked_goods()
 
     return baked_goods
+
+@router.get(
+    "/{baked_good_id}",
+    status_code=status.HTTP_200_OK,
+    response_model= BakedGoodResponseModel
+)
+def get_baked_good_by_id(
+    baked_good_id: int,
+    db: Session = Depends(get_db)
+) -> BakedGoodResponseModel:
+    """
+    Retrieves a baked good by its ID.
+
+    Args:
+        baked_good_id: The unique ID of the baked good.
+        db: The database session.
+
+    Returns:
+        The baked good matching the provided ID.
+
+    Raises:
+        HTTPException: If the baked good does not exist.
+    """
+    repository = BakedGoodRepository(db)
+    baked_good = repository.get_baked_good_by_id(baked_good_id)
+
+    if baked_good is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Baked Good ID"
+        )
+    return baked_good

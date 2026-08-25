@@ -108,3 +108,18 @@ class BakedGoodRepository:
         self.session.refresh(new_baked_good)
 
         return new_baked_good
+
+    def get_baked_good_by_id(self, baked_good_id: int) -> BakedGoodSchema | None:
+        """
+        Retrieves a baked good by its ID.
+
+        Args:
+            baked_good_id: The unique ID of the baked good.
+
+        Returns:
+            BakedGoodSchema: The baked good matching the provided ID,
+                or None if the baked good does not exist.
+        """
+        return self.session.query(BakedGoodSchema).filter(
+            BakedGoodSchema.id == baked_good_id
+        ).first()
