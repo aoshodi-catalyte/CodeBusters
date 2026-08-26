@@ -9,6 +9,9 @@ domain exceptions instead.
 """
 
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from customer.customer_model import CustomerCreate
 from customer.customer_schema import CustomerSchema
 from exceptions.customer_exceptions import (
@@ -18,7 +21,6 @@ from exceptions.customer_exceptions import (
     CustomerPhoneAlreadyExistsError,
 )
 from utils.error_utils import parse_integrity_error
-from sqlalchemy.orm import Session
 
 
 class CustomerRepository:
