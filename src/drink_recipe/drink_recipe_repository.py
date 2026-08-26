@@ -91,9 +91,6 @@ class DrinkRecipeRepository:
         if existing:
             raise ValueError(f"Drink recipe name '{drink_recipe.name}' already exists")
 
-        # if not drink_recipe.ingredients:
-        #     raise ValueError("Drink recipe must include at least one ingredient")
-
         recipe = DrinkRecipeSchema(
             name=drink_recipe.name,
             description=drink_recipe.description,
@@ -144,7 +141,7 @@ class DrinkRecipeRepository:
         # Assign calculated production cost
         recipe.production_cost = round_float(total_cost)
 
-        # NEW: Calculate sale price
+        # Calculate sale price
         markup_multiplier = 1 + (recipe.markup_percentage / 100)
         recipe.sale_price = round_float(recipe.production_cost * markup_multiplier)
         self.session.commit()
