@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
-from customer.customer_router import router
+from routers.customer_router import router
 
 
 TEST_DATABASE_URL = "sqlite:///:memory:"

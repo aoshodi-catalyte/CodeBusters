@@ -6,7 +6,15 @@ baked goods stored in the database and establishes a relationship with
 the Vendor model.
 """
 
-from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -50,7 +58,5 @@ class BakedGoodSchema(Base):
     vendor = relationship("Vendor", back_populates="baked_good")
 
     __table_args__ = (
-        UniqueConstraint(
-            "name", "vendor_id", name="uq_baked_good_name_vendor"
-        ),
+        UniqueConstraint("name", "vendor_id", name="uq_baked_good_name_vendor"),
     )

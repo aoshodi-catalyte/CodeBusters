@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 
 from baked_good.baked_good_model import BakedGood
-from baked_good.baked_good_repository import BakedGoodRepository
+from repositories.baked_good_repository import BakedGoodRepository
 from database import Base
 from baked_good.baked_good_exceptions import VendorNotFoundError
 from vendor.vendor_schema import Vendor
