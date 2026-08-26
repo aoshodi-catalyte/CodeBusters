@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from utils.response import to_response
-from ingredient.ingredient_exceptions import (
+from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
@@ -23,8 +23,7 @@ from ingredient.ingredient_model import (
     Ingredient,
     IngredientOut,
 )
-from ingredient.ingredient_repository import IngredientRepository
-
+from repositories.ingredient_repository import IngredientRepository
 
 router = APIRouter(
     prefix="/ingredients",
@@ -122,10 +121,7 @@ def read_all_ingredients(
     repo = IngredientRepository(db)
     ingredients = repo.get_all_ingredients()
 
-    return [
-        to_response(IngredientOut, ingredient)
-        for ingredient in ingredients
-    ]
+    return [to_response(IngredientOut, ingredient) for ingredient in ingredients]
 
 
 @router.get(
@@ -157,10 +153,7 @@ def read_ingredient(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "ingredient_not_found",
-                "message": (
-                    f"Ingredient with ID {ingredient_id} "
-                    "was not found."
-                ),
+                "message": (f"Ingredient with ID {ingredient_id} " "was not found."),
             },
         )
 
@@ -196,7 +189,7 @@ def update(
     """
     repo = IngredientRepository(db)
     try:
-        result = repo.update_ingredient(ingredient_id,ingredient)
+        result = repo.update_ingredient(ingredient_id, ingredient)
 
         if result is None:
             raise HTTPException(
@@ -204,8 +197,7 @@ def update(
                 detail={
                     "error": "ingredient_not_found",
                     "message": (
-                        f"Ingredient with ID {ingredient_id} "
-                        "was not found."
+                        f"Ingredient with ID {ingredient_id} " "was not found."
                     ),
                 },
             )

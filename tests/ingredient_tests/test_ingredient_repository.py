@@ -6,13 +6,13 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from ingredient.ingredient_exceptions import (
+from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import (
+from repositories.ingredient_repository import (
     IngredientRepository,
     get_or_create_allergen,
 )
@@ -125,7 +125,7 @@ def test_create_ingredient_vendor_not_found(db):
 
 def test_get_or_create_allergen_creates_new_allergen(db):
     """Test that a missing allergen is created."""
-    result =get_or_create_allergen(db, "Milk")
+    result = get_or_create_allergen(db, "Milk")
 
     assert result.id is not None
     assert result.name == "Milk"
@@ -425,9 +425,7 @@ def test_update_ingredient_replaces_allergens(db):
         ),
     )
 
-    assert {
-        allergen.name for allergen in ingredient.allergens
-    } == {"Milk", "Soy"}
+    assert {allergen.name for allergen in ingredient.allergens} == {"Milk", "Soy"}
 
     updated_data = make_ingredient(
         name="Dark Chocolate",
@@ -441,9 +439,7 @@ def test_update_ingredient_replaces_allergens(db):
     )
 
     assert result is not None
-    assert {
-        allergen.name for allergen in result.allergens
-    } == {"Soy", "Wheat"}
+    assert {allergen.name for allergen in result.allergens} == {"Soy", "Wheat"}
 
 
 def test_update_ingredient_duplicate_name_raises_error(db):
@@ -515,6 +511,8 @@ def test_update_ingredient_vendor_not_found(db):
                 vendor_id=9999,
             ),
         )
+
+
 def test_soft_delete_ingredient_success(db):
     """Test that an active ingredient is successfully soft deleted."""
     vendor = Vendor(
@@ -562,9 +560,7 @@ def test_soft_delete_ingredient_sqlalchemy_error():
     """Test that SQLAlchemy errors are rolled back and re-raised."""
     db = MagicMock()
 
-    db.query.side_effect = SQLAlchemyError(
-        "Unexpected database failure"
-    )
+    db.query.side_effect = SQLAlchemyError("Unexpected database failure")
 
     repo = IngredientRepository(db)
 

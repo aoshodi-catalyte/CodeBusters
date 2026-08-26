@@ -3,7 +3,7 @@
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from ingredient.ingredient_exceptions import (
+from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,

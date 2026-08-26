@@ -10,16 +10,21 @@ from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 
 
-def map_role_enum_to_fk(enum_value: EmployeeRole, db: Session) -> int:
+def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
     """
-    Map an EmployeeRole enum to its corresponding foreign key ID in the database.
+    Map an EmployeeRole enum or string to its corresponding foreign key ID.
     """
-    role_row = db.query(EmployeeRoleSchema).filter_by(role=enum_value.value).first()
+
+    # Normalize input
+    if isinstance(enum_value, EmployeeRole):
+        role_str = enum_value.value
+    else:
+        role_str = enum_value
+
+    role_row = db.query(EmployeeRoleSchema).filter_by(role=role_str).first()
 
     if not role_row:
-        raise ValueError(
-            f"EmployeeRole '{enum_value.value}' not found in employee_role table"
-        )
+        raise ValueError(f"EmployeeRole '{role_str}' not found in employee_role table")
 
     return role_row.id
 
@@ -36,35 +41,17 @@ class EmployeeRepository:
     def create_new_employee(self, employee_data: Employee) -> EmployeeSchema:
         """
         Create a new employee record in the database.
-
-        This method:
-            - Resolves the employee role enum to its foreign key ID.
-            - Constructs an EmployeeSchema ORM instance.
-            - Persists the new employee to the database.
-            - Returns the refreshed ORM object.
-
-        Args:
-            employee_data (Employee):
-                Validated Pydantic model containing employee fields.
-
-        Returns:
-            EmployeeSchema:
-                The newly created and persisted employee ORM instance.
-
-        Raises:
-            ValueError:
-                If the provided role cannot be mapped to a valid role ID.
         """
 
         role_id = map_role_enum_to_fk(employee_data.role, self.db)
 
         db_employee = EmployeeSchema(
             active=employee_data.active,
-            first_name=employee_data.first_name,
-            last_name=employee_data.last_name,
+            first_name=employee_data.first_name.strip(),
+            last_name=employee_data.last_name.strip(),
             email=employee_data.email,
             role_id=role_id,
-            hourly_rate=employee_data.hourly_rate,
+            hourly_rate=float(employee_data.hourly_rate),
             hire_date=employee_data.hire_date,
             term_date=employee_data.term_date,
         )

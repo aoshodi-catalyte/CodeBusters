@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
-from customer.customer_router import router
+from routers.customer_router import router
 
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -247,7 +247,8 @@ def test_create_customer_with_duplicate_email(client):
     assert second_response.status_code == 409
 
     assert second_response.json() == {
-        "detail": "A customer with this email already exists."
+        "detail": "A customer with the email 'john@example.com' "
+                   "already exists."
     }
 
 
@@ -290,7 +291,8 @@ def test_create_customer_with_duplicate_phone_number(client):
     assert second_response.status_code == 409
 
     assert second_response.json() == {
-        "detail": "A customer with this phone number already exists."
+        "detail": "A customer with the phone number '5551234567' "
+                   "already exists."
     }
 
 
@@ -315,3 +317,4 @@ def test_create_customer_with_invalid_phone_number(client):
     )
 
     assert response.status_code == 422
+    
