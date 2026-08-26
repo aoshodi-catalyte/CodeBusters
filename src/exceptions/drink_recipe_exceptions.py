@@ -1,6 +1,40 @@
+"""
+Domain-specific exceptions for the drink recipe subsystem.
+
+This module defines a structured hierarchy of custom exceptions used by the
+DrinkRecipeRepository to signal business-rule violations and domain errors.
+These exceptions allow the repository layer to communicate precise failure
+conditions without relying on generic ValueError or database-level errors.
+
+The router layer catches these exceptions and translates them into appropriate
+HTTP responses, ensuring a clean separation between domain logic, persistence,
+and API concerns.
+
+Exception Overview:
+    • DrinkRecipeError
+        Base class for all drink recipe domain errors.
+
+    • DrinkTypeNotFoundError
+        Raised when a DrinkType enum value cannot be mapped to a corresponding
+        database record in the drink_type table.
+
+    • DuplicateDrinkRecipeNameError
+        Raised when attempting to create a drink recipe whose normalized name
+        already exists in the database.
+
+    • IngredientNotFoundError
+        Raised when a recipe references an ingredient ID that does not exist.
+
+    • UnitConversionError
+        Raised when unit conversion fails while calculating ingredient usage
+        amounts for cost computation.
+
+These exceptions are intentionally narrow and descriptive, enabling clearer
+error handling, better test coverage, and more meaningful API responses.
+"""
+
 class DrinkRecipeError(Exception):
     """Base class for all drink recipe domain errors."""
-    pass
 
 
 class DrinkTypeNotFoundError(DrinkRecipeError):
