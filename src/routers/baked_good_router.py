@@ -34,16 +34,25 @@ def post_baked_good(
     """
     Creates and stores a new baked good in the database.
     """
+    try:
+        repo = BakedGoodRepository(db)
+        return repo.create_baked_good(baked_good)
 
-    repo = BakedGoodRepository(db)
+    except VendorNotFoundError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)) from exc
 
-    return repo.create_baked_good(baked_good)
-
+    except DuplicateBakedGoodError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc)) from exc
 
 @router.get(
     "/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel]
 )
-
 def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
     """
     Retrieves all baked goods from the database.
