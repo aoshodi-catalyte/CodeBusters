@@ -158,5 +158,5 @@ def test_create_baked_good_invalid_vendor(db):
         vendor_id=9999,
     )
 
-    with pytest.raises(VendorNotFoundError, match="Vendor not found"):
+    with pytest.raises(VendorNotFoundError, match= f"Vendor with ID {baked_good.vendor_id} was not found."):
         repository.create_baked_good(baked_good)
