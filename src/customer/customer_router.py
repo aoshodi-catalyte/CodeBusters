@@ -82,7 +82,10 @@ def create_customer(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while creating the customer."
+            detail=(
+                "An unexpected error occurred while creating "
+                "the customer."
+            )
         ) from exc
 
 
@@ -117,5 +120,61 @@ def get_customers(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while retrieving customers."
+            detail=(
+                "An unexpected error occurred while retrieving "
+                "customers."
+            )
+        ) from exc
+
+
+@router.get(
+    "/customers/{customer_id}",
+    response_model=CustomerResponse,
+    status_code=status.HTTP_200_OK
+)
+def get_customer(
+    customer_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve a single customer by ID.
+
+    Args:
+        customer_id: The ID of the customer to retrieve.
+        db: SQLAlchemy database session.
+
+    Returns:
+        CustomerResponse: The customer matching the provided ID.
+
+    Raises:
+        HTTPException 404:
+            If no customer exists with the provided ID.
+
+        HTTPException 500:
+            If an unexpected database error occurs.
+    """
+    try:
+        repo = CustomerRepository(db)
+        customer = repo.get_customer_by_id(customer_id)
+
+        if customer is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"Customer with ID {customer_id} was not found."
+                )
+            )
+
+        return customer
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "An unexpected error occurred while retrieving "
+                "the customer."
+            )
         ) from exc

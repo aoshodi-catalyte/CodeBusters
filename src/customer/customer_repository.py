@@ -70,6 +70,26 @@ class CustomerRepository:
         """
         return self.db.query(CustomerSchema).all()
 
+    def get_customer_by_id(
+    self,
+    customer_id: int
+) -> CustomerSchema | None:
+        """
+        Retrieve a customer by its ID.
+
+        Args:
+            customer_id: The ID of the customer to retrieve.
+
+        Returns:
+            CustomerSchema | None: The matching customer if found,
+            otherwise None.
+        """
+        return (
+            self.db.query(CustomerSchema)
+            .filter(CustomerSchema.id == customer_id)
+            .first()
+        )
+
     def get_customer_by_email(
         self,
         email: str
