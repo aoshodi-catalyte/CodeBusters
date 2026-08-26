@@ -13,7 +13,7 @@ from typing import List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from baked_good.baked_good_exceptions import (
+from exceptions.baked_good_exceptions import (
     DuplicateBakedGoodError,
     VendorNotFoundError,
 )
