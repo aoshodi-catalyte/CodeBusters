@@ -10,9 +10,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
-from ingredient.ingredient_router import router as ingredient_router
+from routers.ingredient_router import router as ingredient_router
 from vendor.vendor_router import router as vendor_router
-
 
 # Use an in-memory SQLite database for fast integration tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -114,7 +113,6 @@ def test_create_ingredient_vendor_not_found(client):
 
 def test_create_ingredient_already_exists(client):
     """Test 3: Creating a duplicate ingredient name returns 409 Conflict."""
-
     vendor_res = client.post(
         "/vendors/",
         json={
@@ -251,7 +249,6 @@ def test_read_ingredient_by_id_success(client):
     )
 
     vendor_id = vendor_res.json()["id"]
-
     create_res = client.post(
         "/ingredients/",
         json={
@@ -264,7 +261,6 @@ def test_read_ingredient_by_id_success(client):
             "allergens": ["Milk"],
         },
     )
-
     ingredient_id = create_res.json()["id"]
 
     response = client.get(f"/ingredients/{ingredient_id}")
@@ -299,7 +295,6 @@ def test_update_ingredient_success(client):
     )
 
     vendor_id = vendor_res.json()["id"]
-
     create_res = client.post(
         "/ingredients/",
         json={
@@ -312,7 +307,6 @@ def test_update_ingredient_success(client):
             "allergens": [],
         },
     )
-
     ingredient_id = create_res.json()["id"]
 
     update_payload = {
@@ -387,7 +381,6 @@ def test_update_ingredient_vendor_not_found(client):
     )
 
     vendor_id = vendor_res.json()["id"]
-
     create_res = client.post(
         "/ingredients/",
         json={
@@ -400,7 +393,6 @@ def test_update_ingredient_vendor_not_found(client):
             "allergens": [],
         },
     )
-
     ingredient_id = create_res.json()["id"]
 
     update_payload = {
@@ -438,7 +430,6 @@ def test_update_ingredient_already_exists(client):
     )
 
     vendor_id = vendor_res.json()["id"]
-
     client.post(
         "/ingredients/",
         json={
@@ -451,7 +442,6 @@ def test_update_ingredient_already_exists(client):
             "allergens": [],
         },
     )
-
     item2 = client.post(
         "/ingredients/",
         json={
@@ -531,6 +521,7 @@ def test_get_all_ingredients_multiple(client):
     assert response.status_code == 200
     assert len(response.json()) == 3
 
+
 def test_soft_delete_ingredient_success(client):
     """Test 16: Successfully soft deleting an ingredient returns 200."""
 
@@ -563,9 +554,7 @@ def test_soft_delete_ingredient_success(client):
 
     ingredient_id = create_res.json()["id"]
 
-    response = client.delete(
-        f"/ingredients/{ingredient_id}"
-    )
+    response = client.delete(f"/ingredients/{ingredient_id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == ingredient_id
@@ -612,16 +601,12 @@ def test_soft_delete_ingredient_is_persisted(client):
 
     ingredient_id = create_res.json()["id"]
 
-    delete_response = client.delete(
-        f"/ingredients/{ingredient_id}"
-    )
+    delete_response = client.delete(f"/ingredients/{ingredient_id}")
 
     assert delete_response.status_code == 200
 
     # Verify the soft delete through the GET endpoint.
-    get_response = client.get(
-        f"/ingredients/{ingredient_id}"
-    )
+    get_response = client.get(f"/ingredients/{ingredient_id}")
 
     assert get_response.status_code == 200
     assert get_response.json()["id"] == ingredient_id

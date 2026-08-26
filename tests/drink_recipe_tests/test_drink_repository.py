@@ -7,7 +7,7 @@ from constants.drink_types import DrinkType
 from constants.unit_conversions import convert
 from database import Base
 from drink_recipe.drink_recipe_model import DrinkRecipe, RecipeIngredient
-from drink_recipe.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
+from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from ingredient.ingredient_schema import IngredientSchema
 import models
