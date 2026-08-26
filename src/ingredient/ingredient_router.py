@@ -8,6 +8,7 @@ HTTP responses for ingredient‑related actions.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -246,6 +247,68 @@ def update(
                 "message": (
                     "An unexpected database error occurred "
                     "while updating the ingredient."
+                ),
+            },
+        ) from exc
+class IngredientDeleteResponse(BaseModel):
+    """Schema used when confirming an ingredient soft delete."""
+    message: str
+    id: int
+
+
+@router.delete(
+    "/{ingredient_id}",
+    response_model=IngredientDeleteResponse,
+)
+def delete_ingredient_endpoint(
+    ingredient_id: int,
+    db: Session = Depends(get_db),
+):
+    """Soft delete an ingredient by its ID.
+
+    Args:
+        ingredient_id: ID of the ingredient to deactivate.
+        db: Database session provided by FastAPI.
+
+    Returns:
+        A confirmation message and the ID of the deactivated ingredient.
+
+    Raises:
+        HTTPException:
+            404 if the ingredient does not exist.
+        HTTPException:
+            500 if a database error occurs.
+    """
+    repo = IngredientRepository(db)
+
+    try:
+        ingredient = repo.soft_delete_ingredient(ingredient_id)
+
+        if ingredient is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "ingredient_not_found",
+                    "message": (
+                        f"Ingredient with ID {ingredient_id} "
+                        "was not found."
+                    ),
+                },
+            )
+
+        return IngredientDeleteResponse(
+            message="Ingredient successfully deactivated.",
+            id=ingredient.id,
+        )
+
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "database_error",
+                "message": (
+                    "An unexpected database error occurred "
+                    "while deactivating the ingredient."
                 ),
             },
         ) from exc

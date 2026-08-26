@@ -12,12 +12,11 @@ from ingredient.ingredient_exceptions import (
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_repository import (
-    IngredientRepository,
-    get_or_create_allergen,
+from ingredient.ingredient_repository import get_or_create_allergen, IngredientRepository
+from ingredient.ingredient_schema import (
+    AllergenSchema,
+    IngredientSchema,
 )
-from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
-import models
 from vendor.vendor_schema import Vendor
 
 
@@ -515,3 +514,62 @@ def test_update_ingredient_vendor_not_found(db):
                 vendor_id=9999,
             ),
         )
+def test_soft_delete_ingredient_success(db):
+    """Test that an active ingredient is successfully soft deleted."""
+    vendor = Vendor(
+        name="Soft Delete Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="softdelete@test.com",
+        phone="3125557000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    repo = IngredientRepository(db)
+    ingredient = repo.create_ingredient(
+        make_ingredient(
+            name="Vanilla Extract",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    result = repo.soft_delete_ingredient(
+        ingredient_id=ingredient.id,
+    )
+
+    assert result is not None
+    assert result.id == ingredient.id
+    assert result.active is False
+
+
+def test_soft_delete_ingredient_not_found(db):
+    """Test that soft deleting a nonexistent ingredient returns None."""
+    repo = IngredientRepository(db)
+
+    result = repo.soft_delete_ingredient(
+        ingredient_id=99999,
+    )
+
+    assert result is None
+
+
+def test_soft_delete_ingredient_sqlalchemy_error():
+    """Test that SQLAlchemy errors are rolled back and re-raised."""
+    db = MagicMock()
+
+    db.query.side_effect = SQLAlchemyError(
+        "Unexpected database failure"
+    )
+
+    repo = IngredientRepository(db)
+
+    with pytest.raises(SQLAlchemyError):
+        repo.soft_delete_ingredient(
+            ingredient_id=1,
+        )
+
+    db.rollback.assert_called_once()

@@ -3,6 +3,7 @@
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+import models
 from ingredient.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
@@ -34,6 +35,7 @@ def get_or_create_allergen(
 
 class IngredientRepository:
     """Repository for managing ingredient-related database operations."""
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -201,6 +203,28 @@ class IngredientRepository:
                 ) from exc
 
             raise IngredientConstraintError(constraint) from exc
+
+        except SQLAlchemyError as exc:
+            self.db.rollback()
+            raise exc
+
+    def soft_delete_ingredient(
+        self,
+        ingredient_id: int,
+    ) -> IngredientSchema | None:
+        """Soft delete an ingredient by setting active to False."""
+        try:
+            ingredient = self.get_ingredient_by_id(ingredient_id)
+
+            if ingredient is None:
+                return None
+
+            ingredient.active = False
+
+            self.db.commit()
+            self.db.refresh(ingredient)
+
+            return ingredient
 
         except SQLAlchemyError as exc:
             self.db.rollback()
