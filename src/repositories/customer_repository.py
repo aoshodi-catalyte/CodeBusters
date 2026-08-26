@@ -19,6 +19,7 @@ from exceptions.customer_exceptions import (
 )
 from customer.customer_model import CustomerCreate
 from customer.customer_schema import CustomerSchema
+from repositories.error_utils import parse_integrity_error
 
 
 class CustomerRepository:
@@ -84,14 +85,7 @@ class CustomerRepository:
             self.db.commit()
         except IntegrityError as exc:
             self.db.rollback()
-
-            constraint = getattr(
-                getattr(exc.orig, "diag", None),
-                "constraint_name",
-                None,
-            )
-
-            error_message = str(exc.orig).lower()
+            constraint, error_message = parse_integrity_error(exc)
 
             if "email" in error_message:
                 raise CustomerEmailAlreadyExistsError(
