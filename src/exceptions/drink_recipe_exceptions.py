@@ -35,7 +35,6 @@ error handling, better test coverage, and more meaningful API responses.
 
 class DrinkRecipeError(Exception):
     """Base class for all drink recipe domain errors."""
-    pass
 
 
 class DrinkTypeNotFoundError(DrinkRecipeError):
