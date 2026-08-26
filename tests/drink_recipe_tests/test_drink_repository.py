@@ -10,6 +10,14 @@ from drink_recipe.drink_recipe_model import DrinkRecipe, RecipeIngredient
 from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from ingredient.ingredient_schema import IngredientSchema
+
+from exceptions.drink_recipe_exceptions import (
+    DrinkTypeNotFoundError,
+    DuplicateDrinkRecipeNameError,
+    IngredientNotFoundError,
+    UnitConversionError,
+)
+
 import models
 
 # ---------------------------
@@ -41,6 +49,10 @@ def repo(db):
     return DrinkRecipeRepository(db)
 
 
+# ---------------------------
+# Tests
+# ---------------------------
+
 def test_map_enum_to_fk_success(db):
     drink_type = DrinkTypeSchema(name="coffee")
     db.add(drink_type)
@@ -51,11 +63,12 @@ def test_map_enum_to_fk_success(db):
 
 
 def test_map_enum_to_fk_missing_type(db):
-    with pytest.raises(ValueError):
+    with pytest.raises(DrinkTypeNotFoundError):
         map_enum_to_fk(DrinkType.TEA, db)
 
 
 def test_unsupported_unit_conversion():
+    # convert() still raises ValueError
     with pytest.raises(ValueError):
         convert(1, "kg", "fl_oz")
 
@@ -116,15 +129,78 @@ def test_create_drink_recipe(repo, db):
 
     created = repo.create_drink_recipe(recipe_model)
 
-    # Production cost:
-    # Milk: 0.50
-    # Espresso: 3.50
-    # Sugar: 0.01
-    # Total: 4.01
     assert created.production_cost == 4.01
-
-    # Sale price = 4.01 * 1.81 = 7.2581 → 7.26
     assert created.sale_price == 7.26
+
+
+def test_duplicate_drink_recipe_name(repo, db):
+    drink_type = DrinkTypeSchema(name="coffee")
+    db.add(drink_type)
+    db.commit()
+
+    recipe_model = DrinkRecipe(
+        name="Latte",
+        description="desc",
+        ingredients=[],
+        active=True,
+        type="coffee",
+        markup_percentage=10,
+    )
+
+    repo.create_drink_recipe(recipe_model)
+
+    with pytest.raises(DuplicateDrinkRecipeNameError):
+        repo.create_drink_recipe(recipe_model)
+
+
+def test_missing_ingredient(repo, db):
+    drink_type = DrinkTypeSchema(name="coffee")
+    db.add(drink_type)
+    db.commit()
+
+    recipe_model = DrinkRecipe(
+        name="Bad Latte",
+        description="desc",
+        ingredients=[
+            RecipeIngredient(id=999, quantity_used=1.0, unit_of_measure_used="g")
+        ],
+        active=True,
+        type="coffee",
+        markup_percentage=10,
+    )
+
+    with pytest.raises(IngredientNotFoundError):
+        repo.create_drink_recipe(recipe_model)
+
+
+def test_unit_conversion_failure(repo, db):
+    drink_type = DrinkTypeSchema(name="coffee")
+    db.add(drink_type)
+    db.commit()
+
+    ing = IngredientSchema(
+        name="Milk",
+        purchasing_cost=4.00,
+        unit_amount=1.00,
+        unit_of_measure="gal",
+        vendor_id=1,
+    )
+    db.add(ing)
+    db.commit()
+
+    recipe_model = DrinkRecipe(
+        name="Broken Latte",
+        description="desc",
+        ingredients=[
+            RecipeIngredient(id=ing.id, quantity_used=1.0, unit_of_measure_used="banana")
+        ],
+        active=True,
+        type="coffee",
+        markup_percentage=10,
+    )
+
+    with pytest.raises(UnitConversionError):
+        repo.create_drink_recipe(recipe_model)
 
 
 def test_get_all_drink_recipes(repo, db):
