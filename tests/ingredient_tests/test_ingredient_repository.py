@@ -13,13 +13,11 @@ from ingredient.ingredient_exceptions import (
 )
 from ingredient.ingredient_model import Ingredient
 from repositories.ingredient_repository import (
-    get_or_create_allergen,
     IngredientRepository,
+    get_or_create_allergen,
 )
-from ingredient.ingredient_schema import (
-    AllergenSchema,
-    IngredientSchema,
-)
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
+import models
 from vendor.vendor_schema import Vendor
 
 
