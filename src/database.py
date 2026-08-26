@@ -12,9 +12,8 @@ DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(DATABASE_URL, echo=True)
 
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)  # pylint: disable=invalid-name
+# pylint: disable=C0103
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 

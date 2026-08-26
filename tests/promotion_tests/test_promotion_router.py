@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from database import Base, get_db
-from promotion.promotion_router import router as promotion_router
+from routers.promotion_router import router as promotion_router
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 

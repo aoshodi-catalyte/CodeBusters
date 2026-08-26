@@ -12,19 +12,25 @@ from fastapi import Depends, status, APIRouter, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
+
 from baked_good.baked_good_model import BakedGood
-from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_response_model import BakedGoodResponseModel
-from exceptions.baked_good_exceptions import DuplicateBakedGoodError, VendorNotFoundError
-
-
-router = APIRouter(
-    prefix="/baked_goods",
-    tags=["baked_goods"]
+from exceptions.baked_good_exceptions import (
+    DuplicateBakedGoodError,
+    VendorNotFoundError,
 )
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel)
-def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodResponseModel:
+from repositories.baked_good_repository import BakedGoodRepository
+
+router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
+
+
+@router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel
+)
+def post_baked_good(
+    baked_good: BakedGood, db: Session = Depends(get_db)
+) -> BakedGoodResponseModel:
     """
     Creates and stores a new baked good in the database.
 
@@ -46,18 +52,21 @@ def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> Bak
     except VendorNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cannot create baked good because the vendor does not exist."
+            detail="Cannot create baked good because the vendor does not exist.",
         ) from exc
 
     except DuplicateBakedGoodError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A baked good with name '{baked_good.name}' already exists"
+            detail=f"A baked good with name '{baked_good.name}' already exists",
         ) from exc
 
     return created_baked_good
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel])
+
+@router.get(
+    "/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel]
+)
 def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
     """
     Retrieves all baked goods from the database.
@@ -76,14 +85,14 @@ def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponse
 
     return baked_goods
 
+
 @router.get(
     "/{baked_good_id}",
     status_code=status.HTTP_200_OK,
-    response_model= BakedGoodResponseModel
+    response_model=BakedGoodResponseModel,
 )
 def get_baked_good_by_id(
-    baked_good_id: int,
-    db: Session = Depends(get_db)
+    baked_good_id: int, db: Session = Depends(get_db)
 ) -> BakedGoodResponseModel:
     """
     Retrieves a baked good by its ID.

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 
 from database import Base, get_db
-from baked_good.baked_good_router import router as baked_good_router
+from routers.baked_good_router import router as baked_good_router
 from vendor.vendor_router import router as vendor_router
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
