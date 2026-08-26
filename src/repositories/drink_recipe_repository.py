@@ -140,6 +140,9 @@ class DrinkRecipeRepository:
         return recipe
 
     def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
+        """
+        Retrieve a drink recipe by its ID.
+        """
         return (
             self.session.query(DrinkRecipeSchema)
             .filter(DrinkRecipeSchema.id == recipe_id)
@@ -147,4 +150,7 @@ class DrinkRecipeRepository:
         )
 
     def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
+        """
+        Retrieve all drink recipes.
+        """
         return self.session.query(DrinkRecipeSchema).all()
