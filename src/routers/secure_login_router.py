@@ -85,7 +85,10 @@ def get_current_employee(
             - 401: If the token is invalid or the employee no longer exists.
     """
 
-    employee = auth_repo.get_current_employee(token, db)
+    try:
+        employee = auth_repo.get_current_employee(token, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     if not employee:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
