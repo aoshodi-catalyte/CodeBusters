@@ -35,6 +35,13 @@ from drink_recipe.drink_type_schema import DrinkTypeSchema
 from ingredient.ingredient_schema import IngredientSchema
 from utils.validators import round_float
 
+from exceptions.drink_recipe_exceptions import (
+    DrinkTypeNotFoundError,
+    DuplicateDrinkRecipeNameError,
+    IngredientNotFoundError,
+    UnitConversionError,
+)
+
 
 def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
     """
@@ -42,28 +49,13 @@ def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
     """
     drink_type = db.query(DrinkTypeSchema).filter_by(name=enum_value.value).first()
     if not drink_type:
-        raise ValueError(
-            f"DrinkType '{enum_value.value}' not found in drink_type table"
-        )
+        raise DrinkTypeNotFoundError(enum_value.value)
     return drink_type.id
 
 
 class DrinkRecipeRepository:
     """
-    Parameters:
-        session (Session):
-            The SQLAlchemy session used for all database operations.
-
-    Methods:
-        create_drink_recipe(drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
-            Creates a new drink recipe, calculates its costs, persists it, and
-            returns the ORM representation.
-
-        get_drink_recipe_by_id(recipe_id: int) -> DrinkRecipeSchema | None:
-            Fetches a single drink recipe by its ID, or returns None if not found.
-
-        get_all_drink_recipes() -> list[DrinkRecipeSchema]:
-            Returns all drink recipes currently stored in the database.
+    Repository responsible for creating, retrieving, and managing drink recipe records.
     """
 
     def __init__(self, session: Session):
@@ -76,20 +68,20 @@ class DrinkRecipeRepository:
         """
         drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
 
+        # Normalize name for duplicate detection
         normalized_input = re.sub(r"\s+", "", drink_recipe.name).lower()
 
         existing = (
             self.session.query(DrinkRecipeSchema)
             .filter(
-                func.lower(
-                    func.replace(DrinkRecipeSchema.name, " ", "")
-                ) == normalized_input
+                func.lower(func.replace(DrinkRecipeSchema.name, " ", ""))
+                == normalized_input
             )
             .first()
         )
 
         if existing:
-            raise ValueError(f"Drink recipe name '{drink_recipe.name}' already exists")
+            raise DuplicateDrinkRecipeNameError(drink_recipe.name)
 
         recipe = DrinkRecipeSchema(
             name=drink_recipe.name,
@@ -107,7 +99,7 @@ class DrinkRecipeRepository:
         for ing in drink_recipe.ingredients:
             ingredient = self.session.get(IngredientSchema, ing.id)
             if not ingredient:
-                raise ValueError(f"Ingredient ID {ing.id} not found")
+                raise IngredientNotFoundError(ing.id)
 
             # Convert recipe usage → ingredient purchase unit
             try:
@@ -117,9 +109,7 @@ class DrinkRecipeRepository:
                     ingredient.unit_of_measure,
                 )
             except ValueError as e:
-                raise ValueError(
-                    f"Unit conversion failed for ingredient {ingredient.name}: {e}"
-                ) from e
+                raise UnitConversionError(ingredient.name, str(e)) from e
 
             # Cost per unit of ingredient
             cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount
@@ -144,14 +134,12 @@ class DrinkRecipeRepository:
         # Calculate sale price
         markup_multiplier = 1 + (recipe.markup_percentage / 100)
         recipe.sale_price = round_float(recipe.production_cost * markup_multiplier)
+
         self.session.commit()
         self.session.refresh(recipe)
         return recipe
 
     def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
-        """
-        Retrieve a drink recipe by its ID.
-        """
         return (
             self.session.query(DrinkRecipeSchema)
             .filter(DrinkRecipeSchema.id == recipe_id)
@@ -159,7 +147,4 @@ class DrinkRecipeRepository:
         )
 
     def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
-        """
-        Retrieve all drink recipes.
-        """
         return self.session.query(DrinkRecipeSchema).all()
