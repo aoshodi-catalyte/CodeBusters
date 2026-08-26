@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from utils.response import to_response
-from ingredient.ingredient_exceptions import (
+from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
