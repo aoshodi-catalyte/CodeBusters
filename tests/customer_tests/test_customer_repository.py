@@ -5,7 +5,7 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base
 from customer.customer_model import CustomerCreate
-from customer.customer_repository import CustomerRepository
+from repositories.customer_repository import CustomerRepository
 from customer.customer_schema import CustomerSchema
 
 

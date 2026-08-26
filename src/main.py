@@ -8,19 +8,23 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from baked_good.baked_good_router import router as baked_good_router
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
-from customer.customer_router import router as customer_router
+
 from database import SessionLocal, create_db
-from drink_recipe.drink_recipe_router import router as drink_recipe_router
+
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
-from employee.employee_router import router as employee_router
+
+from routers.baked_good_router import router as baked_good_router
+from routers.customer_router import router as customer_router
+from routers.drink_recipe_router import router as drink_recipe_router
+from routers.employee_router import router as employee_router
+from routers.ingredient_router import router as ingredient_router
+from routers.promotion_router import router as promotion_router
 from health.health_router import router as health_router
-from ingredient.ingredient_router import router as ingredient_router
-from promotion.promotion_router import router as promotion_router
 from vendor.vendor_router import router as vendor_router
+from secure_login.secure_login_router import router as secure_login_router
 
 
 @asynccontextmanager
@@ -38,20 +42,14 @@ async def lifespan(_app: FastAPI):
     try:
         for drink_type in DrinkType:
             existing = (
-                db.query(DrinkTypeSchema)
-                .filter_by(name=drink_type.value)
-                .first()
+                db.query(DrinkTypeSchema).filter_by(name=drink_type.value).first()
             )
 
             if not existing:
                 db.add(DrinkTypeSchema(name=drink_type.value))
 
         for role in EmployeeRole:
-            existing = (
-                db.query(EmployeeRoleSchema)
-                .filter_by(role=role.value)
-                .first()
-            )
+            existing = db.query(EmployeeRoleSchema).filter_by(role=role.value).first()
 
             if not existing:
                 db.add(EmployeeRoleSchema(role=role.value))
@@ -87,3 +85,4 @@ app.include_router(ingredient_router)
 app.include_router(customer_router)
 app.include_router(employee_router)
 app.include_router(promotion_router)
+app.include_router(secure_login_router)

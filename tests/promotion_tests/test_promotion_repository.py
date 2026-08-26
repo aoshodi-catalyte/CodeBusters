@@ -7,7 +7,7 @@ from datetime import datetime
 from database import Base
 from promotion.promotion_model import Promotion
 from promotion.promotion_schema import PromotionSchema
-from promotion.promotion_repository import PromotionRepository
+from repositories.promotion_repository import PromotionRepository
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 

@@ -54,14 +54,14 @@ TO_BASE = {
     "kg": 1000,
     "oz": 28.3495,
     "lb": 453.592,
-    "scoop": 5,       # customize per your café
+    "scoop": 5,
 
     # Volume → milliliters
     "ml": 1,
     "l": 1000,
     "fl_oz": 29.5735,
     "gal": 3785.41,
-    "pump": 10,       # customize per your café
+    "pump": 10,
     "shot": 30,       # espresso shot
     "dash": 0.9,      # bitters dash
 }
