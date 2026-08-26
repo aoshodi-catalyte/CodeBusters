@@ -7,7 +7,7 @@ from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema, Base
 from employee.employee_role_schema import EmployeeRoleSchema
 from repositories.employee_repository import EmployeeRepository
-
+from secure_login.secure_login_schema import EmployeeAuth
 from pydantic import ValidationError
 from datetime import date, timedelta
 
