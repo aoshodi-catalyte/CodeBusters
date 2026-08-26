@@ -15,7 +15,7 @@ from database import get_db
 from baked_good.baked_good_model import BakedGood
 from baked_good.baked_good_repository import BakedGoodRepository
 from baked_good.baked_good_response_model import BakedGoodResponseModel
-from baked_good.baked_good_exceptions import DuplicateBakedGoodError, VendorNotFoundError
+from exceptions.baked_good_exceptions import DuplicateBakedGoodError, VendorNotFoundError
 
 
 router = APIRouter(
