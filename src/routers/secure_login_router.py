@@ -4,12 +4,12 @@ registration for employee accounts.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database import get_db
-from secure_login.secure_login_model import EmployeeAuthCreate
 from repositories.secure_login_repository import SecureLoginRepository
+from secure_login.secure_login_model import EmployeeAuthCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -123,6 +123,6 @@ def register_employee_auth(
     try:
         auth_repo.register_employee_auth(db, data)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return {"message": "Login credentials created successfully"}
