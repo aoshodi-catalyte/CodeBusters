@@ -33,36 +33,22 @@ def post_baked_good(
 ) -> BakedGoodResponseModel:
     """
     Creates and stores a new baked good in the database.
-
-    Args:
-        baked_good: The validated baked good data received from the request.
-        db: The SQLAlchemy database session provided by the get_db dependency.
-
-    Returns:
-        BakedGoodResponseModel: The newly created baked good.
-
-    Raises:
-        HTTPException: If the vendor does not exist or the baked good
-            already exists for the vendor.
     """
-    repo = BakedGoodRepository(db)
     try:
-        created_baked_good = repo.create_baked_good(baked_good)
+        repo = BakedGoodRepository(db)
+        return repo.create_baked_good(baked_good)
 
     except VendorNotFoundError as exc:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cannot create baked good because the vendor does not exist.",
-        ) from exc
+            detail=str(exc)) from exc
 
     except DuplicateBakedGoodError as exc:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A baked good with name '{baked_good.name}' already exists",
-        ) from exc
-
-    return created_baked_good
-
+            detail=str(exc)) from exc
 
 @router.get(
     "/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel]
