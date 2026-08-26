@@ -25,37 +25,11 @@ router = APIRouter(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel)
 def post_baked_good(baked_good: BakedGood, db: Session = Depends(get_db)) -> BakedGoodResponseModel:
-    """
-    Creates and stores a new baked good in the database.
+    """Create a new baked good."""
 
-    Args:
-        baked_good: The validated baked good data received from the request.
-        db: The SQLAlchemy database session provided by the get_db dependency.
-
-    Returns:
-        BakedGoodResponseModel: The newly created baked good.
-
-    Raises:
-        HTTPException: If the vendor does not exist or the baked good
-            already exists for the vendor.
-    """
     repo = BakedGoodRepository(db)
-    try:
-        created_baked_good = repo.create_baked_good(baked_good)
 
-    except VendorNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cannot create baked good because the vendor does not exist."
-        ) from exc
-
-    except DuplicateBakedGoodError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"A baked good with name '{baked_good.name}' already exists"
-        ) from exc
-
-    return created_baked_good
+    return repo.create_baked_good(baked_good)
 
 @router.get("/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel])
 def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
