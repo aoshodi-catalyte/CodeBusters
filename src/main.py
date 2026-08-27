@@ -22,8 +22,9 @@ from routers.drink_recipe_router import router as drink_recipe_router
 from routers.employee_router import router as employee_router
 from routers.ingredient_router import router as ingredient_router
 from routers.promotion_router import router as promotion_router
+from routers.vendor_router import router as vendor_router
+
 from health.health_router import router as health_router
-from vendor.vendor_router import router as vendor_router
 from secure_login.secure_login_router import router as secure_login_router
 
 
