@@ -79,7 +79,10 @@ def get_all_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseM
 
     return get_promos
 
-@router.get("/{promotion_id}", status_code=status.HTTP_200_OK, response_model=PromotionResponseModel)
+@router.get(
+    "/{promotion_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=PromotionResponseModel)
 def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> PromotionResponseModel:
     """
     Retrieves a promotion by its unique ID.
