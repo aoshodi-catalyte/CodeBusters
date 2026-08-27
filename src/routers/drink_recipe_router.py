@@ -196,6 +196,28 @@ def get_all_drink_recipes(db: Session = Depends(get_db)):
 
 @router.put("/{recipe_id}", response_model=DrinkRecipeResponse, status_code=200)
 def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
+    """
+    Update an existing drink recipe by its ID.
+
+    This endpoint replaces all editable fields of a drink recipe, including
+    name, description, active status, drink type, markup percentage, and
+    ingredient usage. Ingredient associations are fully rebuilt during the
+    update, and production cost and sale price are recalculated based on the
+    new ingredient quantities and markup.
+
+    Args:
+        recipe_id (int):
+            The unique identifier of the drink recipe to update.
+        drink_recipe (DrinkRecipe):
+            The updated drink recipe payload containing all fields and
+            ingredient usage definitions.
+        db (Session):
+            SQLAlchemy session injected via FastAPI dependency.
+
+    Returns:
+        DrinkRecipeResponse:
+            The updated drink recipe, serialized and validated for API output.
+    """
     repo = DrinkRecipeRepository(db)
 
     try:

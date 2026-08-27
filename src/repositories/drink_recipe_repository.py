@@ -143,7 +143,11 @@ class DrinkRecipeRepository:
         """
         Retrieve a drink recipe by its ID.
         """
-        recipe = self.session.query(DrinkRecipeSchema).filter(DrinkRecipeSchema.id == recipe_id).first()
+        recipe = (
+            self.session.query(DrinkRecipeSchema)
+            .filter(DrinkRecipeSchema.id == recipe_id)
+            .first()
+        )
 
         if not recipe:
             raise DrinkRecipeNotFoundError(recipe_id)
@@ -156,7 +160,14 @@ class DrinkRecipeRepository:
         """
         return self.session.query(DrinkRecipeSchema).all()
 
-    def update_drink_recipe_by_id(self, recipe_id: int, drink_recipe_data: DrinkRecipe) -> DrinkRecipeSchema:
+    def update_drink_recipe_by_id(
+        self,
+        recipe_id: int,
+        drink_recipe_data: DrinkRecipe
+        ) -> DrinkRecipeSchema:
+        """
+        Update a dink recipe by its ID.
+        """
         recipe = self.get_drink_recipe_by_id(recipe_id)
 
         # Normalize name for duplicate detection

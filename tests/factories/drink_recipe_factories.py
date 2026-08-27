@@ -1,3 +1,9 @@
+"""
+Factories for drink recipe tests, including drink types, ingredient creation,
+router payload builders, and ORM model builders. These utilities ensure
+consistent, repeatable test setup across router and repository test suites.
+"""
+
 import pytest
 
 from drink_recipe.drink_recipe_model import DrinkRecipe, RecipeIngredient
@@ -38,8 +44,8 @@ def ingredient_factory(db):
 
 @pytest.fixture
 def recipe_payload_factory():
-    """Builds drink recipe payloads for router tests."""
-    def create(name, description, ingredients, drink_type="coffee", markup=81, active=True):
+    """Builds drink recipe payload dictionaries for router tests."""
+    def create(name, description, ingredients, drink_type="coffee", markup=81, active=True): # pylint: disable=R0913, R0917
         return {
             "name": name,
             "description": description,
@@ -61,7 +67,7 @@ def recipe_payload_factory():
 @pytest.fixture
 def recipe_model_factory():
     """Builds DrinkRecipe ORM models for repository tests."""
-    def create(name, description, ingredients, drink_type="coffee", markup=81, active=True):
+    def create(name, description, ingredients, drink_type="coffee", markup=81, active=True): # pylint: disable=R0913, R0917
         return DrinkRecipe(
             name=name,
             description=description,
