@@ -103,5 +103,3 @@ def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> Pro
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
         )
     return promotion
-
- 
