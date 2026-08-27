@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
-    VendorDeletionException,
     VendorNotFoundException,
 )
 from vendor.vendor_model import VendorBase
