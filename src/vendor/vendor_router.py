@@ -41,3 +41,17 @@ async def post_new_vendor(vendor_data: VendorBase, db: Session = Depends(get_db)
             status_code=status.HTTP_409_CONFLICT,
             detail="Vendor with this name or email already exists.",
         ) from exc
+
+@router.get("/vendors", response_model=list[VendorResponse], status_code=status.HTTP_200_OK)
+async def get_all_vendors(db: Session = Depends(get_db)):
+    """Retrieve all vendor records.
+
+    Args:
+        db (Session): Database session injected via FastAPI dependency.
+
+    Returns:
+        list[VendorResponse]: A list of all vendors. Returns an empty list
+            when no vendors exist.
+    """
+    repo = VendorRepository(db)
+    return repo.get_all_vendors()

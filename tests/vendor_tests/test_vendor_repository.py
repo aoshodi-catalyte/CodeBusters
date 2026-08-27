@@ -9,7 +9,7 @@ from database import Base
 
 from database import Base
 from vendor.vendor_model import VendorBase
-
+from vendor.vendor_schema import Vendor
 from repositories.vendor_repository import VendorRepository
 from ingredient.ingredient_schema import IngredientSchema
 
@@ -75,3 +75,63 @@ def test_vendor_ingredients_relationship(db_session):
     assert len(vendor.ingredients) == 1
     assert vendor.ingredients[0].name == "Ground Beef"
     assert ingredient.vendor.name == "Bob's Burgers Supply Co"
+
+def test_get_all_vendors_returns_all_vendors(db_session):
+    vendor1 = Vendor(
+        active=True,
+        name="Vendor One",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@vendorone.com",
+        phone="555-1111",
+    )
+
+    vendor2 = Vendor(
+        active=True,
+        name="Vendor Two",
+        contact_name="Jane Doe",
+        contact_role="Owner",
+        email="jane@vendortwo.com",
+        phone="555-2222",
+    )
+
+    db_session.add_all([vendor1, vendor2])
+    db_session.commit()
+
+    repo = VendorRepository(db_session)
+
+    result = repo.get_all_vendors()
+
+    assert len(result) == 2
+    assert result[0].name == "Vendor One"
+    assert result[1].name == "Vendor Two"
+
+
+def test_get_all_vendors_returns_single_vendor(db_session):
+    vendor = Vendor(
+        active=True,
+        name="Vendor One",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@vendorone.com",
+        phone="555-1111",
+    )
+
+    db_session.add(vendor)
+    db_session.commit()
+
+    repo = VendorRepository(db_session)
+
+    result = repo.get_all_vendors()
+
+    assert len(result) == 1
+    assert result[0].id == vendor.id
+    assert result[0].name == "Vendor One"
+
+
+def test_get_all_vendors_returns_empty_list_when_no_vendors(db_session):
+    repo = VendorRepository(db_session)
+
+    result = repo.get_all_vendors()
+
+    assert result == []
