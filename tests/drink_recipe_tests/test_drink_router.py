@@ -1,3 +1,4 @@
+from fastapi import status
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -252,9 +253,10 @@ def test_get_drink_recipe_by_id(client, db):
     assert data ["sale_price"] == 1.34
 
 def test_get_drink_recipe_by_id_not_found(client, db):
-    response = client.get(f"/drink_recipes/{9999}")
+    drink_id = 9999
+    response = client.get(f"/drink_recipes/{drink_id}")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Drink recipe not found"
+    assert response.json()["detail"] == f"Drink Recipe ID {drink_id} not found"
 
 @pytest.fixture
 def drink_types(db):
@@ -396,3 +398,132 @@ def test_get_all_returns_empty_list(client, db):
     response = client.get("/drink_recipes/")
     assert response.status_code == 200
     assert response.json() == []
+
+def create_ingredient(db, name="milk", cost=8.00, amount=1.0, uom="gal", ven_id = 1):
+    ing = IngredientSchema(
+        name=name,
+        purchasing_cost=cost,
+        unit_amount=amount,
+        unit_of_measure=uom,
+        vendor_id = ven_id
+    )
+    db.add(ing)
+    db.commit()
+    return ing
+
+def base_payload(ing):
+    return {
+        "name": "Latte",
+        "description": "Steamed milk + espresso",
+        "active": True,
+        "type": "coffee",
+        "markup_percentage": 20,
+        "ingredients": [
+            {
+                "id": ing.id,
+                "quantity_used": 16.0,
+                "unit_of_measure_used": "fl_oz"
+            }
+        ]
+    }
+
+
+def test_update_drink_recipe_success(client, db, drink_types):
+    ing = create_ingredient(db)
+    payload = base_payload(ing)
+
+    # Create initial recipe
+    response = client.post("/drink_recipes/", json=payload)
+    recipe_id = response.json()["id"]
+
+    # Update payload
+    updated_payload = payload.copy()
+    updated_payload["name"] = "Updated Latte"
+    updated_payload["description"] = "New desc"
+    updated_payload["markup_percentage"] = 50
+
+    update_response = client.put(
+        f"/drink_recipes/{recipe_id}",
+        json=updated_payload
+    )
+
+    assert update_response.status_code == status.HTTP_200_OK
+    data = update_response.json()
+
+    assert data["name"] == "Updated Latte"
+    assert data["description"] == "New desc"
+    assert data["markup_percentage"] == 50
+    assert data["production_cost"] > 0
+    assert data["sale_price"] > data["production_cost"]
+
+
+def test_update_drink_recipe_not_found(client, db, drink_types):
+    ing = create_ingredient(db)
+    payload = base_payload(ing)
+
+    response = client.put("/drink_recipes/999", json=payload)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_update_drink_recipe_ingredient_not_found(client, db, drink_types):
+    ing = create_ingredient(db)
+    payload = base_payload(ing)
+
+    # Create recipe
+    response = client.post("/drink_recipes/", json=payload)
+    recipe_id = response.json()["id"]
+
+    # Update with invalid ingredient ID
+    bad_payload = payload.copy()
+    bad_payload["ingredients"][0]["id"] = 999
+
+    update_response = client.put(
+        f"/drink_recipes/{recipe_id}",
+        json=bad_payload
+    )
+
+    assert update_response.status_code == status.HTTP_409_CONFLICT
+
+
+def test_update_drink_recipe_drink_type_not_found(client, db, drink_types):
+    ing = create_ingredient(db)
+    payload = base_payload(ing)
+
+    # Create recipe
+    response = client.post("/drink_recipes/", json=payload)
+    recipe_id = response.json()["id"]
+
+    # Remove drink types
+    db.query(type(drink_types[0])).delete()
+    db.commit()
+
+    bad_payload = payload.copy()
+    bad_payload["type"] = "coffee"  # still referencing removed type
+
+    update_response = client.put(
+        f"/drink_recipes/{recipe_id}",
+        json=bad_payload
+    )
+
+    assert update_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_update_drink_recipe_duplicate_name(client, db, drink_types):
+    # Create first recipe
+    ing = create_ingredient(db)
+    payload1 = base_payload(ing)
+    client.post("/drink_recipes/", json=payload1).json()
+
+    # Create second recipe
+    payload2 = base_payload(ing)
+    payload2["name"] = "Mocha"
+    r2 = client.post("/drink_recipes/", json=payload2).json()
+
+    # Try updating second recipe to use first recipe's name
+    payload2["name"] = "Latte"
+    response = client.put(
+        f"/drink_recipes/{r2['id']}",
+        json=payload2
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT

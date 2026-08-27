@@ -40,6 +40,7 @@ from exceptions.drink_recipe_exceptions import (
     DuplicateDrinkRecipeNameError,
     IngredientNotFoundError,
     UnitConversionError,
+    DrinkRecipeNotFoundError
 )
 
 
@@ -143,14 +144,82 @@ class DrinkRecipeRepository:
         """
         Retrieve a drink recipe by its ID.
         """
-        return (
-            self.session.query(DrinkRecipeSchema)
-            .filter(DrinkRecipeSchema.id == recipe_id)
-            .first()
-        )
+        recipe = self.session.query(DrinkRecipeSchema).filter(DrinkRecipeSchema.id == recipe_id).first()
+
+        if not recipe:
+            raise DrinkRecipeNotFoundError(recipe_id)
+
+        return recipe
 
     def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
         """
         Retrieve all drink recipes.
         """
         return self.session.query(DrinkRecipeSchema).all()
+
+    def update_drink_recipe_by_id(self, recipe_id: int, drink_recipe_data: DrinkRecipe) -> DrinkRecipeSchema:
+        recipe = self.get_drink_recipe_by_id(recipe_id)
+
+        # Normalize name for duplicate detection
+        normalized_input = re.sub(r"\s+", "", drink_recipe_data.name).lower()
+
+        existing = (
+            self.session.query(DrinkRecipeSchema)
+            .filter(
+                func.lower(func.replace(DrinkRecipeSchema.name, " ", "")) == normalized_input,
+                DrinkRecipeSchema.id != recipe_id
+            )
+            .first()
+        )
+
+        if existing:
+            raise DuplicateDrinkRecipeNameError(drink_recipe_data.name)
+
+        # Update basic fields
+        recipe.name = drink_recipe_data.name
+        recipe.description = drink_recipe_data.description
+        recipe.active = drink_recipe_data.active
+        recipe.type_id = map_enum_to_fk(drink_recipe_data.type, self.session)
+        recipe.markup_percentage = drink_recipe_data.markup_percentage
+
+        # Remove old ingredient associations
+        self.session.query(DrinkRecipeIngredientSchema).filter(
+            DrinkRecipeIngredientSchema.drink_recipe_id == recipe.id
+        ).delete()
+
+        total_cost = 0.0
+
+        # Rebuild ingredient associations
+        for ing in drink_recipe_data.ingredients:
+            ingredient = self.session.get(IngredientSchema, ing.id)
+            if not ingredient:
+                raise IngredientNotFoundError(ing.id)
+
+            try:
+                recipe_amount_in_purchase_unit = convert(
+                    ing.quantity_used,
+                    ing.unit_of_measure_used,
+                    ingredient.unit_of_measure,
+                )
+            except ValueError as e:
+                raise UnitConversionError(ingredient.name, str(e)) from e
+
+            cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount
+            ingredient_cost = float(cost_per_unit) * float(recipe_amount_in_purchase_unit)
+            total_cost += ingredient_cost
+
+            assoc = DrinkRecipeIngredientSchema(
+                drink_recipe_id=recipe.id,
+                ingredient_id=ingredient.id,
+                quantity_used=ing.quantity_used,
+                unit_of_measure_used=ing.unit_of_measure_used,
+            )
+            self.session.add(assoc)
+
+        recipe.production_cost = round_float(total_cost)
+        markup_multiplier = 1 + (recipe.markup_percentage / 100)
+        recipe.sale_price = round_float(recipe.production_cost * markup_multiplier)
+
+        self.session.commit()
+        self.session.refresh(recipe)
+        return recipe
