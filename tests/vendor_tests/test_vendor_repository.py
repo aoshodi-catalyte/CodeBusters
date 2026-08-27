@@ -187,3 +187,97 @@ def test_vendor_deletion_exception():
         str(exception)
         == "Vendor 123 cannot be deleted because it has associated records."
     )
+
+def test_get_vendor_by_id_returns_vendor(db_session):
+    """Test retrieving a vendor by its ID."""
+    vendor = Vendor(
+        active=True,
+        name="Vendor One",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@vendorone.com",
+        phone="5551111111",
+    )
+
+    db_session.add(vendor)
+    db_session.commit()
+    db_session.refresh(vendor)
+
+    repo = VendorRepository(db_session)
+
+    result = repo.get_vendor_by_id(vendor.id)
+
+    assert result is not None
+    assert result.id == vendor.id
+    assert result.name == "Vendor One"
+    assert result.email == "john@vendorone.com"
+
+
+def test_get_vendor_by_id_returns_correct_vendor_when_multiple_exist(db_session):
+    """Test retrieving the correct vendor when multiple vendors exist."""
+    vendor1 = Vendor(
+        active=True,
+        name="Vendor One",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@vendorone.com",
+        phone="5551111111",
+    )
+
+    vendor2 = Vendor(
+        active=True,
+        name="Vendor Two",
+        contact_name="Jane Doe",
+        contact_role="Owner",
+        email="jane@vendortwo.com",
+        phone="5552222222",
+    )
+
+    db_session.add_all([vendor1, vendor2])
+    db_session.commit()
+    db_session.refresh(vendor1)
+    db_session.refresh(vendor2)
+
+    repo = VendorRepository(db_session)
+
+    result = repo.get_vendor_by_id(vendor2.id)
+
+    assert result is not None
+    assert result.id == vendor2.id
+    assert result.name == "Vendor Two"
+    assert result.email == "jane@vendortwo.com"
+
+    assert result.id != vendor1.id
+
+
+def test_get_vendor_by_id_raises_not_found_exception(db_session):
+    """Test that retrieving a nonexistent vendor raises VendorNotFoundException."""
+    repo = VendorRepository(db_session)
+
+    with pytest.raises(VendorNotFoundException) as exc_info:
+        repo.get_vendor_by_id(999)
+
+    assert exc_info.value.vendor_id == 999
+    assert str(exc_info.value) == "Vendor with ID 999 was not found."
+
+
+def test_get_vendor_by_id_raises_exception_for_negative_id(db_session):
+    """Test that a nonexistent negative vendor ID raises VendorNotFoundException."""
+    repo = VendorRepository(db_session)
+
+    with pytest.raises(VendorNotFoundException) as exc_info:
+        repo.get_vendor_by_id(-1)
+
+    assert exc_info.value.vendor_id == -1
+    assert str(exc_info.value) == "Vendor with ID -1 was not found."
+
+
+def test_get_vendor_by_id_raises_exception_for_zero_id(db_session):
+    """Test that a nonexistent zero vendor ID raises VendorNotFoundException."""
+    repo = VendorRepository(db_session)
+
+    with pytest.raises(VendorNotFoundException) as exc_info:
+        repo.get_vendor_by_id(0)
+
+    assert exc_info.value.vendor_id == 0
+    assert str(exc_info.value) == "Vendor with ID 0 was not found."

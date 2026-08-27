@@ -7,7 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from exceptions.vendor_exceptions import DuplicateVendorException
+from exceptions.vendor_exceptions import (
+DuplicateVendorException,
+VendorNotFoundException,
+)
 from repositories.vendor_repository import VendorRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
@@ -75,16 +78,34 @@ async def get_all_vendors(db: Session = Depends(get_db)):
     response_model=VendorResponse,
     status_code=status.HTTP_200_OK,
 )
-async def get_vendor_by_id(vendor_id: int, db: Session = Depends(get_db)):
-    """Retrieve a single vendor by ID."""
+@router.get(
+    "/vendors/{vendor_id}",
+    response_model=VendorResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_vendor_by_id(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+):
+    """Retrieve a single vendor by ID.
 
+    Args:
+        vendor_id (int): The positive unique identifier of the vendor.
+        db (Session): Database session injected through FastAPI dependency
+            injection.
+
+    Returns:
+        VendorResponse: The requested vendor.
+
+    Raises:
+        HTTPException: If the vendor does not exist.
+    """
     repo = VendorRepository(db)
-    vendor = repo.get_vendor_by_id(vendor_id)
 
-    if vendor is None:
+    try:
+        return repo.get_vendor_by_id(vendor_id)
+    except VendorNotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vendor not found.",
-        )
-
-    return vendor
+            detail=str(exc),
+        ) from exc
