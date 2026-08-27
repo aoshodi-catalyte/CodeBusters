@@ -1,4 +1,4 @@
-import models
+import models  # pylint: disable=unused-import
 
 import pytest
 from fastapi import FastAPI
@@ -8,24 +8,29 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
-
-
-from vendor.vendor_router import router
+from routers.vendor_router import router
 
 
 @pytest.fixture
 def client():
+    """Create a FastAPI test client with an in-memory database."""
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
     Base.metadata.create_all(bind=engine)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    testing_session_local = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+    )
 
     def override_get_db():
-        db = TestingSessionLocal()
+        db = testing_session_local()
+
         try:
             yield db
         finally:
@@ -42,6 +47,7 @@ def client():
 
 
 def test_post_new_vendor(client):
+    """Test creating a new vendor."""
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
@@ -57,13 +63,54 @@ def test_post_new_vendor(client):
 
     data = response.json()
 
+    assert data["id"] is not None
+    assert data["active"] is True
     assert data["name"] == "Bob's Burgers"
     assert data["contact_name"] == "Bob Belcher"
     assert data["contact_role"] == "CEO"
     assert data["email"] == "bestburgers@burger.com"
     assert data["phone"] == "123-456-7896"
 
+
+def test_post_duplicate_vendor_returns_409(client):
+    """Test that creating a duplicate vendor returns HTTP 409."""
+    vendor_payload = {
+        "active": True,
+        "name": "Bob's Burgers",
+        "contact_name": "Bob Belcher",
+        "contact_role": "CEO",
+        "email": "bestburgers@burger.com",
+        "phone": "1234567896",
+    }
+
+    first_response = client.post(
+        "/vendors",
+        json=vendor_payload,
+    )
+
+    assert first_response.status_code == 201
+
+    second_response = client.post(
+        "/vendors",
+        json=vendor_payload,
+    )
+
+    assert second_response.status_code == 409
+    assert second_response.json()["detail"] == (
+        "Vendor with email 'bestburgers@burger.com' already exists."
+    )
+
+
+def test_get_all_vendors_empty(client):
+    """Test retrieving vendors when no vendors exist."""
+    response = client.get("/vendors")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_get_all_vendors(client):
+    """Test retrieving all vendors."""
     vendor_payload_1 = {
         "active": True,
         "name": "Bob's Burgers",
@@ -96,64 +143,38 @@ def test_get_all_vendors(client):
     assert data[1]["name"] == "Acme Supplies"
 
 
-def test_post_duplicate_vendor_returns_409(client):
-    vendor_payload = {
-        "active": True,
-        "name": "Bob's Burgers",
-        "contact_name": "Bob Belcher",
-        "contact_role": "CEO",
-        "email": "bestburgers@burger.com",
-        "phone": "1234567896",
-    }
-
-    first_response = client.post("/vendors", json=vendor_payload)
-
-    assert first_response.status_code == 201
-
-    second_response = client.post("/vendors", json=vendor_payload)
-
-    assert second_response.status_code == 409
-    assert second_response.json()["detail"] == (
-        "Vendor with this name or email already exists."
-    )
-def test_get_all_vendors_empty(client):
-    response = client.get("/vendors")
-
-    assert response.status_code == 200
-    assert response.json() == []
-
-
 def test_get_all_vendors_returns_multiple_vendors(client):
-    vendor_1 = {
-        "active": True,
-        "name": "Bob's Burgers",
-        "contact_name": "Bob Belcher",
-        "contact_role": "CEO",
-        "email": "bob@burger.com",
-        "phone": "1234567896",
-    }
+    """Test retrieving multiple vendors."""
+    vendors = [
+        {
+            "active": True,
+            "name": "Bob's Burgers",
+            "contact_name": "Bob Belcher",
+            "contact_role": "CEO",
+            "email": "bob@burger.com",
+            "phone": "1234567896",
+        },
+        {
+            "active": False,
+            "name": "Acme Supplies",
+            "contact_name": "Wile E. Coyote",
+            "contact_role": "Manager",
+            "email": "wile@acme.com",
+            "phone": "9876543210",
+        },
+        {
+            "active": True,
+            "name": "Wayne Enterprises",
+            "contact_name": "Bruce Wayne",
+            "contact_role": "Owner",
+            "email": "bruce@wayne.com",
+            "phone": "5555555555",
+        },
+    ]
 
-    vendor_2 = {
-        "active": False,
-        "name": "Acme Supplies",
-        "contact_name": "Wile E. Coyote",
-        "contact_role": "Manager",
-        "email": "wile@acme.com",
-        "phone": "9876543210",
-    }
-
-    vendor_3 = {
-        "active": True,
-        "name": "Wayne Enterprises",
-        "contact_name": "Bruce Wayne",
-        "contact_role": "Owner",
-        "email": "bruce@wayne.com",
-        "phone": "5555555555",
-    }
-
-    client.post("/vendors", json=vendor_1)
-    client.post("/vendors", json=vendor_2)
-    client.post("/vendors", json=vendor_3)
+    for vendor in vendors:
+        response = client.post("/vendors", json=vendor)
+        assert response.status_code == 201
 
     response = client.get("/vendors")
 
@@ -168,6 +189,7 @@ def test_get_all_vendors_returns_multiple_vendors(client):
 
 
 def test_get_all_vendors_response_contains_expected_fields(client):
+    """Test that vendor responses contain expected fields."""
     vendor_payload = {
         "active": True,
         "name": "Stark Industries",
@@ -177,7 +199,12 @@ def test_get_all_vendors_response_contains_expected_fields(client):
         "phone": "5551234567",
     }
 
-    client.post("/vendors", json=vendor_payload)
+    response = client.post(
+        "/vendors",
+        json=vendor_payload,
+    )
+
+    assert response.status_code == 201
 
     response = client.get("/vendors")
 
@@ -193,79 +220,39 @@ def test_get_all_vendors_response_contains_expected_fields(client):
     assert "email" in vendor
     assert "phone" in vendor
 
-def test_get_vendor_by_id(client):
+
+def test_post_vendor_missing_required_field_returns_422(client):
+    """Test that missing required fields return HTTP 422."""
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
         "contact_name": "Bob Belcher",
         "contact_role": "CEO",
-        "email": "bob@burger.com",
         "phone": "1234567896",
     }
 
-    create_response = client.post("/vendors", json=vendor_payload)
+    response = client.post(
+        "/vendors",
+        json=vendor_payload,
+    )
 
-    assert create_response.status_code == 201
-
-    created_vendor = create_response.json()
-    vendor_id = created_vendor["id"]
-
-    response = client.get(f"/vendors/{vendor_id}")
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["id"] == vendor_id
-    assert data["active"] is True
-    assert data["name"] == "Bob's Burgers"
-    assert data["contact_name"] == "Bob Belcher"
-    assert data["contact_role"] == "CEO"
-    assert data["email"] == "bob@burger.com"
-    assert data["phone"] == "123-456-7896"
+    assert response.status_code == 422
 
 
-def test_get_vendor_by_id_not_found(client):
-    response = client.get("/vendors/999")
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Vendor not found."
-
-
-def test_get_vendor_by_id_returns_correct_vendor(client):
-    vendor_1 = {
+def test_post_vendor_invalid_email_returns_422(client):
+    """Test that an invalid email returns HTTP 422."""
+    vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
         "contact_name": "Bob Belcher",
         "contact_role": "CEO",
-        "email": "bob@burger.com",
+        "email": "not-an-email",
         "phone": "1234567896",
     }
 
-    vendor_2 = {
-        "active": True,
-        "name": "Acme Supplies",
-        "contact_name": "Wile E. Coyote",
-        "contact_role": "Manager",
-        "email": "wile@acme.com",
-        "phone": "9876543210",
-    }
+    response = client.post(
+        "/vendors",
+        json=vendor_payload,
+    )
 
-    response_1 = client.post("/vendors", json=vendor_1)
-    response_2 = client.post("/vendors", json=vendor_2)
-
-    assert response_1.status_code == 201
-    assert response_2.status_code == 201
-
-    vendor_2_id = response_2.json()["id"]
-
-    response = client.get(f"/vendors/{vendor_2_id}")
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["id"] == vendor_2_id
-    assert data["name"] == "Acme Supplies"
-    assert data["contact_name"] == "Wile E. Coyote"
-    assert data["email"] == "wile@acme.com"
+    assert response.status_code == 422

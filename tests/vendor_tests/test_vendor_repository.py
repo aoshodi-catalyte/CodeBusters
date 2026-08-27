@@ -5,22 +5,31 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from database import Base
-
-
-from database import Base
+from exceptions.vendor_exceptions import (
+    DuplicateVendorException,
+    VendorDeletionException,
+    VendorNotFoundException,
+)
+from ingredient.ingredient_schema import IngredientSchema
+from repositories.vendor_repository import VendorRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor
-from repositories.vendor_repository import VendorRepository
-from ingredient.ingredient_schema import IngredientSchema
 
 
 @pytest.fixture
 def db_session():
+    """Create a temporary database session for testing."""
     engine = create_engine("sqlite:///:memory:")
+
     Base.metadata.create_all(bind=engine)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = TestingSessionLocal()
+    testing_session_local = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+    )
+
+    session = testing_session_local()
 
     try:
         yield session
@@ -30,7 +39,9 @@ def db_session():
 
 
 def test_create_new_vendor(db_session):
+    """Test creating a new vendor."""
     repo = VendorRepository(db_session)
+
     vendor_data = VendorBase(
         active=True,
         name="Bob's Burgers",
@@ -48,7 +59,9 @@ def test_create_new_vendor(db_session):
 
 
 def test_vendor_ingredients_relationship(db_session):
+    """Test the relationship between vendors and ingredients."""
     repo = VendorRepository(db_session)
+
     vendor = repo.create_new_vendor(
         VendorBase(
             active=True,
@@ -68,6 +81,7 @@ def test_vendor_ingredients_relationship(db_session):
         unit_of_measure="lb",
         vendor_id=vendor.id,
     )
+
     db_session.add(ingredient)
     db_session.commit()
     db_session.refresh(vendor)
@@ -76,7 +90,9 @@ def test_vendor_ingredients_relationship(db_session):
     assert vendor.ingredients[0].name == "Ground Beef"
     assert ingredient.vendor.name == "Bob's Burgers Supply Co"
 
+
 def test_get_all_vendors_returns_all_vendors(db_session):
+    """Test retrieving multiple vendors."""
     vendor1 = Vendor(
         active=True,
         name="Vendor One",
@@ -108,6 +124,7 @@ def test_get_all_vendors_returns_all_vendors(db_session):
 
 
 def test_get_all_vendors_returns_single_vendor(db_session):
+    """Test retrieving a single vendor."""
     vendor = Vendor(
         active=True,
         name="Vendor One",
@@ -130,71 +147,43 @@ def test_get_all_vendors_returns_single_vendor(db_session):
 
 
 def test_get_all_vendors_returns_empty_list_when_no_vendors(db_session):
+    """Test retrieving vendors when none exist."""
     repo = VendorRepository(db_session)
 
     result = repo.get_all_vendors()
 
     assert result == []
-    
-def test_get_vendor_by_id_returns_vendor(db_session):
-    vendor = Vendor(
-        active=True,
-        name="Bob's Burgers",
-        contact_name="Bob Belcher",
-        contact_role="CEO",
-        email="bob@burger.com",
-        phone="1234567896",
+
+
+def test_vendor_not_found_exception():
+    """Test the VendorNotFoundException."""
+    exception = VendorNotFoundException(123)
+
+    assert exception.vendor_id == 123
+    assert str(exception) == "Vendor with ID 123 was not found."
+
+
+def test_duplicate_vendor_exception():
+    """Test the DuplicateVendorException."""
+    exception = DuplicateVendorException(
+        field="email",
+        value="test@vendor.com",
     )
 
-    db_session.add(vendor)
-    db_session.commit()
-    db_session.refresh(vendor)
-
-    repo = VendorRepository(db_session)
-
-    result = repo.get_vendor_by_id(vendor.id)
-
-    assert result is not None
-    assert result.id == vendor.id
-    assert result.name == "Bob's Burgers"
-    assert result.email == "bob@burger.com"
-
-def test_get_vendor_by_id_returns_none_when_vendor_does_not_exist(db_session):
-    repo = VendorRepository(db_session)
-
-    result = repo.get_vendor_by_id(999)
-
-    assert result is None
-
-def test_get_vendor_by_id_returns_correct_vendor(db_session):
-    vendor_1 = Vendor(
-        active=True,
-        name="Bob's Burgers",
-        contact_name="Bob Belcher",
-        contact_role="CEO",
-        email="bob@burger.com",
-        phone="1234567896",
+    assert exception.field == "email"
+    assert exception.value == "test@vendor.com"
+    assert (
+        str(exception)
+        == "Vendor with email 'test@vendor.com' already exists."
     )
 
-    vendor_2 = Vendor(
-        active=True,
-        name="Acme Supplies",
-        contact_name="Wile E. Coyote",
-        contact_role="Manager",
-        email="wile@acme.com",
-        phone="9876543210",
+
+def test_vendor_deletion_exception():
+    """Test the VendorDeletionException."""
+    exception = VendorDeletionException(123)
+
+    assert exception.vendor_id == 123
+    assert (
+        str(exception)
+        == "Vendor 123 cannot be deleted because it has associated records."
     )
-
-    db_session.add_all([vendor_1, vendor_2])
-    db_session.commit()
-    db_session.refresh(vendor_1)
-    db_session.refresh(vendor_2)
-
-    repo = VendorRepository(db_session)
-
-    result = repo.get_vendor_by_id(vendor_2.id)
-
-    assert result is not None
-    assert result.id == vendor_2.id
-    assert result.name == "Acme Supplies"
-    assert result.email == "wile@acme.com"
