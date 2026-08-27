@@ -78,3 +78,31 @@ def get_all_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseM
     get_promos = repo.get_all_promotions()
 
     return get_promos
+
+@router.get(
+    "/{promotion_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=PromotionResponseModel)
+def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> PromotionResponseModel:
+    """
+    Retrieves a promotion by its unique ID.
+
+    Args:
+        promotion_id: The unique identifier of the promotion to retrieve.
+        db: The database session used to retrieve the promotion.
+
+    Returns:
+        The promotion matching the provided ID.
+
+    Raises:
+        HTTPException: Raised with a 404 status code when the promotion ID
+        does not exist.
+    """
+    repo = PromotionRepository(db)
+    promotion = repo.get_promotion_by_id(promotion_id)
+
+    if promotion is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
+        )
+    return promotion
