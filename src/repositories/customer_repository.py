@@ -132,6 +132,8 @@ class CustomerRepository:
                 If the update violates another database constraint.
         """
         db_customer = self.get_customer_by_id(customer_id)
+        if db_customer is None:
+            raise CustomerNotFoundError(customer_id)
 
         existing_email = self.get_customer_by_email(customer.email)
         if existing_email and existing_email.id != customer_id:
