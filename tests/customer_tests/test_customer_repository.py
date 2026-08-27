@@ -4,6 +4,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
+from exceptions.customer_exceptions import (
+    CustomerEmailAlreadyExistsError,
+    CustomerNotFoundError,
+    CustomerPhoneAlreadyExistsError,
+)
 from customer.customer_model import CustomerCreate
 from repositories.customer_repository import CustomerRepository
 from customer.customer_schema import CustomerSchema
@@ -89,6 +94,56 @@ def test_create_customer_persists_to_database(repository, db):
 
     assert stored_customer is not None
     assert stored_customer.phone_number == "7735551234"
+
+
+def test_create_customer_with_duplicate_email_raises_error(
+    repository
+):
+    """Repository should raise when the email already exists."""
+
+    first_customer = CustomerCreate(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+    )
+
+    repository.create_customer(first_customer)
+
+    second_customer = CustomerCreate(
+        first_name="Jane",
+        last_name="Doe",
+        email="john@example.com",
+        phone_number="7735551234",
+    )
+
+    with pytest.raises(CustomerEmailAlreadyExistsError):
+        repository.create_customer(second_customer)
+
+
+def test_create_customer_with_duplicate_phone_raises_error(
+    repository
+):
+    """Repository should raise when the phone number already exists."""
+
+    first_customer = CustomerCreate(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+    )
+
+    repository.create_customer(first_customer)
+
+    second_customer = CustomerCreate(
+        first_name="Jane",
+        last_name="Doe",
+        email="jane@example.com",
+        phone_number="3125551234",
+    )
+
+    with pytest.raises(CustomerPhoneAlreadyExistsError):
+        repository.create_customer(second_customer)
 
 
 def test_get_customers(repository, db):
@@ -227,13 +282,8 @@ def test_get_customer_by_id(repository, db):
     assert found_customer.email == "john@example.com"
 
 
-def test_get_customer_by_id_returns_none_when_not_found(
-    repository
-):
-    """Repository should return None when the customer ID does not exist."""
+def test_get_customer_by_id_raises_when_not_found(repository):
+    """Repository should raise CustomerNotFoundError when the ID does not exist."""
 
-    found_customer = repository.get_customer_by_id(
-        999
-    )
-
-    assert found_customer is None
+    with pytest.raises(CustomerNotFoundError):
+        repository.get_customer_by_id(999)

@@ -34,6 +34,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
+from exceptions.drink_recipe_exceptions import (
+    DrinkTypeNotFoundError,
+    DuplicateDrinkRecipeNameError,
+    IngredientNotFoundError,
+    UnitConversionError,
+)
 from repositories.drink_recipe_repository import DrinkRecipeRepository
 from utils.response import to_response
 
@@ -98,10 +104,24 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
         recipe = repo.create_drink_recipe(drink_recipe)
         return to_response(DrinkRecipeResponse, serialize_recipe(recipe))
 
-    except ValueError as e:
+    # --- Domain exceptions mapped to HTTP responses ---
+    except DrinkTypeNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    except DuplicateDrinkRecipeNameError as e:
         db.rollback()
         raise HTTPException(status_code=409, detail=str(e)) from e
 
+    except IngredientNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+    except UnitConversionError as e:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    # --- SQLAlchemy constraint errors ---
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
@@ -109,14 +129,13 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
             detail=f"Drink recipe name '{drink_recipe.name}' already exists"
         ) from e
 
+    # --- Catch-all fallback ---
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while creating the drink recipe."
         ) from e
-
-
 
 
 @router.get("/{recipe_id}", response_model=DrinkRecipeResponse)
@@ -159,12 +178,12 @@ def get_all_drink_recipes(db: Session = Depends(get_db)):
     through DrinkRecipeResponse.
 
     Args:
-        db (Session):
-            SQLAlchemy session injected via FastAPI dependency.
+    db (Session):
+        SQLAlchemy session injected via FastAPI dependency.
 
     Returns:
-        list[DrinkRecipeResponse]: A list of all drink recipes currently
-        available in the system.
+    list[DrinkRecipeResponse]: A list of all drink recipes currently
+    available in the system.
     """
     repo = DrinkRecipeRepository(db)
     recipes = repo.get_all_drink_recipes()

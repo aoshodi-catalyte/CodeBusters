@@ -5,6 +5,11 @@ from sqlalchemy.orm import sessionmaker
 from database import Base
 
 # Import ALL models so SQLAlchemy knows about every table
+from ingredient.ingredient_schema import (
+AllergenSchema,
+IngredientSchema,
+)
+from vendor.vendor_schema import Vendor
 from ingredient.ingredient_model import IngredientOut, AllergenOut
 from vendor.vendor_schema import Vendor
 from vendor.vendor_model import VendorBase
