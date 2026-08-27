@@ -13,7 +13,7 @@ from typing import List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from baked_good.baked_good_exceptions import (
+from exceptions.baked_good_exceptions import (
     DuplicateBakedGoodError,
     VendorNotFoundError,
 )
@@ -83,7 +83,7 @@ class BakedGoodRepository:
         ).first()
 
         if vendor is None:
-            raise VendorNotFoundError("Vendor not found")
+            raise VendorNotFoundError(baked_good.vendor_id)
 
         normalized_input = re.sub(r"\s+", "", baked_good.name).lower()
 
@@ -98,9 +98,7 @@ class BakedGoodRepository:
         )
 
         if existing is not None:
-            raise DuplicateBakedGoodError(
-                f"A baked good with name '{baked_good.name}' already exists"
-            )
+            raise DuplicateBakedGoodError(baked_good.name)
 
         new_baked_good = BakedGoodSchema(**baked_good.model_dump())
         self.session.add(new_baked_good)

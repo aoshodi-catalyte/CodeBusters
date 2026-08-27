@@ -14,10 +14,11 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from utils.response import to_response
-from ingredient.ingredient_exceptions import (
+from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
+    IngredientNotFoundError,
 )
 from ingredient.ingredient_model import (
     Ingredient,
@@ -188,21 +189,20 @@ def update(
             500 if an unexpected database error occurs.
     """
     repo = IngredientRepository(db)
+
     try:
         result = repo.update_ingredient(ingredient_id, ingredient)
 
-        if result is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "error": "ingredient_not_found",
-                    "message": (
-                        f"Ingredient with ID {ingredient_id} " "was not found."
-                    ),
-                },
-            )
-
         return to_response(IngredientOut, result)
+
+    except IngredientNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "ingredient_not_found",
+                "message": str(exc),
+            },
+        ) from exc
 
     except VendorNotFoundError as exc:
         raise HTTPException(
