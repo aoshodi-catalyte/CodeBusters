@@ -71,10 +71,10 @@ def login(
         auth = auth_repo.authenticate_user(db, form_data.username, form_data.password)
 
     except UsernameNotFoundError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     except IncorrectPasswordError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     employee = auth.employee
 
@@ -116,19 +116,19 @@ def get_current_employee(
         employee = auth_repo.get_current_employee(token, db)
 
     except TokenExpiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     except TokenInvalidSignatureError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     except TokenDecodeError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     except TokenMissingClaimError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     except EmployeeNotFoundError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     return employee
 
@@ -167,12 +167,12 @@ def register_employee_auth(
         auth_repo.register_employee_auth(db, data)
 
     except EmployeeNotFoundError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     except UsernameTakenError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     except CredentialsAlreadyExistError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return {"message": "Login credentials created successfully"}

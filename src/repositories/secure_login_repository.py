@@ -4,27 +4,26 @@ management, password hashing, and JWT token operations.
 """
 
 from datetime import datetime, timedelta, timezone
-from sqlalchemy.orm import Session
-from jose import ExpiredSignatureError, jwt, JWTError  # type: ignore
 
+from jose import ExpiredSignatureError, JWTError, jwt  # type: ignore
+from passlib.context import CryptContext  # type: ignore
+from sqlalchemy.orm import Session
+
+from config import settings
+from employee.employee_schema import EmployeeSchema
 from exceptions.secure_login_exceptions import (
-    UsernameNotFoundError,
+    CredentialsAlreadyExistError,
+    EmployeeNotFoundError,
     IncorrectPasswordError,
+    TokenDecodeError,
     TokenExpiredError,
     TokenInvalidSignatureError,
-    TokenDecodeError,
     TokenMissingClaimError,
-    EmployeeNotFoundError,
+    UsernameNotFoundError,
     UsernameTakenError,
-    CredentialsAlreadyExistError,
 )
-
-from passlib.context import CryptContext  # type: ignore
-
-from secure_login.secure_login_schema import EmployeeAuth
 from secure_login.secure_login_model import EmployeeAuthCreate
-from employee.employee_schema import EmployeeSchema
-from config import settings
+from secure_login.secure_login_schema import EmployeeAuth
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
