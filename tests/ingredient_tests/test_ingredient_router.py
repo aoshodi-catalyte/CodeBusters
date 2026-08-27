@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
 from routers.ingredient_router import router as ingredient_router
-from vendor.vendor_router import router as vendor_router
+from routers.vendor_router import router as vendor_router
 
 # Use an in-memory SQLite database for fast integration tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"

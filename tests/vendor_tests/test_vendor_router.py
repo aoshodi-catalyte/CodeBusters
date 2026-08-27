@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 from database import Base
 
 
-from vendor.vendor_router import router, get_db
+from routers.vendor_router import router, get_db
 
 
 @pytest.fixture
