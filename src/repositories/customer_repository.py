@@ -9,6 +9,8 @@ domain exceptions instead.
 """
 
 
+from sqlalchemy.exc import IntegrityError
+
 from customer.customer_model import CustomerCreate
 from customer.customer_schema import CustomerSchema
 from exceptions.customer_exceptions import (

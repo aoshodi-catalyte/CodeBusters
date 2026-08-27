@@ -54,3 +54,45 @@ class IngredientConstraintError(Exception):
         super().__init__(
             "The ingredient violates a database constraint."
         )
+
+
+class IngredientNotFoundError(Exception):
+    """Raised when an ingredient ID does not exist in the database."""
+
+    def __init__(self, ingredient_id: int) -> None:
+        self.ingredient_id = ingredient_id
+
+        super().__init__(
+            f"Ingredient with ID {ingredient_id} does not exist."
+        )
+
+
+class AllergenNotFoundError(Exception):
+    """Raised when an allergen does not exist."""
+
+    def __init__(self, allergen_name: str) -> None:
+        self.allergen_name = allergen_name
+
+        super().__init__(
+            f"Allergen '{allergen_name}' does not exist."
+        )
+
+class IngredientAlreadyInactiveError(Exception):
+    """Raised when attempting to deactivate an inactive ingredient."""
+
+    def __init__(self, ingredient_id: int) -> None:
+        self.ingredient_id = ingredient_id
+
+        super().__init__(
+            f"Ingredient with ID {ingredient_id} is already inactive."
+        )
+
+class InactiveIngredientError(Exception):
+    """Raised when an operation requires an active ingredient."""
+
+    def __init__(self, ingredient_id: int) -> None:
+        self.ingredient_id = ingredient_id
+
+        super().__init__(
+            f"Ingredient with ID {ingredient_id} is inactive."
+        )

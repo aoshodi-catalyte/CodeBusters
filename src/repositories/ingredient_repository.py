@@ -7,6 +7,7 @@ from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
+    IngredientNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
@@ -140,7 +141,7 @@ class IngredientRepository:
             )
 
             if ingredient is None:
-                return None
+                raise IngredientNotFoundError(ingredient_id)
 
             vendor = (
                 self.db.query(Vendor)

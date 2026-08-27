@@ -10,6 +10,7 @@ from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     VendorNotFoundError,
+    IngredientNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
 from repositories.ingredient_repository import (
@@ -375,7 +376,7 @@ def test_update_ingredient_is_persisted(db):
 
 
 def test_update_ingredient_not_found(db):
-    """Test that updating a nonexistent ingredient returns None."""
+    """Test that updating a nonexistent ingredient raises an error."""
     vendor = Vendor(
         name="Missing Ingredient Vendor",
         contact_name="John Doe",
@@ -393,14 +394,18 @@ def test_update_ingredient_not_found(db):
         name="Flour",
         vendor_id=vendor.id,
     )
+
     repo = IngredientRepository(db)
-    result = repo.update_ingredient(
-        ingredient_id=9999,
-        ingredient_data=ingredient_data,
+
+    with pytest.raises(IngredientNotFoundError) as exc_info:
+        repo.update_ingredient(
+            ingredient_id=9999,
+            ingredient_data=ingredient_data,
+        )
+
+    assert str(exc_info.value) == (
+        "Ingredient with ID 9999 does not exist."
     )
-
-    assert result is None
-
 
 def test_update_ingredient_replaces_allergens(db):
     """Test that updating an ingredient replaces its allergens."""
