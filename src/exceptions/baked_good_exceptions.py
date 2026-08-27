@@ -22,4 +22,3 @@ class DuplicateBakedGoodError(Exception):
         super().__init__(
             f"A baked good with name '{baked_good_name}' already exists."
         )
-
