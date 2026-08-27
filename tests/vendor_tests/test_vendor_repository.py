@@ -5,22 +5,31 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from database import Base
-
-
-from database import Base
+from exceptions.vendor_exceptions import (
+    DuplicateVendorException,
+    VendorDeletionException,
+    VendorNotFoundException,
+)
+from ingredient.ingredient_schema import IngredientSchema
+from repositories.vendor_repository import VendorRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor
-from repositories.vendor_repository import VendorRepository
-from ingredient.ingredient_schema import IngredientSchema
 
 
 @pytest.fixture
 def db_session():
+    """Create a temporary database session for testing."""
     engine = create_engine("sqlite:///:memory:")
+
     Base.metadata.create_all(bind=engine)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = TestingSessionLocal()
+    testing_session_local = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+    )
+
+    session = testing_session_local()
 
     try:
         yield session
@@ -30,7 +39,9 @@ def db_session():
 
 
 def test_create_new_vendor(db_session):
+    """Test creating a new vendor."""
     repo = VendorRepository(db_session)
+
     vendor_data = VendorBase(
         active=True,
         name="Bob's Burgers",
@@ -48,7 +59,9 @@ def test_create_new_vendor(db_session):
 
 
 def test_vendor_ingredients_relationship(db_session):
+    """Test the relationship between vendors and ingredients."""
     repo = VendorRepository(db_session)
+
     vendor = repo.create_new_vendor(
         VendorBase(
             active=True,
@@ -68,6 +81,7 @@ def test_vendor_ingredients_relationship(db_session):
         unit_of_measure="lb",
         vendor_id=vendor.id,
     )
+
     db_session.add(ingredient)
     db_session.commit()
     db_session.refresh(vendor)
@@ -76,7 +90,9 @@ def test_vendor_ingredients_relationship(db_session):
     assert vendor.ingredients[0].name == "Ground Beef"
     assert ingredient.vendor.name == "Bob's Burgers Supply Co"
 
+
 def test_get_all_vendors_returns_all_vendors(db_session):
+    """Test retrieving multiple vendors."""
     vendor1 = Vendor(
         active=True,
         name="Vendor One",
@@ -108,6 +124,7 @@ def test_get_all_vendors_returns_all_vendors(db_session):
 
 
 def test_get_all_vendors_returns_single_vendor(db_session):
+    """Test retrieving a single vendor."""
     vendor = Vendor(
         active=True,
         name="Vendor One",
@@ -130,8 +147,43 @@ def test_get_all_vendors_returns_single_vendor(db_session):
 
 
 def test_get_all_vendors_returns_empty_list_when_no_vendors(db_session):
+    """Test retrieving vendors when none exist."""
     repo = VendorRepository(db_session)
 
     result = repo.get_all_vendors()
 
     assert result == []
+
+
+def test_vendor_not_found_exception():
+    """Test the VendorNotFoundException."""
+    exception = VendorNotFoundException(123)
+
+    assert exception.vendor_id == 123
+    assert str(exception) == "Vendor with ID 123 was not found."
+
+
+def test_duplicate_vendor_exception():
+    """Test the DuplicateVendorException."""
+    exception = DuplicateVendorException(
+        field="email",
+        value="test@vendor.com",
+    )
+
+    assert exception.field == "email"
+    assert exception.value == "test@vendor.com"
+    assert (
+        str(exception)
+        == "Vendor with email 'test@vendor.com' already exists."
+    )
+
+
+def test_vendor_deletion_exception():
+    """Test the VendorDeletionException."""
+    exception = VendorDeletionException(123)
+
+    assert exception.vendor_id == 123
+    assert (
+        str(exception)
+        == "Vendor 123 cannot be deleted because it has associated records."
+    )
