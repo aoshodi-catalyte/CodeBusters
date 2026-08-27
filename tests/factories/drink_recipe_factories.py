@@ -22,7 +22,7 @@ def drink_types(db):
 @pytest.fixture
 def ingredient_factory(db):
     """Creates and persists ingredients quickly."""
-    def create(name="Milk", cost=4.00, amount=1.00, uom="gal", vendor_id=1):
+    def create(name="Milk", cost=8.00, amount=1.00, uom="gal", vendor_id=1):
         ing = IngredientSchema(
             name=name,
             purchasing_cost=cost,
