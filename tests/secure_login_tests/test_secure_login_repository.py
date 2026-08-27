@@ -1,7 +1,8 @@
 import pytest
 from types import SimpleNamespace
 
-from jose import JWTError  # type: ignore
+from jose import ExpiredSignatureError, JWTError  # type: ignore
+import models  # noqa: F401
 from repositories.secure_login_repository import SecureLoginRepository
 from exceptions.secure_login_exceptions import (
     UsernameNotFoundError,
@@ -34,27 +35,26 @@ class FakeDB:
         self.employee = employee
         self.username = username
         self.credentials = credentials
-        self.auth_query_count = 0
 
         self.added = None
         self.committed = False
         self.refreshed = None
 
+        self.auth_query_count = 0
+
     def query(self, model):
-        # Employee lookup
+
         if model.__name__ == "EmployeeSchema":
             return FakeQuery(self.employee)
 
-        if model.__name__ in ("EmployeeAuth", "FakeEmployeeAuth"):
+        if model.__name__ == "EmployeeAuth":
             self.auth_query_count += 1
 
             if self.auth_query_count == 1:
-                auth_record = self.username
-                if auth_record is None and hasattr(self.employee, "password_hash"):
-                    auth_record = self.employee
-                return FakeQuery(auth_record)
+                return FakeQuery(self.username)
 
-            return FakeQuery(self.credentials)
+            if self.auth_query_count == 2:
+                return FakeQuery(self.credentials)
 
         return FakeQuery(None)
 
@@ -68,46 +68,38 @@ class FakeDB:
         self.refreshed = obj
 
 
-class FakeEmployeeAuth:
-    username = object()
-    employee_id = object()
-
-    def __init__(self, employee_id, username, password_hash):
-        self.employee_id = employee_id
-        self.username = username
-        self.password_hash = password_hash
-
-
-@pytest.fixture(autouse=True)
-def use_fake_employee_auth(monkeypatch):
-    monkeypatch.setattr(
-        "repositories.secure_login_repository.EmployeeAuth", FakeEmployeeAuth
-    )
-
-
 def test_authenticate_user_success(monkeypatch):
     auth_record = SimpleNamespace(
-        username="jane", password_hash="secret", employee=SimpleNamespace(id=7)
+        username="jane",
+        password_hash="secret",
+        employee=SimpleNamespace(id=7),
     )
 
-    db = FakeDB(employee=auth_record)
-    monkeypatch.setattr(repo, "verify_password", lambda p, h: p == h)
+    db = FakeDB(username=auth_record)
+
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.pwd_context.verify",
+        lambda p, h: p == h,
+    )
 
     result = repo.authenticate_user(db, "jane", "secret")
     assert result is auth_record
 
 
 def test_authenticate_user_raises_username_not_found():
-    db = FakeDB(employee=None)
+    db = FakeDB(username=None)
     with pytest.raises(UsernameNotFoundError):
         repo.authenticate_user(db, "ghost", "secret")
 
 
 def test_authenticate_user_raises_incorrect_password(monkeypatch):
     auth_record = SimpleNamespace(username="jane", password_hash="secret")
-    db = FakeDB(employee=auth_record)
+    db = FakeDB(username=auth_record)
 
-    monkeypatch.setattr(repo, "verify_password", lambda *_: False)
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.pwd_context.verify",
+        lambda *_: False,
+    )
 
     with pytest.raises(IncorrectPasswordError):
         repo.authenticate_user(db, "jane", "wrong")
@@ -132,7 +124,7 @@ def test_get_current_employee_success(monkeypatch):
 
 def test_get_current_employee_raises_expired_token(monkeypatch):
     def fake_decode(token, key, algorithms):
-        raise TokenExpiredError()
+        raise ExpiredSignatureError()
 
     monkeypatch.setattr("repositories.secure_login_repository.jwt.decode", fake_decode)
 
@@ -198,7 +190,7 @@ def test_get_current_employee_raises_employee_not_found(monkeypatch):
 
 def test_register_employee_auth_success():
     db = FakeDB(
-        employee=SimpleNamespace(id=7),
+        employee=SimpleNamespace(id=7, role=SimpleNamespace(role="employee")),
         username=None,
         credentials=None,
     )
@@ -222,7 +214,7 @@ def test_register_employee_auth_raises_employee_not_found():
 
 def test_register_employee_auth_raises_username_taken():
     db = FakeDB(
-        employee=SimpleNamespace(id=7),
+        employee=SimpleNamespace(id=7, role=SimpleNamespace(role="employee")),
         username=SimpleNamespace(),
         credentials=None,
     )
@@ -235,7 +227,7 @@ def test_register_employee_auth_raises_username_taken():
 
 def test_register_employee_auth_raises_credentials_exist():
     db = FakeDB(
-        employee=SimpleNamespace(id=7),
+        employee=SimpleNamespace(id=7, role=SimpleNamespace(role="employee")),
         username=None,
         credentials=SimpleNamespace(),
     )

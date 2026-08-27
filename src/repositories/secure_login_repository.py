@@ -59,7 +59,7 @@ class SecureLoginRepository:
                 A hashed password string suitable for storage.
         """
 
-        return plain
+        return pwd_context.hash(plain)
 
     def verify_password(self, plain: str, hashed: str) -> bool:
         """
@@ -121,7 +121,7 @@ class SecureLoginRepository:
         if auth is None:
             raise UsernameNotFoundError(username)
 
-        if not self.verify_password(password, auth.password_hash):
+        if not pwd_context.verify(password, auth.password_hash):
             raise IncorrectPasswordError(username)
 
         return auth
@@ -264,6 +264,7 @@ class SecureLoginRepository:
 
         new_auth = EmployeeAuth(
             employee_id=data.employee_id,
+            role=employee.role.role,  # <-- REQUIRED
             username=data.username,
             password_hash=self.hash_password(data.password),
         )
