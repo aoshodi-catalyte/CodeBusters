@@ -7,6 +7,7 @@ allow repositories and services to raise clear, typed errors that can be
 caught and translated into appropriate API responses.
 """
 
+
 class VendorNotFoundError(Exception):
     """Raised when the specified vendor does not exist."""
 
@@ -18,9 +19,7 @@ class VendorNotFoundError(Exception):
         """
         self.vendor_id = vendor_id
 
-        super().__init__(
-            f"Vendor with ID {vendor_id} does not exist."
-        )
+        super().__init__(f"Vendor with ID {vendor_id} does not exist.")
 
 
 class IngredientAlreadyExistsError(Exception):
@@ -34,9 +33,7 @@ class IngredientAlreadyExistsError(Exception):
         """
         self.name = name
 
-        super().__init__(
-            f"An ingredient with the name '{name}' already exists."
-        )
+        super().__init__(f"An ingredient with the name '{name}' already exists.")
 
 
 class IngredientConstraintError(Exception):
@@ -51,9 +48,7 @@ class IngredientConstraintError(Exception):
         """
         self.constraint = constraint
 
-        super().__init__(
-            "The ingredient violates a database constraint."
-        )
+        super().__init__("The ingredient violates a database constraint.")
 
 
 class IngredientNotFoundError(Exception):
@@ -62,9 +57,7 @@ class IngredientNotFoundError(Exception):
     def __init__(self, ingredient_id: int) -> None:
         self.ingredient_id = ingredient_id
 
-        super().__init__(
-            f"Ingredient with ID {ingredient_id} does not exist."
-        )
+        super().__init__(f"Ingredient with ID {ingredient_id} does not exist.")
 
 
 class AllergenNotFoundError(Exception):
@@ -73,9 +66,8 @@ class AllergenNotFoundError(Exception):
     def __init__(self, allergen_name: str) -> None:
         self.allergen_name = allergen_name
 
-        super().__init__(
-            f"Allergen '{allergen_name}' does not exist."
-        )
+        super().__init__(f"Allergen '{allergen_name}' does not exist.")
+
 
 class IngredientAlreadyInactiveError(Exception):
     """Raised when attempting to deactivate an inactive ingredient."""
@@ -83,9 +75,8 @@ class IngredientAlreadyInactiveError(Exception):
     def __init__(self, ingredient_id: int) -> None:
         self.ingredient_id = ingredient_id
 
-        super().__init__(
-            f"Ingredient with ID {ingredient_id} is already inactive."
-        )
+        super().__init__(f"Ingredient with ID {ingredient_id} is already inactive.")
+
 
 class InactiveIngredientError(Exception):
     """Raised when an operation requires an active ingredient."""
@@ -93,6 +84,4 @@ class InactiveIngredientError(Exception):
     def __init__(self, ingredient_id: int) -> None:
         self.ingredient_id = ingredient_id
 
-        super().__init__(
-            f"Ingredient with ID {ingredient_id} is inactive."
-        )
+        super().__init__(f"Ingredient with ID {ingredient_id} is inactive.")
