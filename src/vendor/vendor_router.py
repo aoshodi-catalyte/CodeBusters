@@ -55,3 +55,22 @@ async def get_all_vendors(db: Session = Depends(get_db)):
     """
     repo = VendorRepository(db)
     return repo.get_all_vendors()
+
+@router.get(
+    "/vendors/{vendor_id}",
+    response_model=VendorResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_vendor_by_id(vendor_id: int, db: Session = Depends(get_db)):
+    """Retrieve a single vendor by ID."""
+
+    repo = VendorRepository(db)
+    vendor = repo.get_vendor_by_id(vendor_id)
+
+    if vendor is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vendor not found.",
+        )
+
+    return vendor

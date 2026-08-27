@@ -135,3 +135,66 @@ def test_get_all_vendors_returns_empty_list_when_no_vendors(db_session):
     result = repo.get_all_vendors()
 
     assert result == []
+    
+def test_get_vendor_by_id_returns_vendor(db_session):
+    vendor = Vendor(
+        active=True,
+        name="Bob's Burgers",
+        contact_name="Bob Belcher",
+        contact_role="CEO",
+        email="bob@burger.com",
+        phone="1234567896",
+    )
+
+    db_session.add(vendor)
+    db_session.commit()
+    db_session.refresh(vendor)
+
+    repo = VendorRepository(db_session)
+
+    result = repo.get_vendor_by_id(vendor.id)
+
+    assert result is not None
+    assert result.id == vendor.id
+    assert result.name == "Bob's Burgers"
+    assert result.email == "bob@burger.com"
+
+def test_get_vendor_by_id_returns_none_when_vendor_does_not_exist(db_session):
+    repo = VendorRepository(db_session)
+
+    result = repo.get_vendor_by_id(999)
+
+    assert result is None
+
+def test_get_vendor_by_id_returns_correct_vendor(db_session):
+    vendor_1 = Vendor(
+        active=True,
+        name="Bob's Burgers",
+        contact_name="Bob Belcher",
+        contact_role="CEO",
+        email="bob@burger.com",
+        phone="1234567896",
+    )
+
+    vendor_2 = Vendor(
+        active=True,
+        name="Acme Supplies",
+        contact_name="Wile E. Coyote",
+        contact_role="Manager",
+        email="wile@acme.com",
+        phone="9876543210",
+    )
+
+    db_session.add_all([vendor_1, vendor_2])
+    db_session.commit()
+    db_session.refresh(vendor_1)
+    db_session.refresh(vendor_2)
+
+    repo = VendorRepository(db_session)
+
+    result = repo.get_vendor_by_id(vendor_2.id)
+
+    assert result is not None
+    assert result.id == vendor_2.id
+    assert result.name == "Acme Supplies"
+    assert result.email == "wile@acme.com"

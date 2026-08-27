@@ -192,3 +192,80 @@ def test_get_all_vendors_response_contains_expected_fields(client):
     assert "contact_role" in vendor
     assert "email" in vendor
     assert "phone" in vendor
+
+def test_get_vendor_by_id(client):
+    vendor_payload = {
+        "active": True,
+        "name": "Bob's Burgers",
+        "contact_name": "Bob Belcher",
+        "contact_role": "CEO",
+        "email": "bob@burger.com",
+        "phone": "1234567896",
+    }
+
+    create_response = client.post("/vendors", json=vendor_payload)
+
+    assert create_response.status_code == 201
+
+    created_vendor = create_response.json()
+    vendor_id = created_vendor["id"]
+
+    response = client.get(f"/vendors/{vendor_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == vendor_id
+    assert data["active"] is True
+    assert data["name"] == "Bob's Burgers"
+    assert data["contact_name"] == "Bob Belcher"
+    assert data["contact_role"] == "CEO"
+    assert data["email"] == "bob@burger.com"
+    assert data["phone"] == "123-456-7896"
+
+
+def test_get_vendor_by_id_not_found(client):
+    response = client.get("/vendors/999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Vendor not found."
+
+
+def test_get_vendor_by_id_returns_correct_vendor(client):
+    vendor_1 = {
+        "active": True,
+        "name": "Bob's Burgers",
+        "contact_name": "Bob Belcher",
+        "contact_role": "CEO",
+        "email": "bob@burger.com",
+        "phone": "1234567896",
+    }
+
+    vendor_2 = {
+        "active": True,
+        "name": "Acme Supplies",
+        "contact_name": "Wile E. Coyote",
+        "contact_role": "Manager",
+        "email": "wile@acme.com",
+        "phone": "9876543210",
+    }
+
+    response_1 = client.post("/vendors", json=vendor_1)
+    response_2 = client.post("/vendors", json=vendor_2)
+
+    assert response_1.status_code == 201
+    assert response_2.status_code == 201
+
+    vendor_2_id = response_2.json()["id"]
+
+    response = client.get(f"/vendors/{vendor_2_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == vendor_2_id
+    assert data["name"] == "Acme Supplies"
+    assert data["contact_name"] == "Wile E. Coyote"
+    assert data["email"] == "wile@acme.com"
