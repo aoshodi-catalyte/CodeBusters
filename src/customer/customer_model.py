@@ -2,7 +2,8 @@
 Pydantic models for Customer API data.
 
 This module defines the request and response models used by the Customer API.
-CustomerCreate validates and normalizes incoming customer data, while
+CustomerCreate validates and normalizes incoming customer data, CustomerUpdate
+validates data submitted when updating an existing customer, and
 CustomerResponse formats customer data for API responses.
 """
 
@@ -126,6 +127,81 @@ class CustomerCreate(BaseModel):
         Raises:
             ValueError: If the phone number does not contain exactly
                 10 digits.
+        """
+
+        digits = re.sub(r"\D", "", value)
+
+        if len(digits) != 10:
+            raise ValueError(
+                "Phone number must contain exactly 10 digits."
+            )
+
+        return digits
+
+
+class CustomerUpdate(BaseModel):
+    """
+    Pydantic model used to validate data when updating an existing
+    customer via PUT.
+
+    All fields (except the optional last name) must be provided, since
+    PUT represents a full replacement of the customer's properties.
+    Validation and normalization rules mirror CustomerCreate.
+    """
+
+    active: bool
+    first_name: str = Field(
+        min_length=1,
+        max_length=50
+    )
+    last_name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=50
+    )
+    email: EmailStr
+    phone_number: str
+    loyalty_points: int = Field(ge=0)
+
+    @field_validator("email")
+    @classmethod
+    def validate_and_normalize_email(
+        cls,
+        value: EmailStr
+    ) -> str:
+        """
+        Validate and normalize the customer's email address.
+        """
+
+        email = str(value)
+
+        if not EMAIL_PATTERN.fullmatch(email):
+            raise ValueError(
+                "Invalid email format."
+            )
+
+        return email.lower()
+
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        """
+        Normalize customer names by removing leading/trailing whitespace
+        and converting multiple consecutive spaces into a single space.
+        """
+        if value is None:
+            return None
+
+        return re.sub(r"\s+", " ", str(value)).strip()
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(
+        cls,
+        value: str
+    ) -> str:
+        """
+        Validate and normalize a phone number.
         """
 
         digits = re.sub(r"\D", "", value)
