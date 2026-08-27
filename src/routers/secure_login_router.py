@@ -3,13 +3,25 @@ Authentication router providing login, identity retrieval, and credential
 registration for employee accounts.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.secure_login_repository import SecureLoginRepository
 from secure_login.secure_login_model import EmployeeAuthCreate
+
+from exceptions.secure_login_exceptions import (
+    UsernameNotFoundError,
+    IncorrectPasswordError,
+    TokenExpiredError,
+    TokenInvalidSignatureError,
+    TokenDecodeError,
+    TokenMissingClaimError,
+    EmployeeNotFoundError,
+    UsernameTakenError,
+    CredentialsAlreadyExistError,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -23,33 +35,46 @@ def login(
     db: Session = Depends(get_db),
 ):
     """
-    Authenticate an employee and return a JWT access token.
+    Authenticate an employee and issue a JWT access token.
 
     This endpoint validates the provided username and password using the
     authentication repository. If authentication succeeds, a signed JWT
-    token containing the employee ID and role is returned.
+    token containing the employee ID and role is returned. The token can
+    be used to authorize subsequent requests to protected endpoints.
+
+    Authentication failures raise typed exceptions from the repository,
+    which are translated into HTTP 401 responses:
+
+    - UsernameNotFoundError:
+        Raised when the provided username does not exist.
+    - IncorrectPasswordError:
+        Raised when the password does not match the stored hash.
 
     Args:
         form_data (OAuth2PasswordRequestForm):
-            The OAuth2 login form containing username and password.
+            The OAuth2 login form containing `username` and `password`.
         db (Session):
             Database session dependency.
 
     Returns:
-        dict: A dictionary containing the access token and token type.
+        dict:
+            A dictionary containing:
+            - `access_token`: The signed JWT token.
+            - `token_type`: Always `"bearer"`.
 
     Raises:
-        HTTPException:
-            - 401: If the username or password is invalid.
+        HTTPException (401):
+            If the username does not exist or the password is incorrect.
     """
 
-    auth = auth_repo.authenticate_user(db, form_data.username, form_data.password)
+    try:
+        auth = auth_repo.authenticate_user(db, form_data.username, form_data.password)
 
-    if not auth:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-        )
+    except UsernameNotFoundError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    except IncorrectPasswordError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
 
     employee = auth.employee
 
@@ -66,10 +91,11 @@ def get_current_employee(
     db: Session = Depends(get_db),
 ):
     """
-    Retrieve the currently authenticated employee based on the JWT token.
+    Retrieve the currently authenticated employee based on the provided JWT token.
 
-    The token is decoded using the authentication repository. If valid,
-    the corresponding employee record is returned.
+    This endpoint decodes and validates the JWT access token using the
+    authentication repository. If the token is valid and the referenced
+    employee exists, the corresponding employee record is returned.
 
     Args:
         token (str):
@@ -78,20 +104,31 @@ def get_current_employee(
             Database session dependency.
 
     Returns:
-        EmployeeSchema: The authenticated employee record.
+        EmployeeSchema:
+            The authenticated employee record.
 
     Raises:
-        HTTPException:
-            - 401: If the token is invalid or the employee no longer exists.
+        HTTPException (401):
+            If the token is invalid, expired, malformed, missing claims,
+            or references a non‑existent employee.
     """
-
     try:
         employee = auth_repo.get_current_employee(token, db)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
-    if not employee:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except TokenExpiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    except TokenInvalidSignatureError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    except TokenDecodeError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    except TokenMissingClaimError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
 
     return employee
 
@@ -105,9 +142,10 @@ def register_employee_auth(
     Register login credentials for an existing employee.
 
     This endpoint delegates credential creation to the authentication
-    repository. Validation includes checking whether the employee exists,
-    whether the username is already taken, and whether the employee
-    already has login credentials.
+    repository. Validation includes ensuring the employee exists, the
+    username is not already taken, and the employee does not already
+    have login credentials. If validation succeeds, a new authentication
+    record is created and persisted.
 
     Args:
         data (EmployeeAuthCreate):
@@ -116,16 +154,25 @@ def register_employee_auth(
             Database session dependency.
 
     Returns:
-        dict: A confirmation message indicating successful creation.
+        dict:
+            A confirmation message indicating successful credential creation.
 
     Raises:
-        HTTPException:
-            - 400: If validation fails (e.g., username taken, employee not found).
+        HTTPException (400):
+            If the employee does not exist, the username is taken, or the
+            employee already has credentials.
     """
 
     try:
         auth_repo.register_employee_auth(db, data)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    except UsernameTakenError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    except CredentialsAlreadyExistError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     return {"message": "Login credentials created successfully"}
