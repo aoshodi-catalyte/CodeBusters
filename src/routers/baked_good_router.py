@@ -75,7 +75,7 @@ def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponse
 @router.get(
     "/{baked_good_id}",
     status_code=status.HTTP_200_OK,
-    response_model=BakedGoodResponseModel,
+    response_model=BakedGoodResponseModel
 )
 def get_baked_good_by_id(
     baked_good_id: int, db: Session = Depends(get_db)
