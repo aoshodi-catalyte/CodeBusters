@@ -78,11 +78,6 @@ async def get_all_vendors(db: Session = Depends(get_db)):
     response_model=VendorResponse,
     status_code=status.HTTP_200_OK,
 )
-@router.get(
-    "/vendors/{vendor_id}",
-    response_model=VendorResponse,
-    status_code=status.HTTP_200_OK,
-)
 def get_vendor_by_id(
     vendor_id: int,
     db: Session = Depends(get_db),
