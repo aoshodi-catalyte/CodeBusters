@@ -317,4 +317,379 @@ def test_create_customer_with_invalid_phone_number(client):
     )
 
     assert response.status_code == 422
-    
+
+
+def test_update_customer(client):
+    """
+    Verifies that a customer can be updated through the API and the
+    updated entity is returned.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 100
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    update_payload = {
+        "active": False,
+        "first_name": "Johnny",
+        "last_name": "Doeson",
+        "email": "johnny@example.com",
+        "phone_number": "5559998888",
+        "loyalty_points": 300
+    }
+
+    response = client.put(
+        f"/customers/{customer_id}",
+        json=update_payload
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["id"] == customer_id
+    assert result["active"] is False
+    assert result["first_name"] == "Johnny"
+    assert result["last_name"] == "Doeson"
+    assert result["email"] == "johnny@example.com"
+    assert result["phone_number"] == "555-999-8888"
+    assert result["loyalty_points"] == 300
+
+
+def test_update_customer_persists_change(client):
+    """
+    Verifies that an update is actually persisted and reflected on a
+    subsequent GET request.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "email": "jane@example.com",
+            "phone_number": "5551112222",
+            "active": True,
+            "loyalty_points": 50
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    client.put(
+        f"/customers/{customer_id}",
+        json={
+            "active": True,
+            "first_name": "Janet",
+            "last_name": "Smith",
+            "email": "janet@example.com",
+            "phone_number": "5551112222",
+            "loyalty_points": 75
+        }
+    )
+
+    get_response = client.get(f"/customers/{customer_id}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["first_name"] == "Janet"
+    assert get_response.json()["loyalty_points"] == 75
+
+
+def test_update_customer_with_nonexistent_id(client):
+    """
+    Verifies that updating a customer with an ID that does not exist
+    returns HTTP 404.
+    """
+
+    update_payload = {
+        "active": True,
+        "first_name": "John",
+        "email": "john@example.com",
+        "phone_number": "5551234567",
+        "loyalty_points": 0
+    }
+
+    response = client.put(
+        "/customers/999",
+        json=update_payload
+    )
+
+    assert response.status_code == 404
+
+    assert response.json() == {
+        "detail": "Customer with ID 999 was not found."
+    }
+
+
+def test_update_customer_with_duplicate_email(client):
+    """
+    Verifies that updating a customer to use another customer's email
+    returns HTTP 409.
+    """
+
+    client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551111111",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    second_response = client.post(
+        "/customers",
+        json={
+            "first_name": "Jane",
+            "email": "jane@example.com",
+            "phone_number": "5552222222",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    second_customer_id = second_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{second_customer_id}",
+        json={
+            "active": True,
+            "first_name": "Jane",
+            "email": "john@example.com",
+            "phone_number": "5552222222",
+            "loyalty_points": 0
+        }
+    )
+
+    assert response.status_code == 409
+
+    assert response.json() == {
+        "detail": "A customer with the email 'john@example.com' "
+                   "already exists."
+    }
+
+
+def test_update_customer_with_duplicate_phone_number(client):
+    """
+    Verifies that updating a customer to use another customer's phone
+    number returns HTTP 409.
+    """
+
+    client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551111111",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    second_response = client.post(
+        "/customers",
+        json={
+            "first_name": "Jane",
+            "email": "jane@example.com",
+            "phone_number": "5552222222",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    second_customer_id = second_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{second_customer_id}",
+        json={
+            "active": True,
+            "first_name": "Jane",
+            "email": "jane@example.com",
+            "phone_number": "5551111111",
+            "loyalty_points": 0
+        }
+    )
+
+    assert response.status_code == 409
+
+    assert response.json() == {
+        "detail": "A customer with the phone number '5551111111' "
+                   "already exists."
+    }
+
+
+def test_update_customer_allows_keeping_own_email_and_phone(client):
+    """
+    Verifies that a customer can be updated without changing their
+    email or phone number.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{customer_id}",
+        json={
+            "active": True,
+            "first_name": "Jonathan",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "loyalty_points": 10
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["first_name"] == "Jonathan"
+    assert response.json()["loyalty_points"] == 10
+
+
+def test_update_customer_with_invalid_phone_number(client):
+    """
+    Verifies that the API rejects an update payload with a malformed
+    phone number.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{customer_id}",
+        json={
+            "active": True,
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "555-123-456",
+            "loyalty_points": 0
+        }
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_customer_with_invalid_email(client):
+    """
+    Verifies that the API rejects an update payload with a malformed
+    email address.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{customer_id}",
+        json={
+            "active": True,
+            "first_name": "John",
+            "email": "not-an-email",
+            "phone_number": "5551234567",
+            "loyalty_points": 0
+        }
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_customer_with_negative_loyalty_points(client):
+    """
+    Verifies that the API rejects an update payload with negative
+    loyalty points.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{customer_id}",
+        json={
+            "active": True,
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "loyalty_points": -5
+        }
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_customer_missing_required_field(client):
+    """
+    Verifies that the API rejects an update payload missing a
+    required field.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/customers/{customer_id}",
+        json={
+            "active": True,
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "loyalty_points": 0
+        }
+    )
+
+    assert response.status_code == 422

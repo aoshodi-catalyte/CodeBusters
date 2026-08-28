@@ -9,7 +9,7 @@ from exceptions.customer_exceptions import (
     CustomerNotFoundError,
     CustomerPhoneAlreadyExistsError,
 )
-from customer.customer_model import CustomerCreate
+from customer.customer_model import CustomerCreate, CustomerUpdate
 from repositories.customer_repository import CustomerRepository
 from customer.customer_schema import CustomerSchema
 
@@ -287,3 +287,184 @@ def test_get_customer_by_id_raises_when_not_found(repository):
 
     with pytest.raises(CustomerNotFoundError):
         repository.get_customer_by_id(999)
+
+
+def test_update_customer(repository):
+    """Repository should update and persist an existing customer's fields."""
+
+    original = CustomerCreate(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+        active=True,
+        loyalty_points=100
+    )
+
+    created_customer = repository.create_customer(original)
+
+    updated_data = CustomerUpdate(
+        active=False,
+        first_name="Johnny",
+        last_name="Smithson",
+        email="johnny@example.com",
+        phone_number="7735559999",
+        loyalty_points=250
+    )
+
+    updated_customer = repository.update_customer(
+        created_customer.id,
+        updated_data
+    )
+
+    assert updated_customer.id == created_customer.id
+    assert updated_customer.active is False
+    assert updated_customer.first_name == "Johnny"
+    assert updated_customer.last_name == "Smithson"
+    assert updated_customer.email == "johnny@example.com"
+    assert updated_customer.phone_number == "7735559999"
+    assert updated_customer.loyalty_points == 250
+
+
+def test_update_customer_persists_to_database(repository, db):
+    """Updated customer fields should actually be persisted in the database."""
+
+    original = CustomerCreate(
+        first_name="Jane",
+        last_name="Doe",
+        email="jane@example.com",
+        phone_number="3125551234"
+    )
+
+    created_customer = repository.create_customer(original)
+
+    updated_data = CustomerUpdate(
+        active=True,
+        first_name="Janet",
+        last_name="Doe",
+        email="janet@example.com",
+        phone_number="3125551234",
+        loyalty_points=500
+    )
+
+    repository.update_customer(created_customer.id, updated_data)
+
+    stored_customer = (
+        db.query(CustomerSchema)
+        .filter_by(id=created_customer.id)
+        .first()
+    )
+
+    assert stored_customer is not None
+    assert stored_customer.first_name == "Janet"
+    assert stored_customer.email == "janet@example.com"
+    assert stored_customer.loyalty_points == 500
+
+
+def test_update_customer_raises_when_id_not_found(repository):
+    """Repository should raise CustomerNotFoundError for a nonexistent ID."""
+
+    updated_data = CustomerUpdate(
+        active=True,
+        first_name="John",
+        email="john@example.com",
+        phone_number="3125551234",
+        loyalty_points=0
+    )
+
+    with pytest.raises(CustomerNotFoundError):
+        repository.update_customer(999, updated_data)
+
+
+def test_update_customer_allows_unchanged_email(repository):
+    """Repository should allow a customer to keep their own existing email."""
+
+    original = CustomerCreate(
+        first_name="John",
+        email="john@example.com",
+        phone_number="3125551234"
+    )
+
+    created_customer = repository.create_customer(original)
+
+    updated_data = CustomerUpdate(
+        active=True,
+        first_name="Johnny",
+        email="john@example.com",
+        phone_number="3125551234",
+        loyalty_points=0
+    )
+
+    updated_customer = repository.update_customer(
+        created_customer.id,
+        updated_data
+    )
+
+    assert updated_customer.email == "john@example.com"
+    assert updated_customer.first_name == "Johnny"
+
+
+def test_update_customer_raises_when_email_belongs_to_another_customer(
+    repository
+):
+    """Repository should raise when the new email belongs to a different customer."""
+
+    first_customer = repository.create_customer(
+        CustomerCreate(
+            first_name="John",
+            email="john@example.com",
+            phone_number="3125551234"
+        )
+    )
+
+    second_customer = repository.create_customer(
+        CustomerCreate(
+            first_name="Jane",
+            email="jane@example.com",
+            phone_number="7735551234"
+        )
+    )
+
+    updated_data = CustomerUpdate(
+        active=True,
+        first_name="Jane",
+        email="john@example.com",
+        phone_number="7735551234",
+        loyalty_points=0
+    )
+
+    with pytest.raises(CustomerEmailAlreadyExistsError):
+        repository.update_customer(second_customer.id, updated_data)
+
+
+def test_update_customer_raises_when_phone_belongs_to_another_customer(
+    repository
+):
+    """Repository should raise when the new phone belongs to a different customer."""
+
+    first_customer = repository.create_customer(
+        CustomerCreate(
+            first_name="John",
+            email="john@example.com",
+            phone_number="3125551234"
+        )
+    )
+
+    second_customer = repository.create_customer(
+        CustomerCreate(
+            first_name="Jane",
+            email="jane@example.com",
+            phone_number="7735551234"
+        )
+    )
+
+    updated_data = CustomerUpdate(
+        active=True,
+        first_name="Jane",
+        email="jane@example.com",
+        phone_number="3125551234",
+        loyalty_points=0
+    )
+
+    with pytest.raises(CustomerPhoneAlreadyExistsError):
+        repository.update_customer(second_customer.id, updated_data)

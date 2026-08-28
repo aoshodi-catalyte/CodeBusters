@@ -1,11 +1,10 @@
 """
 FastAPI router for vendor-related API endpoints, including creation of new
-vendor records and handling of vendor domain exceptions.
+vendor records and handling of database integrity errors.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.orm import Session
-
 from database import get_db
 from exceptions.vendor_exceptions import (
 DuplicateVendorException,
@@ -14,6 +13,7 @@ VendorNotFoundException,
 from repositories.vendor_repository import VendorRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
+from repositories.vendor_repository import VendorRepository
 
 router = APIRouter()
 

@@ -1,13 +1,12 @@
-import models  # pylint: disable=unused-import
-
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
+import models
 from routers.vendor_router import router
 
 
