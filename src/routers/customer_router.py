@@ -16,7 +16,11 @@ from exceptions.customer_exceptions import (
     CustomerNotFoundError,
     CustomerPhoneAlreadyExistsError,
 )
-from customer.customer_model import CustomerCreate, CustomerResponse
+from customer.customer_model import (
+    CustomerCreate,
+    CustomerResponse,
+    CustomerUpdate,
+)
 from database import get_db
 from repositories.customer_repository import CustomerRepository
 
@@ -45,6 +49,49 @@ def create_customer(
 
     try:
         return repo.create_customer(customer)
+
+    except (
+        CustomerEmailAlreadyExistsError,
+        CustomerPhoneAlreadyExistsError,
+        CustomerConstraintError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.put(
+    "/customers/{customer_id}",
+    response_model=CustomerResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_customer(
+    customer_id: int,
+    customer: CustomerUpdate,
+    db: Session = Depends(get_db),
+):
+    """
+    Update an existing customer's properties.
+
+    Raises:
+        HTTPException 404:
+            If no customer exists with the provided ID.
+        HTTPException 409:
+            If the updated email or phone number belongs to another
+            customer, or the record violates another database
+            constraint.
+    """
+    repo = CustomerRepository(db)
+
+    try:
+        return repo.update_customer(customer_id, customer)
+
+    except CustomerNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
     except (
         CustomerEmailAlreadyExistsError,
