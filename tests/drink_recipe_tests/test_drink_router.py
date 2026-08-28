@@ -225,6 +225,158 @@ def test_update_drink_recipe_success(client, db, drink_types, ingredient_factory
     assert data["sale_price"] > data["production_cost"]
 
 
+def test_update_drink_recipe_replaces_ingredients(client, db, drink_types, ingredient_factory, recipe_payload_factory):
+    milk = ingredient_factory("Milk", 8.00, 1.00, "gal")
+    sugar = ingredient_factory("Sugar", 5.00, 1.00, "lb")
+    espresso = ingredient_factory("Espresso", 14.00, 1.00, "lb")
+
+    # Initial recipe: Milk + Sugar
+    initial_payload = recipe_payload_factory(
+        name="Latte",
+        description="Milk and sugar",
+        ingredients=[
+            (milk, 6.0, "fl_oz"),
+            (sugar, 5.0, "g"),
+        ],
+        drink_type="coffee",
+        markup=20,
+    )
+
+    create_response = client.post(
+        "/drink_recipes/",
+        json=initial_payload,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    recipe_id = create_response.json()["id"]
+
+    # Update recipe: Milk + Espresso
+    # Sugar should be removed.
+    updated_payload = recipe_payload_factory(
+        name="Updated Latte",
+        description="Milk and espresso",
+        ingredients=[
+            (milk, 8.0, "fl_oz"),
+            (espresso, 4.0, "oz"),
+        ],
+        drink_type="coffee",
+        markup=30,
+    )
+
+    update_response = client.put(
+        f"/drink_recipes/{recipe_id}",
+        json=updated_payload,
+    )
+
+    assert update_response.status_code == status.HTTP_200_OK
+
+    data = update_response.json()
+
+    assert data["name"] == "Updated Latte"
+    assert data["description"] == "Milk and espresso"
+    assert len(data["ingredients"]) == 2
+
+    ingredient_names = {
+        ingredient["name"]
+        for ingredient in data["ingredients"]
+    }
+
+    assert ingredient_names == {"Milk", "Espresso"}
+    assert "Sugar" not in ingredient_names
+
+    # Verify the replacement persisted in the database.
+    get_response = client.get(
+        f"/drink_recipes/{recipe_id}",
+    )
+
+    assert get_response.status_code == status.HTTP_200_OK
+
+    persisted = get_response.json()
+
+    persisted_names = {
+        ingredient["name"]
+        for ingredient in persisted["ingredients"]
+    }
+
+    assert persisted_names == {"Milk", "Espresso"}
+
+
+def test_update_drink_recipe_invalid_ingredient_rolls_back(client, db, drink_types, ingredient_factory, recipe_payload_factory):
+    milk = ingredient_factory("Milk", 8.00, 1.00, "gal")
+    sugar = ingredient_factory("Sugar", 5.00, 1.00, "lb")
+
+    initial_payload = recipe_payload_factory(
+        name="Latte",
+        description="Original recipe",
+        ingredients=[
+            (milk, 6.0, "fl_oz"),
+            (sugar, 5.0, "g"),
+        ],
+        drink_type="coffee",
+        markup=20,
+    )
+
+    create_response = client.post(
+        "/drink_recipes/",
+        json=initial_payload,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    original = create_response.json()
+    recipe_id = original["id"]
+
+    # Attempt to replace ingredients with one that does not exist.
+    bad_payload = recipe_payload_factory(
+        name="Changed Latte",
+        description="This update should fail",
+        ingredients=[
+            (milk, 10.0, "fl_oz"),
+            (type("Fake", (), {"id": 999999}), 5.0, "g"),
+        ],
+        drink_type="coffee",
+        markup=50,
+    )
+
+    update_response = client.put(
+        f"/drink_recipes/{recipe_id}",
+        json=bad_payload,
+    )
+
+    assert update_response.status_code == status.HTTP_409_CONFLICT
+
+    # Verify the original recipe was not partially modified.
+    get_response = client.get(
+        f"/drink_recipes/{recipe_id}",
+    )
+
+    assert get_response.status_code == status.HTTP_200_OK
+
+    persisted = get_response.json()
+
+    assert persisted["name"] == "Latte"
+    assert persisted["description"] == "Original recipe"
+    assert persisted["markup_percentage"] == 20
+
+    assert len(persisted["ingredients"]) == 2
+
+    ingredients_by_name = {
+        ingredient["name"]: ingredient
+        for ingredient in persisted["ingredients"]
+    }
+
+    assert set(ingredients_by_name) == {"Milk", "Sugar"}
+
+    assert ingredients_by_name["Milk"]["quantity_used"] == 6.0
+    assert ingredients_by_name["Milk"]["unit_of_measure_used"] == "fl_oz"
+
+    assert ingredients_by_name["Sugar"]["quantity_used"] == 5.0
+    assert ingredients_by_name["Sugar"]["unit_of_measure_used"] == "g"
+
+    # Pricing should also remain unchanged.
+    assert persisted["production_cost"] == original["production_cost"]
+    assert persisted["sale_price"] == original["sale_price"]
+
+
 def test_update_drink_recipe_not_found(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory()
     payload = recipe_payload_factory(
@@ -306,9 +458,7 @@ def test_update_drink_recipe_drink_type_not_found(client, db, drink_types, ingre
     assert update_response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_update_drink_recipe_duplicate_name(
-    client, db, drink_types, ingredient_factory, recipe_payload_factory
-):
+def test_update_drink_recipe_duplicate_name(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory()
 
     # Create first recipe
@@ -349,3 +499,47 @@ def test_update_drink_recipe_duplicate_name(
     )
 
     assert response.status_code == 409
+
+
+def test_update_drink_recipe_negative_quantity_returns_422(client, db, drink_types, ingredient_factory, recipe_payload_factory):
+    milk = ingredient_factory("Milk", 8.00, 1.00, "gal")
+
+    initial_payload = recipe_payload_factory(
+        name="Latte",
+        description="Original recipe",
+        ingredients=[
+            (milk, 6.0, "fl_oz"),
+        ],
+        drink_type="coffee",
+        markup=20,
+    )
+
+    create_response = client.post(
+        "/drink_recipes/",
+        json=initial_payload,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    recipe_id = create_response.json()["id"]
+
+    invalid_payload = recipe_payload_factory(
+        name="Updated Latte",
+        description="Invalid quantity",
+        ingredients=[
+            (milk, -10.0, "fl_oz"),
+        ],
+        drink_type="coffee",
+        markup=20,
+    )
+
+    response = client.put(
+        f"/drink_recipes/{recipe_id}",
+        json=invalid_payload,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    assert any(
+        "greater than 0" in error["msg"].lower()
+        for error in response.json()["detail"]
+    )

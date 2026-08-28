@@ -160,11 +160,8 @@ class DrinkRecipeRepository:
         """
         return self.session.query(DrinkRecipeSchema).all()
 
-    def update_drink_recipe_by_id(
-        self,
-        recipe_id: int,
-        drink_recipe_data: DrinkRecipe
-        ) -> DrinkRecipeSchema:
+    # pylint: disable-next=line-too-long
+    def update_drink_recipe_by_id(self, recipe_id: int, drink_recipe_data: DrinkRecipe) -> DrinkRecipeSchema:
         """
         Update a drink recipe by its ID.
         """
@@ -185,23 +182,13 @@ class DrinkRecipeRepository:
         if existing:
             raise DuplicateDrinkRecipeNameError(drink_recipe_data.name)
 
-        # Update basic fields
-        recipe.name = drink_recipe_data.name
-        recipe.description = drink_recipe_data.description
-        recipe.active = drink_recipe_data.active
-        recipe.type_id = map_enum_to_fk(drink_recipe_data.type, self.session)
-        recipe.markup_percentage = drink_recipe_data.markup_percentage
-
-        # Remove old ingredient associations
-        self.session.query(DrinkRecipeIngredientSchema).filter(
-            DrinkRecipeIngredientSchema.drink_recipe_id == recipe.id
-        ).delete()
-
+        validated_ingredients = []
         total_cost = 0.0
 
-        # Rebuild ingredient associations
         for ing in drink_recipe_data.ingredients:
+
             ingredient = self.session.get(IngredientSchema, ing.id)
+
             if not ingredient:
                 raise IngredientNotFoundError(ing.id)
 
@@ -212,24 +199,59 @@ class DrinkRecipeRepository:
                     ingredient.unit_of_measure,
                 )
             except ValueError as e:
-                raise UnitConversionError(ingredient.name, str(e)) from e
+                raise UnitConversionError(
+                    ingredient.name,
+                    str(e)
+                ) from e
 
-            cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount
-            ingredient_cost = float(cost_per_unit) * float(recipe_amount_in_purchase_unit)
+            cost_per_unit = (ingredient.purchasing_cost / ingredient.unit_amount)
+
+            ingredient_cost = (float(cost_per_unit) * float(recipe_amount_in_purchase_unit))
+
             total_cost += ingredient_cost
 
+            validated_ingredients.append(
+                {
+                    "ingredient_id": ingredient.id,
+                    "quantity_used": ing.quantity_used,
+                    "unit_of_measure_used": ing.unit_of_measure_used,
+                }
+            )
+
+        recipe.name = drink_recipe_data.name
+        recipe.description = drink_recipe_data.description
+        recipe.active = drink_recipe_data.active
+        recipe.type_id = map_enum_to_fk(
+            drink_recipe_data.type,
+            self.session
+        )
+        recipe.markup_percentage = (
+            drink_recipe_data.markup_percentage
+        )
+
+        self.session.query(
+            DrinkRecipeIngredientSchema
+        ).filter(
+            DrinkRecipeIngredientSchema.drink_recipe_id == recipe.id
+        ).delete()
+
+        for ing in validated_ingredients:
             assoc = DrinkRecipeIngredientSchema(
                 drink_recipe_id=recipe.id,
-                ingredient_id=ingredient.id,
-                quantity_used=ing.quantity_used,
-                unit_of_measure_used=ing.unit_of_measure_used,
+                ingredient_id=ing["ingredient_id"],
+                quantity_used=ing["quantity_used"],
+                unit_of_measure_used=ing["unit_of_measure_used"],
             )
+
             self.session.add(assoc)
 
         recipe.production_cost = round_float(total_cost)
+
         markup_multiplier = 1 + (recipe.markup_percentage / 100)
+
         recipe.sale_price = round_float(recipe.production_cost * markup_multiplier)
 
         self.session.commit()
         self.session.refresh(recipe)
+
         return recipe

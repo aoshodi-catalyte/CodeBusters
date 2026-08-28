@@ -274,7 +274,7 @@ def test_update_drink_recipe_drink_type_not_found(repo, db, drink_types, ingredi
     bad_payload = recipe_model_factory(
         name="Latte",
         description="desc",
-        ingredients=[(ing, 1.0, "cup")],
+        ingredients=[(ing, 1.0, "fl_oz")],
         drink_type="coffee",
         markup=10,
     )
