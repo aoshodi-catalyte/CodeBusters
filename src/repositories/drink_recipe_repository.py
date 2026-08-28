@@ -166,7 +166,7 @@ class DrinkRecipeRepository:
         drink_recipe_data: DrinkRecipe
         ) -> DrinkRecipeSchema:
         """
-        Update a dink recipe by its ID.
+        Update a drink recipe by its ID.
         """
         recipe = self.get_drink_recipe_by_id(recipe_id)
 
