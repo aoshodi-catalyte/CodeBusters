@@ -6,7 +6,10 @@ vendor records and handling of database integrity errors.
 from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.orm import Session
 from database import get_db
-from exceptions.vendor_exceptions import DuplicateVendorException
+from exceptions.vendor_exceptions import (
+DuplicateVendorException,
+VendorNotFoundException,
+)
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
@@ -68,3 +71,35 @@ async def get_all_vendors(db: Session = Depends(get_db)):
     repo = VendorRepository(db)
 
     return repo.get_all_vendors()
+
+@router.get(
+    "/vendors/{vendor_id}",
+    response_model=VendorResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_vendor_by_id(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+):
+    """Retrieve a single vendor by ID.
+
+    Args:
+        vendor_id (int): The positive unique identifier of the vendor.
+        db (Session): Database session injected through FastAPI dependency
+            injection.
+
+    Returns:
+        VendorResponse: The requested vendor.
+
+    Raises:
+        HTTPException: If the vendor does not exist.
+    """
+    repo = VendorRepository(db)
+
+    try:
+        return repo.get_vendor_by_id(vendor_id)
+    except VendorNotFoundException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc

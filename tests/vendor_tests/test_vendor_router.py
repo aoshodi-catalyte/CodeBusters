@@ -255,3 +255,114 @@ def test_post_vendor_invalid_email_returns_422(client):
     )
 
     assert response.status_code == 422
+
+def test_get_vendor_by_id(client):
+    """Test retrieving a vendor by ID."""
+    vendor_payload = {
+        "active": True,
+        "name": "Bob's Burgers",
+        "contact_name": "Bob Belcher",
+        "contact_role": "CEO",
+        "email": "bob@burger.com",
+        "phone": "1234567896",
+    }
+
+    create_response = client.post(
+        "/vendors",
+        json=vendor_payload,
+    )
+
+    assert create_response.status_code == 201
+
+    created_vendor = create_response.json()
+    vendor_id = created_vendor["id"]
+
+    response = client.get(f"/vendors/{vendor_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == vendor_id
+    assert data["active"] is True
+    assert data["name"] == "Bob's Burgers"
+    assert data["contact_name"] == "Bob Belcher"
+    assert data["contact_role"] == "CEO"
+    assert data["email"] == "bob@burger.com"
+    assert data["phone"] == "123-456-7896"
+
+
+def test_get_vendor_by_id_returns_correct_vendor(client):
+    """Test retrieving the correct vendor when multiple vendors exist."""
+    vendor_payload_1 = {
+        "active": True,
+        "name": "Bob's Burgers",
+        "contact_name": "Bob Belcher",
+        "contact_role": "CEO",
+        "email": "bob@burger.com",
+        "phone": "1234567896",
+    }
+
+    vendor_payload_2 = {
+        "active": True,
+        "name": "Acme Supplies",
+        "contact_name": "Wile E. Coyote",
+        "contact_role": "Manager",
+        "email": "wile@acme.com",
+        "phone": "9876543210",
+    }
+
+    first_response = client.post(
+        "/vendors",
+        json=vendor_payload_1,
+    )
+
+    second_response = client.post(
+        "/vendors",
+        json=vendor_payload_2,
+    )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+
+    vendor_id = second_response.json()["id"]
+
+    response = client.get(f"/vendors/{vendor_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == vendor_id
+    assert data["name"] == "Acme Supplies"
+    assert data["email"] == "wile@acme.com"
+
+
+def test_get_vendor_by_id_not_found_returns_404(client):
+    """Test that a nonexistent vendor ID returns HTTP 404."""
+    response = client.get("/vendors/999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Vendor with ID 999 was not found."
+    )
+
+
+def test_get_vendor_by_id_zero_returns_404(client):
+    """Test that vendor ID zero returns HTTP 404."""
+    response = client.get("/vendors/0")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Vendor with ID 0 was not found."
+    )
+
+
+def test_get_vendor_by_id_negative_id_returns_404(client):
+    """Test that a negative vendor ID returns HTTP 404."""
+    response = client.get("/vendors/-1")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Vendor with ID -1 was not found."
+    )
