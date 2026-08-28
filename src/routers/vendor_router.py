@@ -10,7 +10,6 @@ from exceptions.vendor_exceptions import (
 DuplicateVendorException,
 VendorNotFoundException,
 )
-from repositories.vendor_repository import VendorRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
