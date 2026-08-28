@@ -159,3 +159,81 @@ def test_post_new_employee_integrity_error(monkeypatch, client):
 
     assert response.status_code == 409
     assert response.json()["detail"] == "Employee with this email already exists."
+
+
+def test_get_all_employees_empty(client):
+    """Test retrieving employees when none exist."""
+    response = client.get("/employees")
+ 
+    assert response.status_code == 200
+    assert response.json() == []
+ 
+ 
+def test_get_all_employees(client):
+    """Test retrieving all employees."""
+    payload_1 = {
+        "active": True,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@doe.com",
+        "role": "manager",
+        "hourly_rate": "10.50",
+        "hire_date": "01/01/2023",
+        "term_date": None,
+    }
+ 
+    payload_2 = {
+        "active": True,
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "email": "jane@doe.com",
+        "role": "manager",
+        "hourly_rate": "15.00",
+        "hire_date": "02/01/2023",
+        "term_date": None,
+    }
+ 
+    client.post("/employees", json=payload_1)
+    client.post("/employees", json=payload_2)
+ 
+    response = client.get("/employees")
+ 
+    assert response.status_code == 200
+ 
+    data = response.json()
+ 
+    assert len(data) == 2
+    assert data[0]["first_name"] == "John"
+    assert data[0]["email"] == "john@doe.com"
+    assert data[0]["role"] == "manager"
+    assert data[1]["first_name"] == "Jane"
+    assert data[1]["email"] == "jane@doe.com"
+ 
+ 
+def test_get_all_employees_response_contains_expected_fields(client):
+    """Test that employee list response contains expected fields."""
+    payload = {
+        "active": True,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@doe.com",
+        "role": "manager",
+        "hourly_rate": "10.50",
+        "hire_date": "01/01/2023",
+        "term_date": None,
+    }
+ 
+    client.post("/employees", json=payload)
+ 
+    response = client.get("/employees")
+ 
+    assert response.status_code == 200
+ 
+    employee = response.json()[0]
+ 
+    assert "id" in employee
+    assert "active" in employee
+    assert "first_name" in employee
+    assert "last_name" in employee
+    assert "email" in employee
+    assert "role" in employee
