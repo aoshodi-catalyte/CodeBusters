@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from customer.customer_model import CustomerCreate, CustomerResponse
+from customer.customer_model import CustomerCreate, CustomerResponse, CustomerUpdate 
 
 
 def test_valid_customer_create():
@@ -307,4 +307,172 @@ def test_last_name_can_be_none():
     )
 
     assert customer.last_name is None
+
+
+def test_valid_customer_update():
+    """CustomerUpdate should accept valid customer data."""
+
+    customer = CustomerUpdate(
+        active=True,
+        first_name="John",
+        last_name="Smith",
+        email="john.smith@example.com",
+        phone_number="312-555-1234",
+        loyalty_points=150
+    )
+
+    assert customer.active is True
+    assert customer.first_name == "John"
+    assert customer.last_name == "Smith"
+    assert customer.email == "john.smith@example.com"
+    assert customer.phone_number == "3125551234"
+    assert customer.loyalty_points == 150
+
+
+def test_customer_update_phone_number_normalizes_formatting():
+    """CustomerUpdate should remove formatting characters from phone numbers."""
+
+    customer = CustomerUpdate(
+        active=True,
+        first_name="John",
+        email="john@example.com",
+        phone_number="(312) 555-1234",
+        loyalty_points=0
+    )
+
+    assert customer.phone_number == "3125551234"
+
+
+def test_customer_update_phone_number_rejects_invalid_length():
+    """CustomerUpdate should reject phone numbers that are not 10 digits."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            active=True,
+            first_name="John",
+            email="john@example.com",
+            phone_number="312555123",
+            loyalty_points=0
+        )
+
+
+def test_customer_update_rejects_invalid_email():
+    """CustomerUpdate should reject an invalid email address."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            active=True,
+            first_name="John",
+            email="not-an-email",
+            phone_number="3125551234",
+            loyalty_points=0
+        )
+
+
+def test_customer_update_email_normalized_to_lowercase():
+    """CustomerUpdate should normalize email addresses to lowercase."""
+
+    customer = CustomerUpdate(
+        active=True,
+        first_name="John",
+        email="JOHN@EXAMPLE.COM",
+        phone_number="3125551234",
+        loyalty_points=0
+    )
+
+    assert customer.email == "john@example.com"
+
+
+def test_customer_update_rejects_empty_first_name():
+    """CustomerUpdate should reject an empty first name."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            active=True,
+            first_name="",
+            email="john@example.com",
+            phone_number="3125551234",
+            loyalty_points=0
+        )
+
+
+def test_customer_update_rejects_first_name_too_long():
+    """CustomerUpdate should reject a first name longer than 50 characters."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            active=True,
+            first_name="A" * 51,
+            email="john@example.com",
+            phone_number="3125551234",
+            loyalty_points=0
+        )
+
+
+def test_customer_update_last_name_can_be_none():
+    """CustomerUpdate should allow the last name to be omitted."""
+
+    customer = CustomerUpdate(
+        active=True,
+        first_name="John",
+        email="john@example.com",
+        phone_number="3125551234",
+        loyalty_points=0
+    )
+
+    assert customer.last_name is None
+
+
+def test_customer_update_rejects_negative_loyalty_points():
+    """CustomerUpdate should reject negative loyalty points."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            active=True,
+            first_name="John",
+            email="john@example.com",
+            phone_number="3125551234",
+            loyalty_points=-1
+        )
+
+
+def test_customer_update_requires_active():
+    """CustomerUpdate should require the active field to be explicitly provided."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            first_name="John",
+            email="john@example.com",
+            phone_number="3125551234",
+            loyalty_points=0
+        )
+
+
+def test_customer_update_requires_loyalty_points():
+    """CustomerUpdate should require loyalty_points to be explicitly provided."""
+
+    with pytest.raises(ValidationError):
+        CustomerUpdate(
+            active=True,
+            first_name="John",
+            email="john@example.com",
+            phone_number="3125551234"
+        )
+
+
+def test_customer_update_name_normalization_collapses_whitespace():
+    """CustomerUpdate should normalize whitespace in names."""
+
+    customer = CustomerUpdate(
+        active=True,
+        first_name="Billy    Bob",
+        last_name="Van    Buren",
+        email="billy@example.com",
+        phone_number="3125551234",
+        loyalty_points=0
+    )
+
+    assert customer.first_name == "Billy Bob"
+    assert customer.last_name == "Van Buren"
+
     
