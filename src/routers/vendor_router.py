@@ -4,7 +4,6 @@ vendor records and handling of database integrity errors.
 """
 
 from fastapi import Depends, HTTPException, APIRouter, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from database import get_db
 from exceptions.vendor_exceptions import DuplicateVendorException
