@@ -121,3 +121,6 @@ class BakedGoodRepository:
         return self.session.query(BakedGoodSchema).filter(
             BakedGoodSchema.id == baked_good_id
         ).first()
+
+    def update_baked_good(self, update_baked_good) -> BakedGoodSchema:
+        self.get_baked_good_by_id
