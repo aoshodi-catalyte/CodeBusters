@@ -1,9 +1,10 @@
 """
 FastAPI router for baked good endpoints.
 
-This module defines API endpoints for retrieving and creating baked goods.
-It uses the BakedGoodRepository to interact with the database and
-provides validated request and response models for the baked good data.
+This module defines API endpoints for retrieving, creating, and updating
+baked goods. It uses the BakedGoodRepository to interact with the
+database and provides validated request and response models for the
+baked good data.
 """
 
 from typing import List
@@ -13,9 +14,10 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 
-from baked_good.baked_good_model import BakedGood
+from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from baked_good.baked_good_response_model import BakedGoodResponseModel
 from exceptions.baked_good_exceptions import (
+    BakedGoodNotFoundError,
     DuplicateBakedGoodError,
     VendorNotFoundError,
 )
@@ -101,3 +103,56 @@ def get_baked_good_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Baked Good ID"
         )
     return baked_good
+
+
+@router.put(
+    "/{baked_good_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=BakedGoodResponseModel,
+)
+def put_baked_good(
+    baked_good_id: int,
+    baked_good: BakedGoodUpdate,
+    db: Session = Depends(get_db),
+) -> BakedGoodResponseModel:
+    """
+    Updates an existing baked good's properties.
+
+    Args:
+        baked_good_id: The unique ID of the baked good to update.
+        baked_good: The validated replacement baked good data.
+        db: The database session.
+
+    Returns:
+        The updated baked good.
+
+    Raises:
+        HTTPException 404: If the baked good ID does not exist, or if
+            the vendor ID provided in the payload does not exist.
+        HTTPException 409: If another baked good already has the same
+            name.
+    """
+    repo = BakedGoodRepository(db)
+
+    try:
+        return repo.update_baked_good(baked_good_id, baked_good)
+
+    except BakedGoodNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except VendorNotFoundError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except DuplicateBakedGoodError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
