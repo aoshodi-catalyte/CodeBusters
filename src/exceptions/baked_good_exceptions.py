@@ -22,3 +22,16 @@ class DuplicateBakedGoodError(Exception):
         super().__init__(
             f"A baked good with name '{baked_good_name}' already exists."
         )
+
+
+class BakedGoodNotFoundError(Exception):
+    """
+    Raised when a baked good cannot be found by its ID.
+
+    Args:
+        baked_good_id: The ID of the baked good that could not be found.
+    """
+
+    def __init__(self, baked_good_id: int):
+        self.baked_good_id = baked_good_id
+        super().__init__(f"Baked good with ID {baked_good_id} was not found.")
