@@ -21,7 +21,7 @@ from routers.employee_router import router as employee_router
 from routers.ingredient_router import router as ingredient_router
 from routers.promotion_router import router as promotion_router
 from routers.vendor_router import router as vendor_router
-from routers.health_router import router as health_router
+from health.health_router import router as health_router
 from routers.secure_login_router import router as secure_login_router
 
 
@@ -40,14 +40,16 @@ async def lifespan(_app: FastAPI):
     try:
         for drink_type in DrinkType:
             existing = (
-                db.query(DrinkTypeSchema).filter_by(name=drink_type.value).first()
+                db.query(DrinkTypeSchema).filter_by(
+                    name=drink_type.value).first()
             )
 
             if not existing:
                 db.add(DrinkTypeSchema(name=drink_type.value))
 
         for role in EmployeeRole:
-            existing = db.query(EmployeeRoleSchema).filter_by(role=role.value).first()
+            existing = db.query(EmployeeRoleSchema).filter_by(
+                role=role.value).first()
 
             if not existing:
                 db.add(EmployeeRoleSchema(role=role.value))
