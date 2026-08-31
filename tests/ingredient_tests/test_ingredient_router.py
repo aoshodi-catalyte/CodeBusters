@@ -523,7 +523,7 @@ def test_get_all_ingredients_multiple(client):
 
 
 def test_soft_delete_ingredient_success(client):
-    """Test 16: Successfully soft deleting an ingredient returns 200."""
+    """Test 16: Successfully soft deleting an ingredient returns 204."""
 
     vendor_res = client.post(
         "/vendors/",
@@ -556,8 +556,8 @@ def test_soft_delete_ingredient_success(client):
 
     response = client.delete(f"/ingredients/{ingredient_id}")
 
-    assert response.status_code == 200
-    assert response.json()["id"] == ingredient_id
+    assert response.status_code == 204
+    assert response.content == b""
 
 
 def test_soft_delete_ingredient_not_found(client):
@@ -603,7 +603,7 @@ def test_soft_delete_ingredient_is_persisted(client):
 
     delete_response = client.delete(f"/ingredients/{ingredient_id}")
 
-    assert delete_response.status_code == 200
+    assert delete_response.status_code == 204
 
     # Verify the soft delete through the GET endpoint.
     get_response = client.get(f"/ingredients/{ingredient_id}")

@@ -103,3 +103,44 @@ def get_vendor_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+@router.put(
+    "/vendors/{vendor_id}",
+    response_model=VendorResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_vendor(
+    vendor_id: int,
+    vendor_data: VendorBase,
+    db: Session = Depends(get_db),
+):
+    """Update an existing vendor.
+
+    Args:
+        vendor_id: The unique identifier of the vendor.
+        vendor_data: Validated vendor properties.
+        db: Database session injected through FastAPI dependency injection.
+
+    Returns:
+        VendorResponse: The updated vendor.
+
+    Raises:
+        HTTPException: If the vendor does not exist or a unique constraint
+            is violated.
+    """
+    repo = VendorRepository(db)
+
+    try:
+        return repo.update_vendor(vendor_id, vendor_data)
+
+    except VendorNotFoundException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except DuplicateVendorException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc

@@ -9,7 +9,7 @@ from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
-from vendor.vendor_model import VendorBase
+from vendor.vendor_model import VendorBase, VendorUpdate
 from vendor.vendor_schema import Vendor, VendorSchema
 
 
@@ -94,5 +94,38 @@ class VendorRepository:
 
         if vendor is None:
             raise VendorNotFoundException(vendor_id)
+
+        return vendor
+
+    def update_vendor(
+        self,
+        vendor_id: int,
+        vendor_data: VendorUpdate,
+    ) -> Vendor:
+        vendor = (
+            self.db.query(Vendor)
+            .filter(Vendor.id == vendor_id)
+            .first()
+        )
+
+        if vendor is None:
+            raise VendorNotFoundException(vendor_id)
+
+        update_data = vendor_data.model_dump(exclude_unset=True)
+
+        for field, value in update_data.items():
+            setattr(vendor, field, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(vendor)
+
+        except IntegrityError as exc:
+            self.db.rollback()
+
+            raise DuplicateVendorException(
+                field="email",
+                value=vendor_data.email,
+            ) from exc
 
         return vendor
