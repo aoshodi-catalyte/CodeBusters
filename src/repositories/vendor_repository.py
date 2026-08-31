@@ -97,11 +97,27 @@ class VendorRepository:
 
         return vendor
 
+
     def update_vendor(
         self,
         vendor_id: int,
         vendor_data: VendorUpdate,
     ) -> Vendor:
+        """Update an existing vendor with the provided fields.
+
+        Args:
+            vendor_id: ID of the vendor to update.
+            vendor_data: Fields and values to apply to the vendor.
+
+        Returns:
+            The updated vendor.
+
+        Raises:
+            VendorNotFoundException:
+                If the vendor does not exist.
+            DuplicateVendorException:
+                If the update violates a unique email constraint.
+        """
         vendor = (
             self.db.query(Vendor)
             .filter(Vendor.id == vendor_id)

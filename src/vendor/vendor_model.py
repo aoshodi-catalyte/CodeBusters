@@ -106,6 +106,8 @@ class VendorBase(BaseModel):
         return digits_only
 
 class VendorUpdate(BaseModel):
+    """Schema for partially updating a vendor."""
+
     active: bool | None = None
     name: str | None = Field(default=None, min_length=1)
     contact_name: str | None = Field(default=None, min_length=1)
@@ -121,6 +123,7 @@ class VendorUpdate(BaseModel):
     )
     @classmethod
     def normalize_text(cls, value: str | None) -> str | None:
+        """Strip whitespace and normalize internal spacing."""
         if value is None:
             return None
 
@@ -134,6 +137,7 @@ class VendorUpdate(BaseModel):
     @field_validator("email", mode="before")
     @classmethod
     def validate_email(cls, value: str | None) -> str | None:
+        """Normalize and validate the vendor email address."""
         if value is None:
             return None
 
@@ -147,6 +151,7 @@ class VendorUpdate(BaseModel):
     @field_validator("phone")
     @classmethod
     def validate_phone(cls, value: str | None) -> str | None:
+        """Normalize and validate the vendor phone number."""
         if value is None:
             return None
 
