@@ -366,3 +366,109 @@ def test_get_vendor_by_id_negative_id_returns_404(client):
     assert response.json()["detail"] == (
         "Vendor with ID -1 was not found."
     )
+
+
+def test_update_vendor_success(client):
+    """Test that an existing vendor can be updated."""
+    create_response = client.post(
+        "/vendors",
+        json={
+            "active": True,
+            "name": "Original Vendor",
+            "contact_name": "John Smith",
+            "contact_role": "Manager",
+            "email": "original@example.com",
+            "phone": "555-123-4567",
+        },
+    )
+
+    vendor_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/vendors/{vendor_id}",
+        json={
+            "active": False,
+            "name": "Updated Vendor",
+            "contact_name": "Jane Smith",
+            "contact_role": "Owner",
+            "email": "updated@example.com",
+            "phone": "555-987-6543",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == vendor_id
+    assert data["active"] is False
+    assert data["name"] == "Updated Vendor"
+    assert data["contact_name"] == "Jane Smith"
+    assert data["contact_role"] == "Owner"
+    assert data["email"] == "updated@example.com"
+    assert data["phone"] == "555-987-6543"
+
+def test_update_vendor_not_found(client):
+    """Test that updating a nonexistent vendor returns 404."""
+    response = client.put(
+        "/vendors/999999",
+        json={
+            "active": True,
+            "name": "Updated Vendor",
+            "contact_name": "John Smith",
+            "contact_role": "Manager",
+            "email": "updated@example.com",
+            "phone": "555-123-4567",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_vendor_invalid_email(client):
+    """Test that invalid email data returns a validation error."""
+    create_response = client.post(
+        "/vendors",
+        json={
+            "active": True,
+            "name": "Email Test Vendor",
+            "contact_name": "John Smith",
+            "contact_role": "Manager",
+            "email": "emailtest@example.com",
+            "phone": "555-123-4567",
+        },
+    )
+
+    vendor_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/vendors/{vendor_id}",
+        json={
+            "active": True,
+            "name": "Email Test Vendor",
+            "contact_name": "John Smith",
+            "contact_role": "Manager",
+            "email": "not-a-valid-email",
+            "phone": "555-123-4567",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_vendor_invalid_phone(client):
+    """Test that invalid phone data returns a validation error."""
+
+    response = client.put(
+        "/vendors/1",
+        json={
+            "active": True,
+            "name": "Phone Test Vendor",
+            "contact_name": "John Smith",
+            "contact_role": "Manager",
+            "email": "phonetest@example.com",
+            "phone": "123",
+        },
+    )
+
+    assert response.status_code == 422

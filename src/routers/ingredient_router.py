@@ -7,7 +7,7 @@ and domain‑specific exception handling to ensure consistent and meaningful
 HTTP responses for ingredient‑related actions.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -250,7 +250,7 @@ class IngredientDeleteResponse(BaseModel):
 
 @router.delete(
     "/{ingredient_id}",
-    response_model=IngredientDeleteResponse,
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_ingredient_endpoint(
     ingredient_id: int,
@@ -288,10 +288,7 @@ def delete_ingredient_endpoint(
                 },
             )
 
-        return IngredientDeleteResponse(
-            message="Ingredient successfully deactivated.",
-            id=ingredient.id,
-        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     except SQLAlchemyError as exc:
         raise HTTPException(
