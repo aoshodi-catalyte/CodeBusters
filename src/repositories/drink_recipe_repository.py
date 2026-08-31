@@ -33,6 +33,7 @@ from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeAlreadyDeacivated,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -265,6 +266,23 @@ class DrinkRecipeRepository:
 
         self._apply_ingredients(recipe.id, validated_ingredients)
         self._apply_costs(recipe, total_cost)
+
+        self.session.commit()
+        self.session.refresh(recipe)
+        return recipe
+
+
+    def deactivate_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema:
+        """
+        Set a drink recipe's status to false by its ID.
+        """
+        recipe = self.get_drink_recipe_by_id(recipe_id)
+
+        # Check if drink status is already set to false
+        if recipe.active is False:
+            raise DrinkRecipeAlreadyDeacivated(recipe.name)
+        
+        recipe.active = False
 
         self.session.commit()
         self.session.refresh(recipe)

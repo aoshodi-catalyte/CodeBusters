@@ -35,6 +35,7 @@ from database import get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeAlreadyDeacivated,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -244,4 +245,25 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while updating the drink recipe."
+        ) from e
+
+
+@router.delete("/{recipe_id}", response_model=DrinkRecipeResponse, status_code=204)
+def deactiavate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+    repo = DrinkRecipeRepository(db)
+
+    try:
+        repo.deactivate_drink_recipe_by_id(recipe_id)
+        return
+    except DrinkRecipeNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except DrinkRecipeAlreadyDeacivated as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deactivating the drink recipe."
         ) from e
