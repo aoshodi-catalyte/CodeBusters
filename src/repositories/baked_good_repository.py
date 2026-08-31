@@ -211,10 +211,6 @@ class BakedGoodRepository:
         baked_good.purchasing_cost = update_data.purchasing_cost
         baked_good.retail_price = update_data.retail_price
         baked_good.vendor_id = update_data.vendor_id
-
-        # Explicitly reassign the relationship so the vendor side of the
-        # association (vendor.baked_good) is updated in the same unit of
-        # work, not just the raw vendor_id foreign key column.
         baked_good.vendor = vendor
 
         self.session.commit()
