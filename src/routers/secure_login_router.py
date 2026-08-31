@@ -68,7 +68,8 @@ def login(
     """
 
     try:
-        auth = auth_repo.authenticate_user(db, form_data.username, form_data.password)
+        auth = auth_repo.authenticate_user(
+            db, form_data.username, form_data.password)
 
     except UsernameNotFoundError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
@@ -110,7 +111,7 @@ def get_current_employee(
     Raises:
         HTTPException (401):
             If the token is invalid, expired, malformed, missing claims,
-            or references a non‑existent employee.
+            or references a non‑existent employee. 
     """
     try:
         employee = auth_repo.get_current_employee(token, db)
