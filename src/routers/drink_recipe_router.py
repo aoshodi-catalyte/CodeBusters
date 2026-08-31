@@ -35,6 +35,7 @@ from database import get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
     IngredientNotFoundError,
@@ -104,7 +105,6 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
         recipe = repo.create_drink_recipe(drink_recipe)
         return to_response(DrinkRecipeResponse, serialize_recipe(recipe))
 
-    # --- Domain exceptions mapped to HTTP responses ---
     except DrinkTypeNotFoundError as e:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -121,7 +121,6 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
         db.rollback()
         raise HTTPException(status_code=422, detail=str(e)) from e
 
-    # --- SQLAlchemy constraint errors ---
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
@@ -129,7 +128,6 @@ def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)
             detail=f"Drink recipe name '{drink_recipe.name}' already exists"
         ) from e
 
-    # --- Catch-all fallback ---
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -159,12 +157,14 @@ def get_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
         validated for API output.
     """
     repo = DrinkRecipeRepository(db)
-    recipe = repo.get_drink_recipe_by_id(recipe_id)
 
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Drink recipe not found")
+    try:
+        recipe = repo.get_drink_recipe_by_id(recipe_id)
+        return to_response(DrinkRecipeResponse, serialize_recipe(recipe))
 
-    return to_response(DrinkRecipeResponse, serialize_recipe(recipe))
+    except DrinkRecipeNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/", response_model=list[DrinkRecipeResponse])
@@ -192,3 +192,56 @@ def get_all_drink_recipes(db: Session = Depends(get_db)):
         to_response(DrinkRecipeResponse, serialize_recipe(recipe))
         for recipe in recipes
     ]
+
+
+@router.put("/{recipe_id}", response_model=DrinkRecipeResponse, status_code=200)
+def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
+    """
+    Update an existing drink recipe by its ID.
+
+    This endpoint replaces all editable fields of a drink recipe, including
+    name, description, active status, drink type, markup percentage, and
+    ingredient usage. Ingredient associations are fully rebuilt during the
+    update, and production cost and sale price are recalculated based on the
+    new ingredient quantities and markup.
+
+    Args:
+        recipe_id (int):
+            The unique identifier of the drink recipe to update.
+        drink_recipe (DrinkRecipe):
+            The updated drink recipe payload containing all fields and
+            ingredient usage definitions.
+        db (Session):
+            SQLAlchemy session injected via FastAPI dependency.
+
+    Returns:
+        DrinkRecipeResponse:
+            The updated drink recipe, serialized and validated for API output.
+    """
+    repo = DrinkRecipeRepository(db)
+
+    try:
+        updated_recipe = repo.update_drink_recipe_by_id(recipe_id, drink_recipe)
+        return to_response(DrinkRecipeResponse, serialize_recipe(updated_recipe))
+    except DrinkRecipeNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    except DrinkTypeNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    except IngredientNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+    except DuplicateDrinkRecipeNameError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while updating the drink recipe."
+        ) from e

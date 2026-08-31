@@ -32,15 +32,15 @@ from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
-from ingredient.ingredient_schema import IngredientSchema
-from utils.validators import round_float
-
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
     IngredientNotFoundError,
     UnitConversionError,
 )
+from ingredient.ingredient_schema import IngredientSchema
+from utils.validators import round_float
 
 
 def map_enum_to_fk(enum_value: DrinkType, db: Session) -> int:
@@ -57,53 +57,74 @@ class DrinkRecipeRepository:
     """
     Repository responsible for creating, retrieving, and managing drink recipe records.
     """
-
     def __init__(self, session: Session):
         self.session = session
 
-    def create_drink_recipe(self, drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
+    def _normalize_name(self, name: str) -> str:
         """
-        Create a new drink recipe, calculate its costs,
-        persist it, and return the ORM representation.
+        Normalize a drink recipe name for duplicate detection.
+
+        Removes all whitespace and lowercases the string so that
+        names like "Iced Latte" and "iced   latte" are treated
+        as identical during uniqueness checks.
+
+        Returns:
+            str: Normalized name string.
         """
-        drink_type_id = map_enum_to_fk(drink_recipe.type, self.session)
+        return re.sub(r"\s+", "", name).lower()
 
-        # Normalize name for duplicate detection
-        normalized_input = re.sub(r"\s+", "", drink_recipe.name).lower()
+    def _ensure_name_unique(self, name: str, exclude_id: int | None = None) -> None:
+        """
+        Ensure that a drink recipe name does not already exist.
 
-        existing = (
-            self.session.query(DrinkRecipeSchema)
-            .filter(
-                func.lower(func.replace(DrinkRecipeSchema.name, " ", ""))
-                == normalized_input
-            )
-            .first()
+        Performs normalized name comparison to detect duplicates.
+        Optionally excludes a specific recipe ID (used during updates).
+
+        Args:
+            name (str): The proposed recipe name.
+            exclude_id (int | None): A recipe ID to ignore during lookup.
+
+        Raises:
+            DuplicateDrinkRecipeNameError: If another recipe already uses the name.
+        """
+        normalized = self._normalize_name(name)
+
+        query = self.session.query(DrinkRecipeSchema).filter(
+            func.lower(func.replace(DrinkRecipeSchema.name, " ", "")) == normalized
         )
 
-        if existing:
-            raise DuplicateDrinkRecipeNameError(drink_recipe.name)
+        if exclude_id is not None:
+            query = query.filter(DrinkRecipeSchema.id != exclude_id)
 
-        recipe = DrinkRecipeSchema(
-            name=drink_recipe.name,
-            description=drink_recipe.description,
-            active=drink_recipe.active,
-            type_id=drink_type_id,
-            markup_percentage=drink_recipe.markup_percentage,
-        )
+        if query.first():
+            raise DuplicateDrinkRecipeNameError(name)
 
-        self.session.add(recipe)
-        self.session.flush()
+    def _process_ingredients(self, ingredients):
+        """
+        Validate ingredients and compute total production cost.
 
-        total_cost = 0.00
+        Args:
+            ingredients (list[DrinkIngredient]): Incoming ingredient usage models.
 
-        for ing in drink_recipe.ingredients:
+        Returns:
+            tuple[list[dict], float]:
+                • A list of validated ingredient dictionaries.
+                • The total production cost for the recipe.
+
+        Raises:
+            IngredientNotFoundError: If an ingredient ID does not exist.
+            UnitConversionError: If unit conversion fails.
+        """
+        validated = []
+        total_cost = 0.0
+
+        for ing in ingredients:
             ingredient = self.session.get(IngredientSchema, ing.id)
             if not ingredient:
                 raise IngredientNotFoundError(ing.id)
 
-            # Convert recipe usage → ingredient purchase unit
             try:
-                recipe_amount_in_purchase_unit = convert(
+                converted_amount = convert(
                     ing.quantity_used,
                     ing.unit_of_measure_used,
                     ingredient.unit_of_measure,
@@ -111,46 +132,140 @@ class DrinkRecipeRepository:
             except ValueError as e:
                 raise UnitConversionError(ingredient.name, str(e)) from e
 
-            # Cost per unit of ingredient
             cost_per_unit = ingredient.purchasing_cost / ingredient.unit_amount
-
-            # Cost for this ingredient in the recipe
-            ingredient_cost = float(cost_per_unit) * float(
-                recipe_amount_in_purchase_unit
-            )
+            ingredient_cost = float(cost_per_unit) * float(converted_amount)
             total_cost += ingredient_cost
 
+            validated.append(
+                {
+                    "ingredient_id": ingredient.id,
+                    "quantity_used": ing.quantity_used,
+                    "unit_of_measure_used": ing.unit_of_measure_used,
+                }
+            )
+
+        return validated, total_cost
+
+    def _apply_ingredients(self, recipe_id: int, validated_ingredients):
+        """
+        Replace all ingredient associations for a recipe.
+
+        Deletes existing DrinkRecipeIngredientSchema rows for the recipe
+        and inserts new association records based on validated ingredient data.
+
+        Args:
+            recipe_id (int): The recipe being updated.
+            validated_ingredients (list[dict]): Ingredient usage payloads.
+        """
+        self.session.query(DrinkRecipeIngredientSchema).filter(
+            DrinkRecipeIngredientSchema.drink_recipe_id == recipe_id
+        ).delete()
+
+        for ing in validated_ingredients:
             assoc = DrinkRecipeIngredientSchema(
-                drink_recipe_id=recipe.id,
-                ingredient_id=ingredient.id,
-                quantity_used=ing.quantity_used,
-                unit_of_measure_used=ing.unit_of_measure_used,
+                drink_recipe_id=recipe_id,
+                ingredient_id=ing["ingredient_id"],
+                quantity_used=ing["quantity_used"],
+                unit_of_measure_used=ing["unit_of_measure_used"],
             )
             self.session.add(assoc)
 
-        # Assign calculated production cost
-        recipe.production_cost = round_float(total_cost)
+    def _apply_costs(self, recipe: DrinkRecipeSchema, total_cost: float):
+        """
+        Apply production cost and sale price to a recipe.
 
-        # Calculate sale price
+        Production cost is rounded using the validator system.
+        Sale price is computed using markup percentage:
+            sale_price = production_cost * (1 + markup_percentage/100)
+
+        Args:
+            recipe (DrinkRecipeSchema): The ORM recipe object to update.
+            total_cost (float): The computed production cost.
+        """
+        recipe.production_cost = round_float(total_cost)
         markup_multiplier = 1 + (recipe.markup_percentage / 100)
         recipe.sale_price = round_float(recipe.production_cost * markup_multiplier)
+
+
+    def create_drink_recipe(self, drink_recipe: DrinkRecipe) -> DrinkRecipeSchema:
+        """
+        Create a new drink recipe, calculate its costs,
+        persist it, and return the ORM representation.
+        """
+        self._ensure_name_unique(drink_recipe.name)
+
+        recipe = DrinkRecipeSchema(
+            name=drink_recipe.name,
+            description=drink_recipe.description,
+            active=drink_recipe.active,
+            type_id=map_enum_to_fk(drink_recipe.type, self.session),
+            markup_percentage=drink_recipe.markup_percentage,
+        )
+
+        self.session.add(recipe)
+        self.session.flush()
+
+        validated_ingredients, total_cost = self._process_ingredients(
+            drink_recipe.ingredients
+        )
+
+        self._apply_ingredients(recipe.id, validated_ingredients)
+        self._apply_costs(recipe, total_cost)
 
         self.session.commit()
         self.session.refresh(recipe)
         return recipe
 
-    def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema | None:
+
+    def get_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema:
         """
         Retrieve a drink recipe by its ID.
         """
-        return (
+        recipe = (
             self.session.query(DrinkRecipeSchema)
             .filter(DrinkRecipeSchema.id == recipe_id)
             .first()
         )
+
+        if not recipe:
+            raise DrinkRecipeNotFoundError(recipe_id)
+
+        return recipe
+
 
     def get_all_drink_recipes(self) -> list[DrinkRecipeSchema]:
         """
         Retrieve all drink recipes.
         """
         return self.session.query(DrinkRecipeSchema).all()
+
+
+    def update_drink_recipe_by_id(
+        self,
+        recipe_id: int,
+        drink_recipe_data: DrinkRecipe
+        ) -> DrinkRecipeSchema:
+        """
+        Update a drink recipe by its ID.
+        """
+
+        recipe = self.get_drink_recipe_by_id(recipe_id)
+
+        self._ensure_name_unique(drink_recipe_data.name, exclude_id=recipe_id)
+
+        validated_ingredients, total_cost = self._process_ingredients(
+            drink_recipe_data.ingredients
+        )
+
+        recipe.name = drink_recipe_data.name
+        recipe.description = drink_recipe_data.description
+        recipe.active = drink_recipe_data.active
+        recipe.type_id = map_enum_to_fk(drink_recipe_data.type, self.session)
+        recipe.markup_percentage = drink_recipe_data.markup_percentage
+
+        self._apply_ingredients(recipe.id, validated_ingredients)
+        self._apply_costs(recipe, total_cost)
+
+        self.session.commit()
+        self.session.refresh(recipe)
+        return recipe

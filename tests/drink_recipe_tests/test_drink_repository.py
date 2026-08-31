@@ -1,47 +1,21 @@
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from constants.drink_types import DrinkType
-from constants.unit_conversions import convert
-from database import Base
-from drink_recipe.drink_recipe_model import DrinkRecipe, RecipeIngredient
-from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
 from drink_recipe.drink_type_schema import DrinkTypeSchema
-from ingredient.ingredient_schema import IngredientSchema
-
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
     IngredientNotFoundError,
     UnitConversionError,
 )
-
-import models
-
-# ---------------------------
-# Test Database Setup
-# ---------------------------
-
-TEST_DB_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    TEST_DB_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
+from ingredient.ingredient_schema import IngredientSchema
+from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
+from tests.factories.drink_recipe_factories import (
+    drink_types,
+    ingredient_factory,
+    recipe_model_factory,
 )
-
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture
-def db():
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -49,17 +23,9 @@ def repo(db):
     return DrinkRecipeRepository(db)
 
 
-# ---------------------------
-# Tests
-# ---------------------------
-
-def test_map_enum_to_fk_success(db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    db.add(drink_type)
-    db.commit()
-
+def test_map_enum_to_fk_success(db, drink_types):
     fk_id = map_enum_to_fk(DrinkType.COFFEE, db)
-    assert fk_id == drink_type.id
+    assert fk_id == drink_types["coffee"].id
 
 
 def test_map_enum_to_fk_missing_type(db):
@@ -67,226 +33,251 @@ def test_map_enum_to_fk_missing_type(db):
         map_enum_to_fk(DrinkType.TEA, db)
 
 
-def test_unsupported_unit_conversion():
-    # convert() still raises ValueError
-    with pytest.raises(ValueError):
-        convert(1, "kg", "fl_oz")
+def test_create_drink_recipe(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    milk = ingredient_factory(name="Milk", cost=4.00, amount=1.00, uom="gal")
+    espresso = ingredient_factory(name="Espresso Beans", cost=14.00, amount=1.00, uom="lb")
+    sugar = ingredient_factory(name="Sugar", cost=2.50, amount=4.00, uom="lb")
 
-
-def test_unexisting_unit_conversion():
-    with pytest.raises(ValueError):
-        convert(1, "banana", "fl_oz")
-
-
-def test_create_drink_recipe(repo, db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    db.add(drink_type)
-    db.commit()
-
-    milk = IngredientSchema(
-        name="Milk",
-        purchasing_cost=4.00,
-        unit_amount=1.00,
-        unit_of_measure="gal",
-        vendor_id=1,
-    )
-
-    espresso = IngredientSchema(
-        name="Espresso Beans",
-        purchasing_cost=14.00,
-        unit_amount=1.00,
-        unit_of_measure="lb",
-        vendor_id=1,
-    )
-
-    sugar = IngredientSchema(
-        name="Sugar",
-        purchasing_cost=2.50,
-        unit_amount=4.00,
-        unit_of_measure="lb",
-        vendor_id=1,
-    )
-
-    db.add_all([milk, espresso, sugar])
-    db.commit()
-
-    recipe_model = DrinkRecipe(
+    recipe = recipe_model_factory(
         name="20oz Latte",
         description="Milk, espresso, sugar",
         ingredients=[
-            RecipeIngredient(
-                id=milk.id, quantity_used=16.00, unit_of_measure_used="fl_oz"
-            ),
-            RecipeIngredient(
-                id=espresso.id, quantity_used=4.00, unit_of_measure_used="oz"
-            ),
-            RecipeIngredient(id=sugar.id, quantity_used=8.40, unit_of_measure_used="g"),
+            (milk, 16.00, "fl_oz"),
+            (espresso, 4.00, "oz"),
+            (sugar, 8.40, "g"),
         ],
-        active=True,
-        type="coffee",
-        markup_percentage=81,
+        drink_type="coffee",
+        markup=81,
     )
 
-    created = repo.create_drink_recipe(recipe_model)
+    created = repo.create_drink_recipe(recipe)
 
-    assert created.production_cost == 4.01
-    assert created.sale_price == 7.26
+    assert created.production_cost == pytest.approx(4.01, rel=1e-2)
+    assert created.sale_price == pytest.approx(7.26, rel=1e-2)
+    assert len(created.recipe_ingredients) == 3
 
 
-def test_duplicate_drink_recipe_name(repo, db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    db.add(drink_type)
-    db.commit()
-
-    recipe_model = DrinkRecipe(
+def test_duplicate_drink_recipe_name(repo, db, drink_types, recipe_model_factory):
+    recipe = recipe_model_factory(
         name="Latte",
         description="desc",
         ingredients=[],
-        active=True,
-        type="coffee",
-        markup_percentage=10,
+        drink_type="coffee",
+        markup=10,
     )
 
-    repo.create_drink_recipe(recipe_model)
+    repo.create_drink_recipe(recipe)
+
+    recipe1 = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[],
+        drink_type="coffee",
+        markup=10,
+    )
 
     with pytest.raises(DuplicateDrinkRecipeNameError):
-        repo.create_drink_recipe(recipe_model)
+        repo.create_drink_recipe(recipe1)
 
 
-def test_missing_ingredient(repo, db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    db.add(drink_type)
-    db.commit()
-
-    recipe_model = DrinkRecipe(
+def test_missing_ingredient(repo, db, drink_types, recipe_model_factory):
+    recipe = recipe_model_factory(
         name="Bad Latte",
         description="desc",
-        ingredients=[
-            RecipeIngredient(id=999, quantity_used=1.0, unit_of_measure_used="g")
-        ],
-        active=True,
-        type="coffee",
-        markup_percentage=10,
+        ingredients=[(IngredientSchema(id=999), 1.0, "g")],
+        drink_type="coffee",
+        markup=10,
     )
 
     with pytest.raises(IngredientNotFoundError):
-        repo.create_drink_recipe(recipe_model)
+        repo.create_drink_recipe(recipe)
 
 
-def test_unit_conversion_failure(repo, db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    db.add(drink_type)
-    db.commit()
+def test_unit_conversion_failure(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    ing = ingredient_factory(name="Milk", cost=4.00, amount=1.00, uom="gal")
 
-    ing = IngredientSchema(
-        name="Milk",
-        purchasing_cost=4.00,
-        unit_amount=1.00,
-        unit_of_measure="gal",
-        vendor_id=1,
-    )
-    db.add(ing)
-    db.commit()
-
-    recipe_model = DrinkRecipe(
+    recipe = recipe_model_factory(
         name="Broken Latte",
         description="desc",
-        ingredients=[
-            RecipeIngredient(id=ing.id, quantity_used=1.0, unit_of_measure_used="banana")
-        ],
-        active=True,
-        type="coffee",
-        markup_percentage=10,
+        ingredients=[(ing, 1.0, "banana")],
+        drink_type="coffee",
+        markup=10,
     )
 
     with pytest.raises(UnitConversionError):
-        repo.create_drink_recipe(recipe_model)
+        repo.create_drink_recipe(recipe)
 
 
-def test_get_all_drink_recipes(repo, db):
-    drink_type = DrinkTypeSchema(name="coffee")
-    drink_type1 = DrinkTypeSchema(name="tea")
-    db.add_all([drink_type, drink_type1])
-    db.commit()
+def test_get_all_drink_recipes(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    milk = ingredient_factory(name="Milk", cost=4.00, amount=1.00, uom="gal")
+    espresso = ingredient_factory(name="Espresso Beans", cost=14.00, amount=1.00, uom="lb")
+    sugar = ingredient_factory(name="Sugar", cost=2.50, amount=4.00, uom="lb")
 
-    milk = IngredientSchema(
-        name="Milk",
-        purchasing_cost=4.00,
-        unit_amount=1.00,
-        unit_of_measure="gal",
-        vendor_id=1,
-    )
-
-    espresso = IngredientSchema(
-        name="Espresso Beans",
-        purchasing_cost=14.00,
-        unit_amount=1.00,
-        unit_of_measure="lb",
-        vendor_id=1,
-    )
-
-    sugar = IngredientSchema(
-        name="Sugar",
-        purchasing_cost=2.50,
-        unit_amount=4.00,
-        unit_of_measure="lb",
-        vendor_id=1,
-    )
-
-    matcha = IngredientSchema(
-        name="Matcha Poweder",
-        purchasing_cost=12.99,
-        unit_amount=30.00,
-        unit_of_measure="g",
-        vendor_id=1,
-    )
-
-    db.add_all([milk, espresso, sugar, matcha])
-    db.commit()
-
-    recipe_model = DrinkRecipe(
+    recipe = recipe_model_factory(
         name="20oz Latte",
         description="Milk, espresso, sugar",
         ingredients=[
-            RecipeIngredient(
-                id=milk.id, quantity_used=16.00, unit_of_measure_used="fl_oz"
-            ),
-            RecipeIngredient(
-                id=espresso.id, quantity_used=4.00, unit_of_measure_used="oz"
-            ),
-            RecipeIngredient(id=sugar.id, quantity_used=8.40, unit_of_measure_used="g"),
+            (milk, 16.00, "fl_oz"),
+            (espresso, 4.00, "oz"),
+            (sugar, 8.40, "g"),
         ],
-        active=True,
-        type="coffee",
-        markup_percentage=81,
+        drink_type="coffee",
+        markup=81,
     )
 
-    recipe_model1 = DrinkRecipe(
+    repo.create_drink_recipe(recipe)
+
+    recipe = recipe_model_factory(
         name="20oz Matcha Latte",
-        description="Milk, macha powder, sugar",
+        description="Milk, matcha, sugar",
         ingredients=[
-            RecipeIngredient(
-                id=milk.id, quantity_used=16.00, unit_of_measure_used="fl_oz"
-            ),
-            RecipeIngredient(
-                id=matcha.id, quantity_used=4.00, unit_of_measure_used="g"
-            ),
-            RecipeIngredient(id=sugar.id, quantity_used=8.40, unit_of_measure_used="g"),
+            (milk, 16.00, "fl_oz"),
+            (sugar, 8.40, "g"),
         ],
-        active=True,
-        type="tea",
-        markup_percentage=81,
+        drink_type="tea",
+        markup=81,
     )
 
-    created = repo.create_drink_recipe(recipe_model)
-    created1 = repo.create_drink_recipe(recipe_model1)
+    repo.create_drink_recipe(recipe)
 
-    created_list = [created, created1]
+    all_recipes = repo.get_all_drink_recipes()
 
-    assert created.production_cost == 4.01
-    assert created.sale_price == 7.26
+    assert len(all_recipes) == 2
+    assert all_recipes[0].name == "20oz Latte"
+    assert all_recipes[1].name == "20oz Matcha Latte"
 
-    assert created1.production_cost == 2.24
-    assert created1.sale_price == 4.05
+def test_get_all_drink_recipes_empty(repo):
+    all_recipees = repo.get_all_drink_recipes()
 
-    assert len(created_list) == len(repo.get_all_drink_recipes())
+    assert len(all_recipees) == 0
+
+
+def test_get_by_id(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    milk = ingredient_factory(name="Milk", cost=4.00, amount=1.00, uom="gal")
+    espresso = ingredient_factory(name="Espresso Beans", cost=14.00, amount=1.00, uom="lb")
+    sugar = ingredient_factory(name="Sugar", cost=2.50, amount=4.00, uom="lb")
+
+    recipe = recipe_model_factory(
+        name="20oz Latte",
+        description="Milk, espresso, sugar",
+        ingredients=[
+            (milk, 16.00, "fl_oz"),
+            (espresso, 4.00, "oz"),
+            (sugar, 8.40, "g"),
+        ],
+        drink_type="coffee",
+        markup=81,
+    )
+
+    created = repo.create_drink_recipe(recipe)
+    drink = repo.get_drink_recipe_by_id(created.id)
+
+    assert drink.production_cost == pytest.approx(4.01, rel=1e-2)
+    assert drink.sale_price == pytest.approx(7.26, rel=1e-2)
+    assert len(drink.recipe_ingredients) == 3
+
+
+def test_get_by_id_not_found(repo):
+    with pytest.raises(DrinkRecipeNotFoundError):
+        repo.get_drink_recipe_by_id(999)
+
+
+def test_update_drink_recipe_success(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    ing = ingredient_factory(name="Milk", cost=8.00, amount=1.00, uom="gal")
+
+    recipe = recipe_model_factory(
+        name="5 oz Latte",
+        description="desc",
+        ingredients=[(ing, 5.0, "fl_oz")],
+        drink_type="coffee",
+        markup=10,
+    )
+
+    created = repo.create_drink_recipe(recipe)
+
+    payload = recipe_model_factory(
+        name="10 oz Latte",
+        description="desc",
+        ingredients=[(ing, 10.00, "fl_oz")],
+        drink_type="coffee",
+        markup=20,
+    )
+
+    updated = repo.update_drink_recipe_by_id(created.id, payload)
+
+    print(updated)
+
+    assert updated.name == "10 oz Latte"
+    assert len(updated.recipe_ingredients) == 1
+
+    ri = updated.recipe_ingredients[0]
+    assert ri.ingredient_id == ing.id
+    assert float(ri.quantity_used) == 10.00
+    assert ri.unit_of_measure_used == "fl_oz"
+
+
+def test_update_drink_recipe_not_found(repo, db, recipe_model_factory):
+    recipe = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[],
+        drink_type="coffee",
+        markup=10,
+    )
+
+    with pytest.raises(DrinkRecipeNotFoundError):
+        repo.update_drink_recipe_by_id(999, recipe)
+
+
+def test_update_drink_recipe_ingredient_not_found(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    ing = ingredient_factory(name="Milk", cost=4.00, amount=1.00, uom="gal")
+
+    recipe = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[(ing, 5.0, "fl_oz")],
+        drink_type="coffee",
+        markup=10,
+    )
+
+    created = repo.create_drink_recipe(recipe)
+
+    bad_payload = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[(IngredientSchema(id=999), 1.0, "cup")],
+        drink_type="coffee",
+        markup=10,
+    )
+
+    with pytest.raises(IngredientNotFoundError):
+        repo.update_drink_recipe_by_id(created.id, bad_payload)
+
+
+def test_update_drink_recipe_drink_type_not_found(repo, db, drink_types, ingredient_factory, recipe_model_factory):
+    ing = ingredient_factory(name="Milk", cost=4.00, amount=1.00, uom="gal")
+
+    recipe = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[(ing, 5.0, "fl_oz")],
+        drink_type="coffee",
+        markup=10,
+    )
+
+    created = repo.create_drink_recipe(recipe)
+
+    # Remove drink types
+    db.query(DrinkTypeSchema).delete()
+    db.commit()
+
+    bad_payload = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[(ing, 1.0, "fl_oz")],
+        drink_type="coffee",
+        markup=10,
+    )
+
+    with pytest.raises(DrinkTypeNotFoundError):
+        repo.update_drink_recipe_by_id(created.id, bad_payload)

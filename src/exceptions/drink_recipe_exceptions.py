@@ -59,3 +59,8 @@ class UnitConversionError(DrinkRecipeError):
     """Raised when unit conversion fails for an ingredient."""
     def __init__(self, ingredient_name: str, message: str):
         super().__init__(f"Unit conversion failed for ingredient '{ingredient_name}': {message}")
+
+class DrinkRecipeNotFoundError(DrinkRecipeError):
+    """Raised when a drink recipe does not exitst in the DB."""
+    def __init__(self, drink_id: int):
+        super().__init__(f"Drink Recipe ID {drink_id} not found")
