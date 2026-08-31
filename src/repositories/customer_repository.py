@@ -1,10 +1,10 @@
 """
 Repository layer for Customer database operations.
 
-This module contains the database logic used to create and retrieve
-customer records, including duplicate-detection and not-found business
-rules. API-specific logic, such as HTTP status codes and HTTP
-exceptions, belongs in the router layer — this module raises typed
+This module contains the database logic used to create, retrieve, and
+update customer records, including duplicate-detection and not-found
+business rules. API-specific logic, such as HTTP status codes and
+HTTP exceptions, belongs in the router layer — this module raises typed
 domain exceptions instead.
 """
 
@@ -12,7 +12,7 @@ domain exceptions instead.
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from customer.customer_model import CustomerCreate
+from customer.customer_model import CustomerCreate, CustomerUpdate
 from customer.customer_schema import CustomerSchema
 from exceptions.customer_exceptions import (
     CustomerConstraintError,
@@ -27,8 +27,8 @@ class CustomerRepository:
     """
     Repository for customer database operations.
 
-    This class handles creating and retrieving customer records
-    using a SQLAlchemy database session.
+    This class handles creating, retrieving, and updating customer
+    records using a SQLAlchemy database session.
     """
 
     def __init__(self, db: Session):
@@ -81,6 +81,76 @@ class CustomerRepository:
         )
 
         self.db.add(db_customer)
+
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            constraint, error_message = parse_integrity_error(exc)
+
+            if "email" in error_message:
+                raise CustomerEmailAlreadyExistsError(
+                    customer.email
+                ) from exc
+
+            if "phone" in error_message:
+                raise CustomerPhoneAlreadyExistsError(
+                    customer.phone_number
+                ) from exc
+
+            raise CustomerConstraintError(constraint) from exc
+
+        self.db.refresh(db_customer)
+
+        return db_customer
+
+    def update_customer(
+        self,
+        customer_id: int,
+        customer: CustomerUpdate
+    ) -> CustomerSchema:
+        """
+        Update and persist an existing customer's properties.
+
+        Args:
+            customer_id: The ID of the customer to update.
+            customer: CustomerUpdate object containing the validated
+                replacement customer data.
+
+        Returns:
+            CustomerSchema: The updated customer record.
+
+        Raises:
+            CustomerNotFoundError:
+                If no customer exists with the given ID.
+            CustomerEmailAlreadyExistsError:
+                If another customer already has the given email.
+            CustomerPhoneAlreadyExistsError:
+                If another customer already has the given phone
+                number.
+            CustomerConstraintError:
+                If the update violates another database constraint.
+        """
+        db_customer = self.get_customer_by_id(customer_id)
+        if db_customer is None:
+            raise CustomerNotFoundError(customer_id)
+
+        existing_email = self.get_customer_by_email(customer.email)
+        if existing_email and existing_email.id != customer_id:
+            raise CustomerEmailAlreadyExistsError(customer.email)
+
+        existing_phone = self.get_customer_by_phone(
+            customer.phone_number
+        )
+        if existing_phone and existing_phone.id != customer_id:
+            raise CustomerPhoneAlreadyExistsError(customer.phone_number)
+
+        db_customer.active = customer.active
+        db_customer.first_name = customer.first_name
+        db_customer.last_name = customer.last_name
+        db_customer.email = customer.email
+        db_customer.phone_number = customer.phone_number
+        db_customer.loyalty_points = customer.loyalty_points
 
         try:
             self.db.commit()

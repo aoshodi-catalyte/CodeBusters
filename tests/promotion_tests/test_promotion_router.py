@@ -204,3 +204,68 @@ def test_get_all_promotions_empty(client):
 
     assert response.status_code == 200
     assert response.json() == []
+
+def test_get_promotion_by_id(client):
+    """
+    Tests that the GET promotion by ID endpoint returns the
+    promotion matching the provided ID.
+
+    Creates a test promotion, then sends a GET request using the
+    promotion ID and verifies that the response has a 200 status
+    code and contains the expected promotion.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    promotion = {
+        "active": True,
+        "promo_code": "SUMMER20",
+        "discount_percentage": 20.0,
+        "start_datetime": "08/01/2026 09:00 AM",
+        "end_datetime": "08/31/2026 11:59 PM",
+    }
+
+    promotion_response = client.post(
+        "/promotions/",
+        json=promotion
+    )
+
+    assert promotion_response.status_code == 201
+
+    promotion_id = promotion_response.json()["id"]
+
+    response = client.get(f"/promotions/{promotion_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == promotion_id
+    assert data["active"] is True
+    assert data["promo_code"] == "SUMMER20"
+    assert data["discount_percentage"] == 20.0
+
+def test_get_promotion_by_id_invalid_id(client):
+    """
+    Tests that the GET promotion by ID endpoint returns a 404
+    status code when the promotion does not exist.
+
+    Sends a GET request using an ID that does not exist and verifies
+    that the response has a 404 status code.
+
+    Args:
+        client: FastAPI test client provided by the client fixture.
+
+    Returns:
+        None
+    """
+
+    response = client.get("/promotions/9999")
+
+    assert response.status_code == 404
+
+    assert response.json()["detail"] == "Invalid Promotion ID"

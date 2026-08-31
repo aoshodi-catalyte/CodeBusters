@@ -73,3 +73,17 @@ class PromotionRepository:
             retrieved from the database.
         """
         return self.session.query(PromotionSchema).all()
+
+    def get_promotion_by_id(self, promotion_id: int) -> PromotionSchema | None:
+        """
+        Retrieves a promotion from the database by its unique ID.
+
+        Args:
+            promotion_id: The unique identifier of the promotion to retrieve.
+
+        Returns:
+            The matching PromotionSchema object if found, otherwise None.
+        """
+        return self.session.query(PromotionSchema).filter(
+            PromotionSchema.id == promotion_id
+        ).first()
