@@ -248,7 +248,7 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
         ) from e
 
 
-@router.delete("/{recipe_id}", response_model=DrinkRecipeResponse, status_code=204)
+@router.delete("/{recipe_id}", status_code=204)
 def deactiavate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
     repo = DrinkRecipeRepository(db)
 

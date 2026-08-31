@@ -1,6 +1,7 @@
 from fastapi import status
 import pytest
 
+import ingredient
 from tests.factories.drink_recipe_factories import (
     drink_types,
     ingredient_factory,
@@ -543,3 +544,62 @@ def test_update_drink_recipe_negative_quantity_returns_422(client, db, drink_typ
         "greater than 0" in error["msg"].lower()
         for error in response.json()["detail"]
     )
+
+
+def test_deactivate_drink_recipe_success(client, db, drink_types, recipe_payload_factory):
+    """DELETE /drink_recipes/{id} should deactivate the recipe and return 204."""
+    recipe = recipe_payload_factory(
+        name="Americano",
+        description="desc",
+        ingredients=[],
+        active=True,
+        markup=50
+    )
+
+    created = client.post(
+        "/drink_recipes/",
+        json=recipe,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+
+    recipe_id = created.json()["id"]
+
+    response = client.delete(f"/drink_recipes/{recipe_id}")
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.text == ""  # DELETE 204 returns no body
+
+    updated = client.get(f"/drink_recipes/{recipe_id}")
+    assert updated.json()["active"] == False
+
+
+def test_deactivate_drink_recipe_not_found(client):
+    """DELETE should return 404 when recipe does not exist."""
+    response = client.delete("/drink_recipes/999")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_deactivate_drink_recipe_already_inactive(client, db, drink_types, recipe_payload_factory):
+    """DELETE should return 409 when recipe is already inactive."""
+    recipe = recipe_payload_factory(
+        name="Cappuccino",
+        description="desc",
+        ingredients=[],
+        active=False,
+        markup=50
+    )
+    
+    created = client.post(
+        "/drink_recipes/",
+        json=recipe,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+
+    recipe_id = created.json()["id"]
+
+    response = client.delete(f"/drink_recipes/{recipe_id}")
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "already" in response.json()["detail"].lower()

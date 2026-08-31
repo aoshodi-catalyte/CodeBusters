@@ -3,6 +3,7 @@ import pytest
 from constants.drink_types import DrinkType
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeAlreadyDeacivated,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -281,3 +282,50 @@ def test_update_drink_recipe_drink_type_not_found(repo, db, drink_types, ingredi
 
     with pytest.raises(DrinkTypeNotFoundError):
         repo.update_drink_recipe_by_id(created.id, bad_payload)
+
+
+def test_deactivate_drink_recipe_success(db, drink_types, recipe_model_factory):
+    """Repository should deactivate an active drink recipe."""
+    repo = DrinkRecipeRepository(db)
+    recipe = recipe_model_factory(
+        name="Latte",
+        description="desc",
+        ingredients=[],
+        active=True,
+        markup=50
+    )
+
+    created = repo.create_drink_recipe(recipe)
+    db.commit()
+    updated = repo.deactivate_drink_recipe_by_id(created.id)
+
+    assert updated.active is False
+    assert updated.id == created.id
+
+
+def test_deactivate_drink_recipe_not_found(db):
+    """Repository should raise DrinkRecipeNotFoundError when ID does not exist."""
+    repo = DrinkRecipeRepository(db)
+
+    with pytest.raises(DrinkRecipeNotFoundError):
+        repo.deactivate_drink_recipe_by_id(999)
+
+
+def test_deactivate_drink_recipe_already_inactive(db, drink_types, recipe_model_factory):
+    """Repository should raise DrinkRecipeAlreadyDeacivated when already inactive."""
+    repo = DrinkRecipeRepository(db)
+    recipe = recipe_model_factory(
+        name="Mocha",
+        description="desc",
+        ingredients=[],
+        active=False,
+        markup=50,
+    )
+
+    created = repo.create_drink_recipe(recipe)
+    db.commit()
+
+    
+
+    with pytest.raises(DrinkRecipeAlreadyDeacivated):
+        repo.deactivate_drink_recipe_by_id(created.id)
