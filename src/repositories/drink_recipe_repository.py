@@ -281,7 +281,7 @@ class DrinkRecipeRepository:
         # Check if drink status is already set to false
         if recipe.active is False:
             raise DrinkRecipeAlreadyDeacivated(recipe.name)
-        
+
         recipe.active = False
 
         self.session.commit()

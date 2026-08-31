@@ -250,6 +250,19 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
 
 @router.delete("/{recipe_id}", status_code=204)
 def deactiavate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+    """
+    Deactivate a drink recipe by its ID.
+
+    This endpoint performs a soft delete by setting the recipe's `active` flag
+    to `False`. No response body is returned, and a successful operation results
+    in a `204 No Content` status code.
+
+    Parameters:
+        recipe_id (int): The ID of the drink recipe to deactivate.
+
+    Returns:
+        None: A successful deactivation returns an empty response with status 204.
+    """
     repo = DrinkRecipeRepository(db)
 
     try:
