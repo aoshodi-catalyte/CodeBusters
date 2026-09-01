@@ -285,5 +285,5 @@ def test_inactive_employee_with_term_date_past_today():
             role="manager",
             hourly_rate=19.00,
             hire_date="08/18/2026",
-            term_date="09/01/2026",
+            term_date="09/01/2027",
         )
