@@ -7,6 +7,7 @@ from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema, Base
 from employee.employee_role_schema import EmployeeRoleSchema
 from repositories.employee_repository import EmployeeRepository
+from secure_login.secure_login_schema import EmployeeAuth
 from pydantic import ValidationError
 from datetime import date, timedelta
 
@@ -161,3 +162,75 @@ def test_repository_stores_trimmed_fields():
 
     assert created.first_name == "John"
     assert created.last_name == "Doe"
+
+
+
+def test_get_all_employees_returns_empty_list():
+    db, repo, role = run_db()
+ 
+    result = repo.get_all_employees()
+ 
+    assert result == []
+ 
+    db.close()
+ 
+ 
+def test_get_all_employees_returns_single_employee():
+    db, repo, role = run_db()
+ 
+    employee_model = Employee(
+        active=True,
+        first_name="John",
+        last_name="Doe",
+        email="john@doe.com",
+        role=EmployeeRole.MANAGER,
+        hourly_rate="10.50",
+        hire_date="01/01/2023",
+    )
+ 
+    created = repo.create_new_employee(employee_model)
+ 
+    result = repo.get_all_employees()
+ 
+    assert len(result) == 1
+    assert result[0].id == created.id
+    assert result[0].first_name == "John"
+    assert result[0].email == "john@doe.com"
+ 
+    db.close()
+ 
+ 
+def test_get_all_employees_returns_multiple_employees():
+    db, repo, role = run_db()
+ 
+    repo.create_new_employee(
+        Employee(
+            active=True,
+            first_name="John",
+            last_name="Doe",
+            email="john@doe.com",
+            role=EmployeeRole.MANAGER,
+            hourly_rate="10.50",
+            hire_date="01/01/2023",
+        )
+    )
+ 
+    repo.create_new_employee(
+        Employee(
+            active=True,
+            first_name="Jane",
+            last_name="Smith",
+            email="jane@doe.com",
+            role=EmployeeRole.MANAGER,
+            hourly_rate="15.00",
+            hire_date="02/01/2023",
+        )
+    )
+ 
+    result = repo.get_all_employees()
+ 
+    assert len(result) == 2
+    assert result[0].first_name == "John"
+    assert result[1].first_name == "Jane"
+ 
+    db.close()

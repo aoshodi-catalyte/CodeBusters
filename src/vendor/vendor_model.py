@@ -51,6 +51,8 @@ class VendorBase(BaseModel):
         if not value:
             raise ValueError("Must not be blank")
 
+        value = " ".join(value.split())
+
         return value
 
     @field_validator("email", mode="before")
@@ -101,4 +103,61 @@ class VendorBase(BaseModel):
         digits_only = re.sub(r"\D", "", value)
         if not PHONE_DIGITS_PATTERN.match(digits_only):
             raise ValueError("phone number must contain exactly 10 digits")
+        return digits_only
+
+class VendorUpdate(BaseModel):
+    """Schema for partially updating a vendor."""
+
+    active: bool | None = None
+    name: str | None = Field(default=None, min_length=1)
+    contact_name: str | None = Field(default=None, min_length=1)
+    contact_role: str | None = Field(default=None, min_length=1)
+    email: str | None = None
+    phone: str | None = None
+
+    @field_validator(
+        "name",
+        "contact_name",
+        "contact_role",
+        mode="before",
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        """Strip whitespace and normalize internal spacing."""
+        if value is None:
+            return None
+
+        value = value.strip()
+
+        if not value:
+            raise ValueError("Must not be blank")
+
+        return " ".join(value.split())
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email(cls, value: str | None) -> str | None:
+        """Normalize and validate the vendor email address."""
+        if value is None:
+            return None
+
+        value = value.strip().lower()
+
+        if not EMAIL_PATTERN.fullmatch(value):
+            raise ValueError("email must be a valid email address")
+
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        """Normalize and validate the vendor phone number."""
+        if value is None:
+            return None
+
+        digits_only = re.sub(r"\D", "", value)
+
+        if not PHONE_DIGITS_PATTERN.fullmatch(digits_only):
+            raise ValueError("phone number must contain exactly 10 digits")
+
         return digits_only

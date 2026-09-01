@@ -1,17 +1,19 @@
 """
-Pydantic model for validating baked good data.
+Pydantic models for validating baked good data.
 
-This module defines the BakedGood model, which validates baked good
-information before it is stored in the database. It ensures that
-required fields are provided and that pricing and text fields meet
-the application's validation requirements.
+This module defines BakedGoodBase, the shared validation rules for baked
+good data, along with BakedGood (used when creating a baked good) and
+BakedGoodUpdate (used when updating an existing baked good via PUT).
+Both models enforce that required fields are provided and that pricing
+and text fields meet the application's validation requirements.
 """
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-class BakedGood(BaseModel):
+
+class BakedGoodBase(BaseModel):
     """
-    Defines and validates the data for a baked good.
+    Defines and validates the shared data for a baked good.
 
     Args:
         active: Indicates whether the baked good is currently active.
@@ -24,7 +26,7 @@ class BakedGood(BaseModel):
         vendor_id: The ID of the vendor associated with the baked good.
 
     Returns:
-        A validated BakedGood object.
+        A validated BakedGoodBase object.
     """
 
     active: bool
@@ -38,24 +40,24 @@ class BakedGood(BaseModel):
     @classmethod
     def validate_name(cls, value):
         """
-        Validates that the baked good name is not empty and does not
-        begin or end with whitespace.
+        Validates that the baked good name is properly formatted.
 
         Args:
             value: The name of the baked good being validated.
 
         Raises:
-            ValueError: If the name is empty, contains only whitespace,
-                or begins or ends with whitespace.
+            ValueError: If the name is empty, contains leading or trailing
+                whitespace, or is not in title case.
 
         Returns:
             The validated baked good name.
         """
+        stripped_value = value.strip()
 
-        if not value.strip():
+        if not stripped_value:
             raise ValueError("Name cannot be empty")
 
-        if value != value.strip():
+        if stripped_value != value:
             raise ValueError("Name cannot begin or end with a space")
 
         return value
@@ -86,7 +88,7 @@ class BakedGood(BaseModel):
         Validates that the retail price is greater than the purchasing cost.
 
         Args:
-            self: The BakedGood object containing the purchasing cost
+            self: The BakedGoodBase object containing the purchasing cost
                 and retail price.
 
         Raises:
@@ -94,8 +96,24 @@ class BakedGood(BaseModel):
                 the purchasing cost.
 
         Returns:
-            The validated BakedGood object.
+            The validated BakedGoodBase object.
         """
         if self.retail_price <= self.purchasing_cost:
             raise ValueError("Retail price must be greater than purchasing cost")
         return self
+
+
+class BakedGood(BakedGoodBase):
+    """
+    Pydantic model used to validate data when creating a new baked good.
+    """
+
+
+class BakedGoodUpdate(BakedGoodBase):
+    """
+    Pydantic model used to validate data when updating an existing baked
+    good via PUT.
+
+    All fields must be provided, since PUT represents a full replacement
+    of the baked good's properties. Validation rules mirror BakedGood.
+    """
