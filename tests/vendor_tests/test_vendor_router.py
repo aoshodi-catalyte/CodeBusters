@@ -96,7 +96,7 @@ def test_post_duplicate_vendor_returns_409(client):
 
     assert second_response.status_code == 409
     assert second_response.json()["detail"] == (
-        "Vendor with email 'bestburgers@burger.com' already exists."
+        "Vendor with name 'Bob's Burgers' already exists."
     )
 
 
