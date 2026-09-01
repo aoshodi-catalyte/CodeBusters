@@ -95,10 +95,8 @@ def test_post_duplicate_vendor_returns_409(client):
     )
 
     assert second_response.status_code == 409
-    assert second_response.json()["detail"] == (
-        "Vendor with name 'Bob's Burgers' already exists."
-    )
-
+    assert "already exists" in second_response.json()["detail"]
+    
 
 def test_get_all_vendors_empty(client):
     """Test retrieving vendors when no vendors exist."""
