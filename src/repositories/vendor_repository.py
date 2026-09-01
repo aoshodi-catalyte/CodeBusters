@@ -1,3 +1,9 @@
+"""Repository layer for vendor-related database operations.
+
+Provides methods for creating, retrieving, and updating vendor records,
+including handling duplicate unique-field conflicts and missing vendors.
+"""
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
