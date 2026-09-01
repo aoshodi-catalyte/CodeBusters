@@ -281,3 +281,227 @@ def test_get_vendor_by_id_raises_exception_for_zero_id(db_session):
 
     assert exc_info.value.vendor_id == 0
     assert str(exc_info.value) == "Vendor with ID 0 was not found."
+
+
+def test_update_vendor_success(db):
+    """Test that an existing vendor can be updated."""
+    vendor = Vendor(
+        active=True,
+        name="Original Vendor",
+        contact_name="John Smith",
+        contact_role="Manager",
+        email="original@example.com",
+        phone="5551234567",
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    vendor_data = VendorBase(
+        active=False,
+        name="Updated Vendor",
+        contact_name="Jane Smith",
+        contact_role="Owner",
+        email="updated@example.com",
+        phone="5559876543",
+    )
+
+    repo = VendorRepository(db)
+
+    updated_vendor = repo.update_vendor(vendor.id, vendor_data)
+
+    assert updated_vendor.id == vendor.id
+    assert updated_vendor.active is False
+    assert updated_vendor.name == "Updated Vendor"
+    assert updated_vendor.contact_name == "Jane Smith"
+    assert updated_vendor.contact_role == "Owner"
+    assert updated_vendor.email == "updated@example.com"
+    assert updated_vendor.phone == "5559876543"
+
+
+def test_update_vendor_not_found(db):
+    """Test that updating a nonexistent vendor raises an exception."""
+    vendor_data = VendorBase(
+        active=True,
+        name="Updated Vendor",
+        contact_name="John Smith",
+        contact_role="Manager",
+        email="updated@example.com",
+        phone="5551234567",
+    )
+
+    repo = VendorRepository(db)
+
+    with pytest.raises(VendorNotFoundException):
+        repo.update_vendor(999999, vendor_data)
+
+
+def test_update_vendor_all_fields(db):
+    """Test that all vendor fields are updated correctly."""
+    vendor = Vendor(
+        active=True,
+        name="Old Name",
+        contact_name="Old Contact",
+        contact_role="Old Role",
+        email="old@example.com",
+        phone="5551111111",
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    vendor_data = VendorBase(
+        active=False,
+        name="New Name",
+        contact_name="New Contact",
+        contact_role="New Role",
+        email="new@example.com",
+        phone="5552222222",
+    )
+
+    repo = VendorRepository(db)
+
+    repo.update_vendor(vendor.id, vendor_data)
+
+    db.refresh(vendor)
+
+    assert vendor.active is False
+    assert vendor.name == "New Name"
+    assert vendor.contact_name == "New Contact"
+    assert vendor.contact_role == "New Role"
+    assert vendor.email == "new@example.com"
+    assert vendor.phone == "5552222222"
+
+
+def test_update_vendor_duplicate_email(db):
+    """Test that updating a vendor with an existing email raises an exception."""
+    first_vendor = Vendor(
+        active=True,
+        name="First Vendor",
+        contact_name="John Smith",
+        contact_role="Manager",
+        email="first@example.com",
+        phone="5551111111",
+    )
+
+    second_vendor = Vendor(
+        active=True,
+        name="Second Vendor",
+        contact_name="Jane Smith",
+        contact_role="Owner",
+        email="second@example.com",
+        phone="5552222222",
+    )
+
+    db.add_all([first_vendor, second_vendor])
+    db.commit()
+    db.refresh(first_vendor)
+    db.refresh(second_vendor)
+
+    vendor_data = VendorBase(
+        active=True,
+        name="Second Vendor Updated",
+        contact_name="Jane Smith",
+        contact_role="Owner",
+        email="first@example.com",
+        phone="5552222222",
+    )
+
+    repo = VendorRepository(db)
+
+    with pytest.raises(DuplicateVendorException):
+        repo.update_vendor(second_vendor.id, vendor_data)
+
+
+def test_update_vendor_persists_changes(db):
+    """Test that the updated vendor is persisted in the database."""
+    vendor = Vendor(
+        active=True,
+        name="Original Vendor",
+        contact_name="John Smith",
+        contact_role="Manager",
+        email="original@example.com",
+        phone="5551234567",
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    vendor_id = vendor.id
+
+    vendor_data = VendorBase(
+        active=False,
+        name="Persisted Vendor",
+        contact_name="Jane Smith",
+        contact_role="Owner",
+        email="persisted@example.com",
+        phone="5559876543",
+    )
+
+    repo = VendorRepository(db)
+
+    repo.update_vendor(vendor_id, vendor_data)
+
+    db.expire_all()
+
+    saved_vendor = (
+        db.query(Vendor)
+        .filter(Vendor.id == vendor_id)
+        .first()
+    )
+
+    assert saved_vendor is not None
+    assert saved_vendor.name == "Persisted Vendor"
+    assert saved_vendor.email == "persisted@example.com"
+    assert saved_vendor.phone == "5559876543"
+    assert saved_vendor.active is False
+
+
+def test_update_vendor_duplicate_name_raises_correct_field(
+    db_session,
+):
+    # Arrange
+    existing_vendor = Vendor(
+        active=True,
+        name="Existing Vendor",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="existing@example.com",
+        phone="1111111111",
+    )
+
+    vendor_to_update = Vendor(
+        active=True,
+        name="Vendor To Update",
+        contact_name="Jane Doe",
+        contact_role="Manager",
+        email="update@example.com",
+        phone="2222222222",
+    )
+
+    db_session.add_all([existing_vendor, vendor_to_update])
+    db_session.commit()
+
+    repository = VendorRepository(db_session)
+
+    vendor_data = VendorBase(
+        active=True,
+        name="Existing Vendor",  # Duplicate name
+        contact_name="Jane Doe",
+        contact_role="Manager",
+        email="different@example.com",  # Not a duplicate email
+        phone="2222222222",
+    )
+
+    # Act / Assert
+    with pytest.raises(DuplicateVendorException) as exc_info:
+        repository.update_vendor(
+            vendor_to_update.id,
+            vendor_data,
+        )
+
+    assert exc_info.value.field == "name"
+    assert exc_info.value.value == "Existing Vendor"
