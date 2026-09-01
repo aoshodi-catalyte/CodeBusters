@@ -1,6 +1,6 @@
 """
-Repository layer for employee-related database operations, including creation
-and role mapping logic.
+Repository layer for employee-related database operations, including creation,
+retrieval, and role mapping logic.
 """
 
 from sqlalchemy.orm import Session
@@ -31,8 +31,8 @@ def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
 
 class EmployeeRepository:
     """
-    Provides database operations for employee records, including creation and
-    role foreign-key resolution.
+    Provides database operations for employee records, including creation,
+    retrieval, and role foreign-key resolution.
     """
 
     def __init__(self, db: Session):
@@ -61,3 +61,13 @@ class EmployeeRepository:
         self.db.refresh(db_employee)
 
         return db_employee
+
+    def get_all_employees(self) -> list[EmployeeSchema]:
+        """
+        Retrieve all employee records from the database.
+
+        Returns:
+            list[EmployeeSchema]: A list of all employees. Returns an
+                empty list if no employees exist.
+        """
+        return self.db.query(EmployeeSchema).all()

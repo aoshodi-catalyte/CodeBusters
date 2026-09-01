@@ -1,6 +1,6 @@
 """
-FastAPI router for employee-related API endpoints, including creation of new
-employee records and validation of repository-level errors.
+FastAPI router for employee-related API endpoints, including creation and
+retrieval of employee records and validation of repository-level errors.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -64,3 +64,26 @@ async def post_new_employee(employee_data: Employee, db: Session = Depends(get_d
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
+
+
+@router.get(
+    "/employees",
+    response_model=list[EmployeeResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def get_all_employees(db: Session = Depends(get_db)):
+    """
+    Retrieve all employee records.
+
+    Args:
+        db (Session):
+            SQLAlchemy database session provided via FastAPI dependency injection.
+
+    Returns:
+        list[EmployeeResponse]:
+            A list of all employees. Returns an empty list when no employees
+            exist.
+    """
+
+    repo = EmployeeRepository(db)
+    return repo.get_all_employees()
