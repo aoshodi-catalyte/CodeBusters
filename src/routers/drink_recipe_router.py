@@ -35,6 +35,7 @@ from database import get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
 from exceptions.drink_recipe_exceptions import (
+    DrinkRecipeAlreadyDeactivatedError,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -244,4 +245,38 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while updating the drink recipe."
+        ) from e
+
+
+@router.delete("/{recipe_id}", status_code=204)
+def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+    """
+    Deactivate a drink recipe by its ID.
+
+    This endpoint performs a soft delete by setting the recipe's `active` flag
+    to `False`. No response body is returned, and a successful operation results
+    in a `204 No Content` status code.
+
+    Parameters:
+        recipe_id (int): The ID of the drink recipe to deactivate.
+
+    Returns:
+        None: A successful deactivation returns an empty response with status 204.
+    """
+    repo = DrinkRecipeRepository(db)
+
+    try:
+        repo.deactivate_drink_recipe_by_id(recipe_id)
+        return
+    except DrinkRecipeNotFoundError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except DrinkRecipeAlreadyDeactivatedError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deactivating the drink recipe."
         ) from e
