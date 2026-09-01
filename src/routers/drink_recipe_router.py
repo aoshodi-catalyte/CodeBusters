@@ -35,7 +35,7 @@ from database import get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
 from exceptions.drink_recipe_exceptions import (
-    DrinkRecipeAlreadyDeacivated,
+    DrinkRecipeAlreadyDeactivatedError,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -249,7 +249,7 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
 
 
 @router.delete("/{recipe_id}", status_code=204)
-def deactiavate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
     """
     Deactivate a drink recipe by its ID.
 
@@ -271,7 +271,7 @@ def deactiavate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
     except DrinkRecipeNotFoundError as e:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(e)) from e
-    except DrinkRecipeAlreadyDeacivated as e:
+    except DrinkRecipeAlreadyDeactivatedError as e:
         db.rollback()
         raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:

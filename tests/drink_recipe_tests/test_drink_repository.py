@@ -3,7 +3,7 @@ import pytest
 from constants.drink_types import DrinkType
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from exceptions.drink_recipe_exceptions import (
-    DrinkRecipeAlreadyDeacivated,
+    DrinkRecipeAlreadyDeactivatedError,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -312,7 +312,7 @@ def test_deactivate_drink_recipe_not_found(db):
 
 
 def test_deactivate_drink_recipe_already_inactive(db, drink_types, recipe_model_factory):
-    """Repository should raise DrinkRecipeAlreadyDeacivated when already inactive."""
+    """Repository should raise DrinkRecipeAlreadyDeactivatedError when already inactive."""
     repo = DrinkRecipeRepository(db)
     recipe = recipe_model_factory(
         name="Mocha",
@@ -327,5 +327,5 @@ def test_deactivate_drink_recipe_already_inactive(db, drink_types, recipe_model_
 
     
 
-    with pytest.raises(DrinkRecipeAlreadyDeacivated):
+    with pytest.raises(DrinkRecipeAlreadyDeactivatedError):
         repo.deactivate_drink_recipe_by_id(created.id)

@@ -65,7 +65,7 @@ class DrinkRecipeNotFoundError(DrinkRecipeError):
     def __init__(self, drink_id: int):
         super().__init__(f"Drink Recipe ID {drink_id} not found")
 
-class DrinkRecipeAlreadyDeacivated(DrinkRecipeError):
-    """Raised when a drink recipe with a false """
+class DrinkRecipeAlreadyDeactivatedError(DrinkRecipeError):
+    """Raised when a drink recipe with a false active status is attempted to be deactivated."""
     def __init__(self, drink_id:  int):
         super().__init__(f"Drink Recipe with ID {drink_id} already deactivated")

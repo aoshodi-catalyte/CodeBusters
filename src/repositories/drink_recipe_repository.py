@@ -33,7 +33,7 @@ from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from exceptions.drink_recipe_exceptions import (
-    DrinkRecipeAlreadyDeacivated,
+    DrinkRecipeAlreadyDeactivatedError,
     DrinkRecipeNotFoundError,
     DrinkTypeNotFoundError,
     DuplicateDrinkRecipeNameError,
@@ -280,7 +280,7 @@ class DrinkRecipeRepository:
 
         # Check if drink status is already set to false
         if recipe.active is False:
-            raise DrinkRecipeAlreadyDeacivated(recipe.name)
+            raise DrinkRecipeAlreadyDeactivatedError(recipe_id)
 
         recipe.active = False
 
