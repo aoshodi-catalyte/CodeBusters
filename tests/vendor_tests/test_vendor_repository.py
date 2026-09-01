@@ -458,3 +458,50 @@ def test_update_vendor_persists_changes(db):
     assert saved_vendor.email == "persisted@example.com"
     assert saved_vendor.phone == "5559876543"
     assert saved_vendor.active is False
+
+
+def test_update_vendor_duplicate_name_raises_correct_field(
+    db_session,
+):
+    # Arrange
+    existing_vendor = Vendor(
+        active=True,
+        name="Existing Vendor",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="existing@example.com",
+        phone="1111111111",
+    )
+
+    vendor_to_update = Vendor(
+        active=True,
+        name="Vendor To Update",
+        contact_name="Jane Doe",
+        contact_role="Manager",
+        email="update@example.com",
+        phone="2222222222",
+    )
+
+    db_session.add_all([existing_vendor, vendor_to_update])
+    db_session.commit()
+
+    repository = VendorRepository(db_session)
+
+    vendor_data = VendorBase(
+        active=True,
+        name="Existing Vendor",  # Duplicate name
+        contact_name="Jane Doe",
+        contact_role="Manager",
+        email="different@example.com",  # Not a duplicate email
+        phone="2222222222",
+    )
+
+    # Act / Assert
+    with pytest.raises(DuplicateVendorException) as exc_info:
+        repository.update_vendor(
+            vendor_to_update.id,
+            vendor_data,
+        )
+
+    assert exc_info.value.field == "name"
+    assert exc_info.value.value == "Existing Vendor"

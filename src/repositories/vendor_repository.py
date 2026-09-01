@@ -1,16 +1,15 @@
-"""
-Repository layer for vendor-related database operations, including creation,
-retrieval, and persistence logic for vendor records.
-"""
-
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
-from vendor.vendor_model import VendorBase, VendorUpdate
+from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
+
+
+UNIQUE_FIELDS = ("email", "name")
 
 
 class VendorRepository:
@@ -28,18 +27,42 @@ class VendorRepository:
         """
         self.db = db
 
+    def _raise_duplicate_error(
+        self,
+        exc: IntegrityError,
+        data: dict,
+    ) -> None:
+        """Inspect an integrity error and identify the duplicate field.
+
+        Falls back to a generic duplicate error when the offending
+        unique field cannot be determined from the database error.
+        """
+        error_text = str(exc.orig).lower()
+
+        for field in UNIQUE_FIELDS:
+            if field in data and field in error_text:
+                raise DuplicateVendorException(
+                    field=field,
+                    value=data[field],
+                ) from exc
+
+        raise DuplicateVendorException(
+            field="unknown",
+            value=None,
+        ) from exc
+
     def create_new_vendor(self, vendor_data: VendorBase) -> VendorSchema:
         """Create and persist a new vendor record.
 
         Args:
-            vendor_data (VendorBase): Validated vendor data.
+            vendor_data: Validated vendor data.
 
         Returns:
-            VendorSchema: The newly created vendor.
+            The newly created vendor.
 
         Raises:
-            DuplicateVendorException: If a vendor with the same unique
-                field already exists.
+            DuplicateVendorException:
+                If a unique vendor field is already in use.
         """
         db_vendor = Vendor(
             active=vendor_data.active,
@@ -55,14 +78,12 @@ class VendorRepository:
         try:
             self.db.commit()
             self.db.refresh(db_vendor)
-
         except IntegrityError as exc:
             self.db.rollback()
-
-            raise DuplicateVendorException(
-                field="email",
-                value=vendor_data.email,
-            ) from exc
+            self._raise_duplicate_error(
+                exc,
+                vendor_data.model_dump(),
+            )
 
         return db_vendor
 
@@ -70,7 +91,7 @@ class VendorRepository:
         """Retrieve all vendor records from the database.
 
         Returns:
-            list[VendorSchema]: A list of all vendors.
+            A list of all vendors.
         """
         return self.db.query(Vendor).all()
 
@@ -78,13 +99,14 @@ class VendorRepository:
         """Retrieve a vendor by its unique ID.
 
         Args:
-            vendor_id (int): The unique identifier of the vendor.
+            vendor_id: The unique identifier of the vendor.
 
         Returns:
-            VendorSchema: The requested vendor.
+            The requested vendor.
 
         Raises:
-            VendorNotFoundException: If the vendor does not exist.
+            VendorNotFoundException:
+                If the vendor does not exist.
         """
         vendor = (
             self.db.query(Vendor)
@@ -97,17 +119,16 @@ class VendorRepository:
 
         return vendor
 
-
     def update_vendor(
         self,
         vendor_id: int,
-        vendor_data: VendorUpdate,
-    ) -> Vendor:
+        vendor_data: VendorBase,
+    ) -> VendorSchema:
         """Update an existing vendor with the provided fields.
 
         Args:
             vendor_id: ID of the vendor to update.
-            vendor_data: Fields and values to apply to the vendor.
+            vendor_data: Full set of vendor fields to apply.
 
         Returns:
             The updated vendor.
@@ -116,7 +137,7 @@ class VendorRepository:
             VendorNotFoundException:
                 If the vendor does not exist.
             DuplicateVendorException:
-                If the update violates a unique email constraint.
+                If the update violates a unique email or name constraint.
         """
         vendor = (
             self.db.query(Vendor)
@@ -127,7 +148,7 @@ class VendorRepository:
         if vendor is None:
             raise VendorNotFoundException(vendor_id)
 
-        update_data = vendor_data.model_dump(exclude_unset=True)
+        update_data = vendor_data.model_dump()
 
         for field, value in update_data.items():
             setattr(vendor, field, value)
@@ -135,13 +156,8 @@ class VendorRepository:
         try:
             self.db.commit()
             self.db.refresh(vendor)
-
         except IntegrityError as exc:
             self.db.rollback()
-
-            raise DuplicateVendorException(
-                field="email",
-                value=vendor_data.email,
-            ) from exc
+            self._raise_duplicate_error(exc, update_data)
 
         return vendor
