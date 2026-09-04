@@ -174,6 +174,26 @@ class CustomerRepository:
 
         return db_customer
 
+    def deactivate_customer(self, customer_id: int) -> None:
+        """
+        Deactivate a customer by setting active to False (soft delete).
+
+        The customer record is preserved for historical purposes;
+        only its active status is updated.
+
+        Args:
+            customer_id: The ID of the customer to deactivate.
+
+        Raises:
+            CustomerNotFoundError:
+                If no customer exists with the given ID.
+        """
+        db_customer = self.get_customer_by_id(customer_id)
+
+        db_customer.active = False
+
+        self.db.commit()
+
     def get_customers(self) -> list[CustomerSchema]:
         """
         Retrieve all customers from the database.

@@ -149,3 +149,32 @@ def get_customer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+
+@router.delete(
+    "/customers/{customer_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_customer(
+    customer_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Deactivate a customer (soft delete) by setting active to False.
+
+    The customer's record is preserved for historical purposes.
+
+    Raises:
+        HTTPException 404:
+            If no customer exists with the provided ID.
+    """
+    repo = CustomerRepository(db)
+
+    try:
+        repo.deactivate_customer(customer_id)
+
+    except CustomerNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc

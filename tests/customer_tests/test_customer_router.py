@@ -693,3 +693,104 @@ def test_update_customer_missing_required_field(client):
     )
 
     assert response.status_code == 422
+
+
+def test_deactivate_customer(client):
+    """
+    Verifies that a customer can be deactivated (soft deleted)
+    through the API and returns HTTP 204.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "email": "john@example.com",
+            "phone_number": "5551234567",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    response = client.delete(f"/customers/{customer_id}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+def test_deactivate_customer_sets_active_false(client):
+    """
+    Verifies that deactivating a customer sets active to False and
+    the change is reflected on a subsequent GET request.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "Jane",
+            "email": "jane@example.com",
+            "phone_number": "5559876543",
+            "active": True,
+            "loyalty_points": 0
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    client.delete(f"/customers/{customer_id}")
+
+    get_response = client.get(f"/customers/{customer_id}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["active"] is False
+
+
+def test_deactivate_customer_with_nonexistent_id(client):
+    """
+    Verifies that deactivating a customer with an ID that does not
+    exist returns HTTP 404.
+    """
+
+    response = client.delete("/customers/999")
+
+    assert response.status_code == 404
+
+    assert response.json() == {
+        "detail": "Customer with ID 999 was not found."
+    }
+
+
+def test_deactivate_customer_preserves_record(client):
+    """
+    Verifies that deactivating a customer preserves the historical
+    record rather than deleting it.
+    """
+
+    create_response = client.post(
+        "/customers",
+        json={
+            "first_name": "John",
+            "last_name": "Smith",
+            "email": "john.smith@example.com",
+            "phone_number": "5551237890",
+            "active": True,
+            "loyalty_points": 250
+        }
+    )
+
+    customer_id = create_response.json()["id"]
+
+    client.delete(f"/customers/{customer_id}")
+
+    get_response = client.get(f"/customers/{customer_id}")
+
+    assert get_response.status_code == 200
+
+    result = get_response.json()
+
+    assert result["id"] == customer_id
+    assert result["first_name"] == "John"
+    assert result["loyalty_points"] == 250
+    assert result["active"] is False
