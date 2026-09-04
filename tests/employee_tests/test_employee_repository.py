@@ -271,3 +271,21 @@ def test_get_employee_by_id_not_found():
         repo.get_employee_by_id(999)
 
     db.close()
+
+
+def test_get_employee_by_id_non_integer():
+    db, repo, role = run_db()
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.get_employee_by_id("abc")
+
+    db.close()
+
+
+def test_get_employee_by_id_negative_id():
+    db, repo, role = run_db()
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.get_employee_by_id(-1)
+
+    db.close()
