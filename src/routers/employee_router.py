@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from employee.employee_model import Employee
-from employee.employee_reponse import EmployeeResponse
+from employee.employee_response import EmployeeResponse
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 
