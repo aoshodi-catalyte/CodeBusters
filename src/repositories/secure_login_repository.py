@@ -24,7 +24,7 @@ from exceptions.secure_login_exceptions import (
 from secure_login.secure_login_model import EmployeeAuthCreate
 from secure_login.secure_login_schema import EmployeeAuth
 from secure_logout.secure_logout_schema import TokenBlacklist
-from utils.jwt_utils import decode_token, extract_jti_from_payload
+from utils.jwt_utils import decode_token, extract_jti
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -193,7 +193,7 @@ class SecureLoginRepository:
         payload = decode_token(token)
 
         # Extract JTI using shared utility
-        jti = extract_jti_from_payload(payload)
+        jti = extract_jti(payload)
 
         blacklisted = (
             db.query(TokenBlacklist)
