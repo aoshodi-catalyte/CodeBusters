@@ -468,3 +468,76 @@ def test_update_customer_raises_when_phone_belongs_to_another_customer(
 
     with pytest.raises(CustomerPhoneAlreadyExistsError):
         repository.update_customer(second_customer.id, updated_data)
+
+
+def test_deactivate_customer(repository):
+    """Repository should set active to False for an existing customer."""
+
+    customer = CustomerCreate(
+        first_name="John",
+        email="john@example.com",
+        phone_number="3125551234",
+        active=True
+    )
+
+    created_customer = repository.create_customer(customer)
+
+    repository.deactivate_customer(created_customer.id)
+
+    deactivated_customer = repository.get_customer_by_id(created_customer.id)
+
+    assert deactivated_customer.active is False
+
+
+def test_deactivate_customer_persists_to_database(repository, db):
+    """Deactivation should actually be persisted in the database."""
+
+    customer = CustomerCreate(
+        first_name="Jane",
+        email="jane@example.com",
+        phone_number="7735551234",
+        active=True
+    )
+
+    created_customer = repository.create_customer(customer)
+
+    repository.deactivate_customer(created_customer.id)
+
+    stored_customer = (
+        db.query(CustomerSchema)
+        .filter_by(id=created_customer.id)
+        .first()
+    )
+
+    assert stored_customer.active is False
+
+
+def test_deactivate_customer_raises_when_id_not_found(repository):
+    """Repository should raise CustomerNotFoundError for a nonexistent ID."""
+
+    with pytest.raises(CustomerNotFoundError):
+        repository.deactivate_customer(999)
+
+
+def test_deactivate_customer_preserves_other_fields(repository):
+    """Deactivating a customer should not alter other customer fields."""
+
+    customer = CustomerCreate(
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com",
+        phone_number="3125551234",
+        loyalty_points=100
+    )
+
+    created_customer = repository.create_customer(customer)
+
+    repository.deactivate_customer(created_customer.id)
+
+    result = repository.get_customer_by_id(created_customer.id)
+
+    assert result.first_name == "John"
+    assert result.last_name == "Smith"
+    assert result.email == "john@example.com"
+    assert result.loyalty_points == 100
+    
