@@ -4,9 +4,10 @@ management, password hashing, and JWT token operations.
 """
 
 from datetime import datetime, timedelta, timezone
+import uuid
 
-from jose import ExpiredSignatureError, JWTError, jwt  # type: ignore
-from passlib.context import CryptContext  # type: ignore
+from jose import ExpiredSignatureError, JWTError, jwt
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -15,6 +16,7 @@ from exceptions.secure_login_exceptions import (
     CredentialsAlreadyExistError,
     EmployeeNotFoundError,
     IncorrectPasswordError,
+    TokenBlacklistedError,
     TokenDecodeError,
     TokenExpiredError,
     TokenInvalidSignatureError,
@@ -24,6 +26,7 @@ from exceptions.secure_login_exceptions import (
 )
 from secure_login.secure_login_model import EmployeeAuthCreate
 from secure_login.secure_login_schema import EmployeeAuth
+from secure_logout.secure_logout_schema import TokenBlacklist
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -147,10 +150,15 @@ class SecureLoginRepository:
         """
 
         to_encode = data.copy()
+
+        jti = uuid.uuid4().hex
+        to_encode.update({"jti": jti})
+
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
         to_encode.update({"exp": expire})
+
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     def get_current_employee(self, token: str, db: Session):
@@ -197,6 +205,18 @@ class SecureLoginRepository:
                 raise TokenInvalidSignatureError() from exc
 
             raise TokenDecodeError(msg) from exc
+
+        jti = payload.get("jti")
+        if jti is None:
+            raise TokenMissingClaimError("jti")
+
+        blacklisted = (
+            db.query(TokenBlacklist)
+            .filter(TokenBlacklist.token_signature == jti)
+            .first()
+        )
+        if blacklisted:
+            raise TokenBlacklistedError()
 
         employee_id = payload.get("employee_id")
         if employee_id is None:

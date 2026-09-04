@@ -78,3 +78,10 @@ class CredentialsAlreadyExistError(Exception):
         super().__init__(
             f"Employee with ID {employee_id} already has login credentials."
         )
+
+
+class TokenBlacklistedError(Exception):
+    """Raised when a JWT token has been revoked and is no longer valid."""
+
+    def __init__(self) -> None:
+        super().__init__("Token has been revoked and is no longer valid.")
