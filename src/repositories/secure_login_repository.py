@@ -6,7 +6,7 @@ management, password hashing, and JWT token operations.
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from jose import ExpiredSignatureError, JWTError, jwt
+from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -17,9 +17,6 @@ from exceptions.secure_login_exceptions import (
     EmployeeNotFoundError,
     IncorrectPasswordError,
     TokenBlacklistedError,
-    TokenDecodeError,
-    TokenExpiredError,
-    TokenInvalidSignatureError,
     TokenMissingClaimError,
     UsernameNotFoundError,
     UsernameTakenError,
@@ -27,6 +24,7 @@ from exceptions.secure_login_exceptions import (
 from secure_login.secure_login_model import EmployeeAuthCreate
 from secure_login.secure_login_schema import EmployeeAuth
 from secure_logout.secure_logout_schema import TokenBlacklist
+from utils.jwt_utils import decode_token, extract_jti_from_payload
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -192,23 +190,10 @@ class SecureLoginRepository:
                 If the referenced employee does not exist.
         """
 
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode_token(token)
 
-        except ExpiredSignatureError as exc:
-            raise TokenExpiredError() from exc
-
-        except JWTError as exc:
-            msg = str(exc).lower()
-
-            if "signature" in msg or "invalid signature" in msg:
-                raise TokenInvalidSignatureError() from exc
-
-            raise TokenDecodeError(msg) from exc
-
-        jti = payload.get("jti")
-        if jti is None:
-            raise TokenMissingClaimError("jti")
+        # Extract JTI using shared utility
+        jti = extract_jti_from_payload(payload)
 
         blacklisted = (
             db.query(TokenBlacklist)
@@ -223,7 +208,9 @@ class SecureLoginRepository:
             raise TokenMissingClaimError("employee_id")
 
         employee = (
-            db.query(EmployeeSchema).filter(EmployeeSchema.id == employee_id).first()
+            db.query(EmployeeSchema)
+            .filter(EmployeeSchema.id == employee_id)
+            .first()
         )
 
         if employee is None:
