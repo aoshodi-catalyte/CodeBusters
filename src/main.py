@@ -21,6 +21,7 @@ from routers.employee_router import router as employee_router
 from routers.ingredient_router import router as ingredient_router
 from routers.promotion_router import router as promotion_router
 from routers.secure_login_router import router as secure_login_router
+from routers.secure_logout_router import router as secure_logout_router
 from routers.vendor_router import router as vendor_router
 
 
@@ -85,3 +86,4 @@ app.include_router(customer_router)
 app.include_router(employee_router)
 app.include_router(promotion_router)
 app.include_router(secure_login_router)
+app.include_router(secure_logout_router)
