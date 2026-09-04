@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from employee.employee_model import Employee
-from employee.employee_reponse import EmployeeResponse
+from employee.employee_response import EmployeeResponse
+from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 
 router = APIRouter()
@@ -87,3 +88,36 @@ async def get_all_employees(db: Session = Depends(get_db)):
 
     repo = EmployeeRepository(db)
     return repo.get_all_employees()
+
+
+@router.get(
+    "/employees/{employee_id}",
+    response_model=EmployeeResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_single_employee_by_id(
+    employee_id: int,
+    db: Session = Depends(get_db),
+):
+    """Retrieve a single employee by ID.
+
+    Args:
+        employee_id (int): The positive unique identifier of the employee.
+        db (Session): Database session injected through FastAPI dependency
+            injection.
+
+    Returns:
+        EmployeeResponse: The requested employee.
+
+    Raises:
+        HTTPException: If the employee does not exist.
+    """
+    repo = EmployeeRepository(db)
+
+    try:
+        return repo.get_employee_by_id(employee_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
