@@ -1,3 +1,4 @@
+from baked_good.baked_good_schema import BakedGoodSchema
 import models
 
 import pytest
@@ -10,9 +11,10 @@ from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from repositories.baked_good_repository import BakedGoodRepository
 from database import Base
 from exceptions.baked_good_exceptions import (
+    BakedGoodAlreadyDeactivatedError,
     BakedGoodNotFoundError,
     DuplicateBakedGoodError,
-    VendorNotFoundError,
+    VendorNotFoundError, 
 )
 from vendor.vendor_schema import Vendor
 
@@ -512,3 +514,71 @@ def test_update_baked_good_reassigns_vendor_relationship(db):
     # differently.
     assert updated in vendor_two.baked_good
     assert updated not in vendor_one.baked_good
+
+def test_deactivate_baked_good_success(db):
+    vendor = make_vendor()
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    """Test successfully deactivating an active baked good."""
+    baked_good = BakedGoodSchema(
+        active=True,
+        name="Chocolate Cake",
+        description="Chocolate cake",
+        purchasing_cost=10.00,
+        retail_price=20.00,
+        vendor_id=1,
+    )
+
+    db.add(baked_good)
+    db.commit()
+    db.refresh(baked_good)
+
+    repo = BakedGoodRepository(db)
+
+    result = repo.deactivate_baked_good(baked_good.id)
+
+    assert result.id == baked_good.id
+    assert result.active is False
+
+    db.refresh(baked_good)
+    assert baked_good.active is False
+
+def test_deactivate_baked_good_not_found(db):
+    vendor = make_vendor()
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    """Test deactivating a baked good that does not exist."""
+    repo = BakedGoodRepository(db)
+
+    with pytest.raises(BakedGoodNotFoundError):
+        repo.deactivate_baked_good(9999)
+
+def test_deactivate_baked_good_already_deactivated(db):
+    vendor = make_vendor()
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    """Test deactivating a baked good that is already inactive."""
+    baked_good = BakedGoodSchema(
+        active=False,
+        name="Chocolate Cake",
+        description="Chocolate cake",
+        purchasing_cost=10.00,
+        retail_price=20.00,
+        vendor_id=1,
+    )
+
+    db.add(baked_good)
+    db.commit()
+    db.refresh(baked_good)
+
+    repo = BakedGoodRepository(db)
+
+    with pytest.raises(BakedGoodAlreadyDeactivatedError):
+        repo.deactivate_baked_good(baked_good.id)
+
