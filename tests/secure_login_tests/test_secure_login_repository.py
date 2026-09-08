@@ -112,9 +112,12 @@ def test_create_access_token_contains_exp():
 
 def test_get_current_employee_success(monkeypatch):
     def fake_decode(token, key, algorithms):
-        return {"employee_id": 7}
+        return {"employee_id": 7, "jti": "TEST-JTI"}
 
-    monkeypatch.setattr("repositories.secure_login_repository.jwt.decode", fake_decode)
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.jwt.decode",
+        fake_decode
+    )
 
     db = FakeDB(employee=SimpleNamespace(id=7))
     employee = repo.get_current_employee("token", db)
@@ -178,9 +181,12 @@ def test_get_current_employee_raises_missing_claim(monkeypatch):
 
 def test_get_current_employee_raises_employee_not_found(monkeypatch):
     def fake_decode(token, key, algorithms):
-        return {"employee_id": 7}
+        return {"employee_id": 7, "jti": "TEST-JTI"}
 
-    monkeypatch.setattr("repositories.secure_login_repository.jwt.decode", fake_decode)
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.jwt.decode",
+        fake_decode
+    )
 
     db = FakeDB(employee=None)
 

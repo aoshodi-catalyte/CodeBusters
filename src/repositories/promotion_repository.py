@@ -87,3 +87,33 @@ class PromotionRepository:
         return self.session.query(PromotionSchema).filter(
             PromotionSchema.id == promotion_id
         ).first()
+
+    def deactivate_promotion(
+        self,
+        promotion_id: int
+    ) -> PromotionSchema | None:
+        """
+        Deactivate a promotion by setting active to False (soft delete).
+
+        The promotion record is preserved for historical purposes;
+        only its active status is updated.
+
+        Args:
+            promotion_id: The unique identifier of the promotion to
+                deactivate.
+
+        Returns:
+            The deactivated PromotionSchema object if found,
+            otherwise None.
+        """
+        promotion = self.get_promotion_by_id(promotion_id)
+
+        if promotion is None:
+            return None
+
+        promotion.active = False
+
+        self.session.commit()
+        self.session.refresh(promotion)
+
+        return promotion
