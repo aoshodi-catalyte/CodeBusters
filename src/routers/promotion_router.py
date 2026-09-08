@@ -106,3 +106,33 @@ def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> Pro
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
         )
     return promotion
+
+@router.delete(
+    "/{promotion_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_promotion(
+    promotion_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Deactivates a promotion (soft delete) by setting active to False.
+
+    The promotion's record is preserved for historical purposes.
+
+    Args:
+        promotion_id: The unique identifier of the promotion to
+            deactivate.
+        db: The database session used to deactivate the promotion.
+
+    Raises:
+        HTTPException: Raised with a 404 status code when the promotion
+        ID does not exist.
+    """
+    repo = PromotionRepository(db)
+    promotion = repo.deactivate_promotion(promotion_id)
+
+    if promotion is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
+        )

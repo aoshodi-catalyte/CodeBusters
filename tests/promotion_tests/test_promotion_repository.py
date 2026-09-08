@@ -133,3 +133,85 @@ def test_create_promotion_stores_end_datetime(db):
     )
 
     assert result.end_datetime == expected
+
+def test_deactivate_promotion(db):
+    """
+    Test that deactivate_promotion sets active to False for an
+    existing promotion.
+    """
+    repo = PromotionRepository(db)
+
+    promotion = Promotion(
+        active=True,
+        promo_code="SUMMER2026",
+        discount_percentage=20.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(promotion)
+
+    result = repo.deactivate_promotion(created.id)
+
+    assert result is not None
+    assert result.active is False
+
+
+def test_deactivate_promotion_persists_to_database(db):
+    """
+    Test that deactivation is actually persisted in the database.
+    """
+    repo = PromotionRepository(db)
+
+    promotion = Promotion(
+        active=True,
+        promo_code="FALLSALE",
+        discount_percentage=15.0,
+        start_datetime="09/01/2026 09:00 AM",
+        end_datetime="09/30/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(promotion)
+
+    repo.deactivate_promotion(created.id)
+
+    stored_promotion = (
+        db.query(PromotionSchema)
+        .filter_by(id=created.id)
+        .first()
+    )
+
+    assert stored_promotion.active is False
+
+
+def test_deactivate_promotion_returns_none_when_not_found(db):
+    """
+    Test that deactivate_promotion returns None for a nonexistent ID.
+    """
+    repo = PromotionRepository(db)
+
+    result = repo.deactivate_promotion(999)
+
+    assert result is None
+
+
+def test_deactivate_promotion_preserves_other_fields(db):
+    """
+    Test that deactivating a promotion does not alter its other fields.
+    """
+    repo = PromotionRepository(db)
+
+    promotion = Promotion(
+        active=True,
+        promo_code="WINTER2026",
+        discount_percentage=30.0,
+        start_datetime="12/01/2026 09:00 AM",
+        end_datetime="12/31/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(promotion)
+
+    result = repo.deactivate_promotion(created.id)
+
+    assert result.promo_code == "WINTER2026"
+    assert result.discount_percentage == 30.0
