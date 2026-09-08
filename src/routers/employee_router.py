@@ -12,6 +12,7 @@ from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
+from exceptions.employee_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 
 router = APIRouter()
@@ -178,5 +179,23 @@ def update_employee(
     except EmployeeEmailAlreadyExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+@router.delete(
+    "/{employee_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_employee(
+    employee_id: int,
+    db: Session = Depends(get_db),
+):
+    repo = EmployeeRepository(db)
+
+    try:
+        repo.deactivate_employee(employee_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
