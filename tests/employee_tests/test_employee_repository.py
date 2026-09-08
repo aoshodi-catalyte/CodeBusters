@@ -366,7 +366,7 @@ def test_repo_update_email_conflict(repo, db):
     emp2 = repo.create_new_employee(
         Employee(
             active=True,
-            first_name="John",
+            first_name="Jane",
             last_name="Doe",
             email="jane@doe.com",
             role="manager",
@@ -378,9 +378,9 @@ def test_repo_update_email_conflict(repo, db):
 
     update_model = Employee(
         active=True,
-        first_name="John",
+        first_name="Jane",
         last_name="Doe",
-        email="jane@doe.com",
+        email="john@doe.com",
         role="manager",
         hourly_rate="10.50",
         hire_date="01/01/2023",
@@ -388,4 +388,4 @@ def test_repo_update_email_conflict(repo, db):
     )
 
     with pytest.raises(EmployeeEmailAlreadyExistsError):
-        repo.update_employee(emp1.id, update_model)
+        repo.update_employee(emp2.id, update_model)

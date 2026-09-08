@@ -117,15 +117,34 @@ class EmployeeRepository:
             raise EmployeeEmailAlreadyExistsError(email)
 
     def update_employee(self, employee_id: int, employee_data: Employee) -> EmployeeSchema:
+        """
+        Update an existing employee with validated replacement data.
+
+        Steps:
+            - Fetch the employee; raise EmployeeNotFoundError if missing.
+            - Ensure the updated email is unique (excluding this employee).
+            - Map the EmployeeRole enum to its role_id foreign key.
+            - Apply all updated fields to the ORM instance.
+            - Commit and refresh the record.
+
+        Args:
+            employee_id: ID of the employee to update.
+            employee_data: Validated Pydantic Employee model containing new values.
+
+        Returns:
+            The updated EmployeeSchema instance.
+
+        Raises:
+            EmployeeNotFoundError: No employee exists with the given ID.
+            EmployeeEmailAlreadyExistsError: Updated email conflicts with another employee.
+        """
 
         db_employee = self.get_employee_by_id(employee_id)
         if db_employee is None:
             raise EmployeeNotFoundError(employee_id)
 
-        # Ensure email is unique
         self._ensure_email_unique(employee_data.email, exclude_id=employee_id)
 
-        # Convert the enum to the employee_role foreign-key ID
         role_id = map_role_enum_to_fk(employee_data.role, self.db)
 
         db_employee.active = employee_data.active
