@@ -187,6 +187,9 @@ class VendorRepository:
         """
         vendor = self.get_vendor_by_id(vendor_id)
 
+        if vendor is None:
+            raise VendorNotFoundException(vendor_id)
+
         vendor.active = False
 
         self.db.commit()
