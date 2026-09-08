@@ -43,7 +43,7 @@ from exceptions.drink_recipe_exceptions import (
     UnitConversionError,
 )
 from repositories.drink_recipe_repository import DrinkRecipeRepository
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 from utils.response import to_response
 
 router = APIRouter(

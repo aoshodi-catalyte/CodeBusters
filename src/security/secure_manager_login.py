@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError  # type: ignore
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from config import settings
 
@@ -21,7 +21,7 @@ def check_role(allowed_roles: list[str]):
 
             if user_role not in allowed_roles:
                 logger.warning(
-                    f"Unauthorized access attempt at {datetime.utcnow()} "
+                    f"Unauthorized access attempt at {datetime.now(timezone.utc)} "
                     f"Role '{user_role}' tried to access manager-only route."
                 )
                 raise HTTPException(

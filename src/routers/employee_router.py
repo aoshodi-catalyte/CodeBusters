@@ -13,7 +13,7 @@ from employee.employee_response import EmployeeResponse
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 
 router = APIRouter()
 

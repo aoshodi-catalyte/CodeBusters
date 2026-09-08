@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 from utils.response import to_response
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,

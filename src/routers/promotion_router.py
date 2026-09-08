@@ -15,7 +15,7 @@ from database import get_db
 from repositories.promotion_repository import PromotionRepository
 from promotion.promotion_response_model import PromotionResponseModel
 from promotion.promotion_model import Promotion
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 router = APIRouter(
     prefix="/promotions",
     tags=["promotions"]

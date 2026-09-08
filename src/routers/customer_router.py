@@ -23,7 +23,7 @@ from customer.customer_model import (
 )
 from database import get_db
 from repositories.customer_repository import CustomerRepository
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 
 
 router = APIRouter()

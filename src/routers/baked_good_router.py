@@ -24,7 +24,7 @@ from exceptions.baked_good_exceptions import (
 )
 
 from repositories.baked_good_repository import BakedGoodRepository
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 
 router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
 
@@ -161,9 +161,10 @@ def put_baked_good(
             detail=str(exc),
         ) from exc
 
+
 @router.delete("/{baked_good_id}",
-    status_code=status.HTTP_204_NO_CONTENT)
-def deactivate_baked_good(baked_good_id:int, db: Session = Depends(get_db)):
+               status_code=status.HTTP_204_NO_CONTENT)
+def deactivate_baked_good(baked_good_id: int, db: Session = Depends(get_db)):
     """
     Deactivates a baked good and returns a 204 No Content response.
 

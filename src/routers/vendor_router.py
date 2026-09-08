@@ -10,7 +10,7 @@ from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
-from repositories.secure_manager_login import check_role
+from security.secure_manager_login import check_role
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
