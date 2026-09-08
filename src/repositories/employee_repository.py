@@ -8,6 +8,7 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
+from exceptions.secure_login_exceptions import EmployeeNotFoundError
 
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
@@ -24,7 +25,8 @@ def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
     role_row = db.query(EmployeeRoleSchema).filter_by(role=role_str).first()
 
     if not role_row:
-        raise ValueError(f"EmployeeRole '{role_str}' not found in employee_role table")
+        raise ValueError(
+            f"EmployeeRole '{role_str}' not found in employee_role table")
 
     return role_row.id
 
@@ -71,3 +73,27 @@ class EmployeeRepository:
                 empty list if no employees exist.
         """
         return self.db.query(EmployeeSchema).all()
+
+    def get_employee_by_id(self, employee_id: int) -> EmployeeSchema:
+        """Retrieve an employee by its unique ID.
+
+        Args:
+            employee_id: The unique identifier of the employee.
+
+        Returns:
+            The requested employee.
+
+        Raises:
+            EmployeeNotFoundError:
+                If the employee does not exist.
+        """
+        employee = (
+            self.db.query(EmployeeSchema)
+            .filter(EmployeeSchema.id == employee_id)
+            .first()
+        )
+
+        if employee is None:
+            raise EmployeeNotFoundError(employee_id)
+
+        return employee

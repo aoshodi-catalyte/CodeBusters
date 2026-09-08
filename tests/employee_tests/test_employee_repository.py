@@ -6,6 +6,7 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema, Base
 from employee.employee_role_schema import EmployeeRoleSchema
+from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 from secure_login.secure_login_schema import EmployeeAuth
 from pydantic import ValidationError
@@ -164,20 +165,19 @@ def test_repository_stores_trimmed_fields():
     assert created.last_name == "Doe"
 
 
-
 def test_get_all_employees_returns_empty_list():
     db, repo, role = run_db()
- 
+
     result = repo.get_all_employees()
- 
+
     assert result == []
- 
+
     db.close()
- 
- 
+
+
 def test_get_all_employees_returns_single_employee():
     db, repo, role = run_db()
- 
+
     employee_model = Employee(
         active=True,
         first_name="John",
@@ -187,22 +187,22 @@ def test_get_all_employees_returns_single_employee():
         hourly_rate="10.50",
         hire_date="01/01/2023",
     )
- 
+
     created = repo.create_new_employee(employee_model)
- 
+
     result = repo.get_all_employees()
- 
+
     assert len(result) == 1
     assert result[0].id == created.id
     assert result[0].first_name == "John"
     assert result[0].email == "john@doe.com"
- 
+
     db.close()
- 
- 
+
+
 def test_get_all_employees_returns_multiple_employees():
     db, repo, role = run_db()
- 
+
     repo.create_new_employee(
         Employee(
             active=True,
@@ -214,7 +214,7 @@ def test_get_all_employees_returns_multiple_employees():
             hire_date="01/01/2023",
         )
     )
- 
+
     repo.create_new_employee(
         Employee(
             active=True,
@@ -226,11 +226,66 @@ def test_get_all_employees_returns_multiple_employees():
             hire_date="02/01/2023",
         )
     )
- 
+
     result = repo.get_all_employees()
- 
+
     assert len(result) == 2
     assert result[0].first_name == "John"
     assert result[1].first_name == "Jane"
- 
+
+    db.close()
+
+
+def test_get_employee_by_id_success():
+    db, repo, role = run_db()
+
+    employee_model = Employee(
+        active=True,
+        first_name="John",
+        last_name="Doe",
+        email="john@doe.com",
+        role=EmployeeRole.MANAGER,
+        hourly_rate="10.50",
+        hire_date="01/01/2023",
+    )
+
+    created = repo.create_new_employee(employee_model)
+
+    result = repo.get_employee_by_id(created.id)
+
+    assert isinstance(result, EmployeeSchema)
+    assert result.id == created.id
+    assert result.first_name == "John"
+    assert result.last_name == "Doe"
+    assert result.email == "john@doe.com"
+    assert result.role_id == role.id
+    assert result.active is True
+
+    db.close()
+
+
+def test_get_employee_by_id_not_found():
+    db, repo, role = run_db()
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.get_employee_by_id(999)
+
+    db.close()
+
+
+def test_get_employee_by_id_non_integer():
+    db, repo, role = run_db()
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.get_employee_by_id("abc")
+
+    db.close()
+
+
+def test_get_employee_by_id_negative_id():
+    db, repo, role = run_db()
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.get_employee_by_id(-1)
+
     db.close()
