@@ -23,6 +23,7 @@ from customer.customer_model import (
 )
 from database import get_db
 from repositories.customer_repository import CustomerRepository
+from repositories.secure_manager_login import check_role
 
 
 router = APIRouter()
@@ -30,6 +31,7 @@ router = APIRouter()
 
 @router.post(
     "/customers",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=CustomerResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -63,6 +65,7 @@ def create_customer(
 
 @router.put(
     "/customers/{customer_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=CustomerResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -153,6 +156,7 @@ def get_customer(
 
 @router.delete(
     "/customers/{customer_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_customer(

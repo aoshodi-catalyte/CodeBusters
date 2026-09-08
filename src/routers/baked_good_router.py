@@ -23,12 +23,13 @@ from exceptions.baked_good_exceptions import (
 )
 
 from repositories.baked_good_repository import BakedGoodRepository
+from repositories.secure_manager_login import check_role
 
 router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
 
 
 @router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel
+    "/", dependencies=[Depends(check_role(["manager"]))], status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel
 )
 def post_baked_good(
     baked_good: BakedGood, db: Session = Depends(get_db)
@@ -51,6 +52,7 @@ def post_baked_good(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc)) from exc
+
 
 @router.get(
     "/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel]
@@ -107,6 +109,7 @@ def get_baked_good_by_id(
 
 @router.put(
     "/{baked_good_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_200_OK,
     response_model=BakedGoodResponseModel,
 )
