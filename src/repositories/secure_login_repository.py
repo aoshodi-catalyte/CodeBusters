@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from employee.employee_schema import EmployeeSchema
+from repositories.employee_repository import EmployeeRepository
 from exceptions.secure_login_exceptions import (
     CredentialsAlreadyExistError,
     EmployeeNotFoundError,
@@ -207,14 +208,8 @@ class SecureLoginRepository:
         if employee_id is None:
             raise TokenMissingClaimError("employee_id")
 
-        employee = (
-            db.query(EmployeeSchema)
-            .filter(EmployeeSchema.id == employee_id)
-            .first()
-        )
-
-        if employee is None:
-            raise EmployeeNotFoundError(employee_id)
+        repo = EmployeeRepository(db)
+        employee = repo.get_employee_by_id(employee_id)
 
         return employee
 
