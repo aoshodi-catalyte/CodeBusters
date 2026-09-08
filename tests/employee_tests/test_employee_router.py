@@ -284,3 +284,74 @@ def test_get_single_employee_by_id_invalid_id_type(client):
     response = client.get("/employees/not-an-int")
 
     assert response.status_code == 422
+
+
+def test_update_employee_success(client):
+    payload = {
+        "active": True,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@doe.com",
+        "role": "manager",
+        "hourly_rate": 10.50,
+        "hire_date": "01/01/2023",
+        "term_date": None
+    }
+
+    create_resp = client.post("/employees", json=payload)
+    employee_id = create_resp.json()["id"]
+
+    update_payload = {
+        "active": False,
+        "first_name": "Johnny",
+        "last_name": "Doe",
+        "email": "johnny@doe.com",
+        "role": "manager",
+        "hourly_rate": 15.00,
+        "hire_date": "01/01/2023",
+        "term_date": "01/02/2023"
+    }
+
+    resp = client.put(f"/employees/{employee_id}", json=update_payload)
+
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["first_name"] == "Johnny"
+    assert data["email"] == "johnny@doe.com"
+    assert data["active"] is False
+
+
+def test_update_employee_not_found(client):
+    update_payload = {
+        "active": True,
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "email": "jane@doe.com",
+        "role": "manager",
+        "hourly_rate": 12.00,     # FIXED
+        "hire_date": "01/01/2023",
+        "term_date": None
+    }
+
+    resp = client.put("/employees/999", json=update_payload)
+
+    assert resp.status_code == 404
+    assert "does not exist" in resp.json()["detail"].lower()
+
+
+def test_update_employee_invalid_payload(client):
+    invalid_payload = {
+        "active": True,
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "email": "not-an-email",
+        "role": "manager",
+        "hourly_rate": 12.00,
+        "hire_date": "01/01/2023",
+        "term_date": None
+    }
+
+    resp = client.put("/employees/1", json=invalid_payload)
+
+    assert resp.status_code == 422

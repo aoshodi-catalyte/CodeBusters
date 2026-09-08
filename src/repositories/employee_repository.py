@@ -101,55 +101,47 @@ class EmployeeRepository:
 
         return employee
 
-    def update_employee(
-        self,
-        employee_id: int,
-        employee: Employee
-    ) -> EmployeeSchema:
+    def _ensure_email_unique(self, email: str, exclude_id: int | None = None):
         """
-        Update and persist an existing employee's properties.
-
-        Args:
-            employee_id: The ID of the employee to update.
-            employee: Employee object containing the validated
-                replacement employee data.
-
-        Returns:
-            EmployeeSchema: The updated employee record.
-
-        Raises:
-            EmployeeNotFoundError:
-                If no employee exists with the given ID.
-            EmployeeEmailAlreadyExistsError:
-                If another employee already has the given email.
+        Ensure no other employee has the given email.
         """
+        query = (
+            self.db.query(EmployeeSchema)
+            .filter(EmployeeSchema.email == email)
+        )
+
+        if exclude_id is not None:
+            query = query.filter(EmployeeSchema.id != exclude_id)
+
+        if query.first():
+            raise EmployeeEmailAlreadyExistsError(email)
+
+    def update_employee(self, employee_id: int, employee_data: Employee) -> EmployeeSchema:
+
         db_employee = self.get_employee_by_id(employee_id)
         if db_employee is None:
             raise EmployeeNotFoundError(employee_id)
 
-        existing_email = self.get_employee_by_email(employee.email)
-        if existing_email and existing_email.id != employee_id:
-            raise EmployeeEmailAlreadyExistsError(employee.email)
+        # Ensure email is unique
+        self._ensure_email_unique(employee_data.email, exclude_id=employee_id)
 
-        db_employee.active = employee.active
-        db_employee.first_name = employee.first_name
-        db_employee.last_name = employee.last_name
-        db_employee.email = employee.email
-        db_employee.role = employee.role
-        db_employee.hourly_rate = employee.hourly_rate
-        db_employee.hire_date = employee.hire_date
-        db_employee.term_date = employee.term_date
+        # Convert the enum to the employee_role foreign-key ID
+        role_id = map_role_enum_to_fk(employee_data.role, self.db)
+
+        db_employee.active = employee_data.active
+        db_employee.first_name = employee_data.first_name
+        db_employee.last_name = employee_data.last_name
+        db_employee.email = employee_data.email
+        db_employee.role_id = role_id
+        db_employee.hourly_rate = employee_data.hourly_rate
+        db_employee.hire_date = employee_data.hire_date
+        db_employee.term_date = employee_data.term_date
 
         try:
             self.db.commit()
             self.db.refresh(db_employee)
         except IntegrityError as exc:
             self.db.rollback()
-            constraint, error_message = parse_integrity_error(exc)
-
-            if "email" in error_message:
-                raise EmployeeEmailAlreadyExistsError(
-                    employee.email
-                ) from exc
+            raise EmployeeEmailAlreadyExistsError(employee_data.email) from exc
 
         return db_employee
