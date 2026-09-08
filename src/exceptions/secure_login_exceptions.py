@@ -86,6 +86,7 @@ class TokenMissingJTIError(Exception):
     def __init__(self) -> None:
         super().__init__("Token is missing JTI.")
 
+
 class TokenBlacklistedError(Exception):
     """Raised when a JWT token has been revoked and is no longer valid."""
 
