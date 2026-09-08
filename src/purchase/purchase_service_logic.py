@@ -73,7 +73,11 @@ class PurchaseService:
                 )
 
             now = datetime.now(UTC)
-            if promo.start_datetime > now or now > promo.end_datetime:
+
+            start = promo.start_datetime.replace(tzinfo=UTC)
+            end = promo.end_datetime.replace(tzinfo=UTC)
+
+            if start > now or now > end:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Promotion is not within valid date range",

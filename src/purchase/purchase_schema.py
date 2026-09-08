@@ -72,7 +72,7 @@ class PurchaseSchema(Base):
     loyalty_points_awarded = Column(Integer, nullable=False, default=0)
 
     created_at = Column(
-        DateTime,
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False
     )
