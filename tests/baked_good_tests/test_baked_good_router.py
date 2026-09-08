@@ -1,8 +1,19 @@
 import pytest
-
+from config import settings
+from jose import jwt  # type: ignore
 import models
 
+
+def manager_token():
+    payload = {
+        "employee_id": 1,
+        "role": "manager"
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
 def create_vendor(client, name="Test Vendor", email="vendor@example.com"):
+    token = manager_token()
     """Helper to create a vendor and return its ID."""
     vendor = {
         "active": True,
@@ -12,7 +23,8 @@ def create_vendor(client, name="Test Vendor", email="vendor@example.com"):
         "email": email,
         "phone": "5551234567",
     }
-    response = client.post("/vendors", json=vendor)
+    response = client.post("/vendors", json=vendor,
+                           headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 201
     return response.json()["id"]
 
@@ -21,6 +33,7 @@ def test_post_baked_good(client):
     """Tests that a valid baked good can be created through the API."""
 
     vendor_id = create_vendor(client)
+    token = manager_token()
 
     baked_good = {
         "active": True,
@@ -30,7 +43,8 @@ def test_post_baked_good(client):
         "retail_price": 2.50,
         "vendor_id": vendor_id,
     }
-    baked_good_response = client.post("/baked_goods/", json=baked_good)
+    baked_good_response = client.post(
+        "/baked_goods/", json=baked_good, headers={"Authorization": f"Bearer {token}"})
     assert baked_good_response.status_code == 201
 
     data = baked_good_response.json()
@@ -54,7 +68,9 @@ def test_post_baked_good_missing_description(client):
         "vendor_id": 1,
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    token = manager_token()
+    response = client.post("/baked_goods/", json=baked_good,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
@@ -69,7 +85,9 @@ def test_post_baked_good_invalid_retail_price(client):
         "vendor_id": 1,
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    token = manager_token()
+    response = client.post("/baked_goods/", json=baked_good,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
@@ -84,7 +102,9 @@ def test_post_baked_good_empty_name(client):
         "vendor_id": 1,
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    token = manager_token()
+    response = client.post("/baked_goods/", json=baked_good,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
@@ -342,7 +362,8 @@ def test_put_baked_good_with_nonexistent_id(client):
     response = client.put("/baked_goods/9999", json=update_payload)
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Baked good with ID 9999 was not found."
+    assert response.json()[
+        "detail"] == "Baked good with ID 9999 was not found."
 
 
 def test_put_baked_good_with_invalid_vendor(client):
@@ -562,6 +583,7 @@ def test_put_baked_good_updates_vendor(client):
     get_response = client.get(f"/baked_goods/{baked_good_id}")
     assert get_response.json()["vendor_id"] == vendor_2_id
 
+
 def test_delete_baked_good_persists_change(client):
     """Verifies the deactivation is reflected on a subsequent GET."""
 
@@ -594,12 +616,14 @@ def test_delete_baked_good_persists_change(client):
     assert get_response.status_code == 200
     assert get_response.json()["active"] is False
 
+
 def test_delete_baked_good_not_found(client):
     """Verifies a 404 is returned when the baked good does not exist."""
 
     response = client.delete("/baked_goods/9999")
 
     assert response.status_code == 404
+
 
 def test_delete_baked_good_already_deactivated(client):
     """Verifies a 409 is returned when the baked good is already inactive."""
@@ -631,6 +655,7 @@ def test_delete_baked_good_already_deactivated(client):
     )
 
     assert second_delete_response.status_code == 409
+
 
 def test_delete_baked_good_already_deactivated(client):
     """Verifies a 409 is returned when the baked good is already inactive."""
