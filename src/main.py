@@ -14,6 +14,7 @@ from database import SessionLocal, create_db
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from health.health_router import router as health_router
+from routers.purchase_router import router as purchase_router
 from routers.baked_good_router import router as baked_good_router
 from routers.customer_router import router as customer_router
 from routers.drink_recipe_router import router as drink_recipe_router
@@ -85,3 +86,4 @@ app.include_router(customer_router)
 app.include_router(employee_router)
 app.include_router(promotion_router)
 app.include_router(secure_login_router)
+app.include_router(purchase_router)
