@@ -1,3 +1,24 @@
+"""
+Secure Logout Repository
+
+This module provides the data‑access layer responsible for securely revoking
+JWT access tokens. A token is considered revoked when its unique JTI (JWT ID)
+claim is extracted and persisted in the token_blacklist table. Any future
+authentication checks can consult this blacklist to prevent the reuse of
+previously issued tokens.
+
+Key responsibilities:
+- Decode and validate incoming JWT access tokens.
+- Extract the JTI claim using shared JWT utility functions.
+- Persist the revoked token signature along with a UTC timestamp.
+- Provide a consistent, database‑backed mechanism for token invalidation
+  across the authentication system.
+
+This repository is intentionally stateless; all revocation state is stored
+in the database so that logout behavior remains consistent across multiple
+application instances or deployments.
+"""
+
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
