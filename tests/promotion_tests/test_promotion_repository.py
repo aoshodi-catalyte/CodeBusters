@@ -215,3 +215,6 @@ def test_deactivate_promotion_preserves_other_fields(db):
 
     assert result.promo_code == "WINTER2026"
     assert result.discount_percentage == 30.0
+    assert result.start_datetime == created.start_datetime
+    assert result.end_datetime == created.end_datetime
+    assert result.active is False
