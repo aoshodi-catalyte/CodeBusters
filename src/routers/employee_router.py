@@ -136,8 +136,11 @@ def get_single_employee_by_id(
 
     try:
         return repo.get_employee_by_id(employee_id)
-    except Exception as exc:
-        _handle_repo_errors(exc)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.put(
@@ -165,5 +168,15 @@ def update_employee(
 
     try:
         return repo.update_employee(employee_id, employee)
-    except Exception as exc:
-        _handle_repo_errors(exc)
+
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except EmployeeEmailAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
