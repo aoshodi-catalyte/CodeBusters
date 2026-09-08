@@ -11,7 +11,6 @@ from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
-from utils.error_utils import parse_integrity_error
 
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
