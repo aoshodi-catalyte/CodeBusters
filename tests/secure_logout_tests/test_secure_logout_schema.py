@@ -22,7 +22,6 @@ def test_create_token_blacklist_entry(db):
 
 
 def test_query_token_blacklist_entry(db):
-    # Insert test data
     entry = TokenBlacklist(
         token_signature="abc123",
         blacklisted_on=datetime.now(UTC)
@@ -30,7 +29,6 @@ def test_query_token_blacklist_entry(db):
     db.add(entry)
     db.commit()
 
-    # Now query
     result = db.query(TokenBlacklist).filter_by(token_signature="abc123").first()
 
     assert result is not None

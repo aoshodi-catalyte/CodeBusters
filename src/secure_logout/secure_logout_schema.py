@@ -7,4 +7,4 @@ class TokenBlacklist(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     token_signature = Column(String, nullable=False)
-    blacklisted_on = Column(DateTime, nullable=False)
+    blacklisted_on = Column(DateTime(timezone=True), nullable=False)
