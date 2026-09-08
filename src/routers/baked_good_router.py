@@ -17,6 +17,7 @@ from database import get_db
 from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from baked_good.baked_good_response_model import BakedGoodResponseModel
 from exceptions.baked_good_exceptions import (
+    BakedGoodAlreadyDeactivatedError,
     BakedGoodNotFoundError,
     DuplicateBakedGoodError,
     VendorNotFoundError,
@@ -152,6 +153,33 @@ def put_baked_good(
 
     except DuplicateBakedGoodError as exc:
         db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+@router.delete("/{baked_good_id}",
+    status_code=status.HTTP_204_NO_CONTENT)
+def deactivate_baked_good(baked_good_id:int, db: Session = Depends(get_db)):
+    """
+    Deactivates a baked good and returns a 204 No Content response.
+
+    Raises:
+        HTTPException: 404 if the baked good does not exist.
+        HTTPException: 409 if the baked good is already deactivated.
+    """
+    repo = BakedGoodRepository(db)
+
+    try:
+        repo.deactivate_baked_good(baked_good_id)
+
+    except BakedGoodNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except BakedGoodAlreadyDeactivatedError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),

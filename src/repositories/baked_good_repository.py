@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from exceptions.baked_good_exceptions import (
     BakedGoodNotFoundError,
     DuplicateBakedGoodError,
-    VendorNotFoundError,
+    VendorNotFoundError, BakedGoodAlreadyDeactivatedError,
 )
 from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from baked_good.baked_good_schema import BakedGoodSchema
@@ -216,5 +216,34 @@ class BakedGoodRepository:
         self.session.commit()
         self.session.refresh(baked_good)
         self.session.refresh(vendor)
+
+        return baked_good
+
+    def deactivate_baked_good(self, baked_good_id: int) -> BakedGoodSchema:
+        """
+        Deactivates an existing baked good by setting its active status to False.
+
+        Args:
+            baked_good_id: The ID of the baked good to deactivate.
+
+        Raises:
+            BakedGoodNotFoundError: If the baked good does not exist.
+            BakedGoodAlreadyDeactivatedError: If the baked good is already inactive.
+
+        Returns:
+            The updated baked good with its active status set to False.
+        """
+        baked_good = self.get_baked_good_by_id(baked_good_id)
+
+        if baked_good is None:
+            raise BakedGoodNotFoundError(baked_good_id)
+
+        if baked_good.active is False:
+            raise BakedGoodAlreadyDeactivatedError(baked_good_id)
+
+        baked_good.active = False
+
+        self.session.commit()
+        self.session.refresh(baked_good)
 
         return baked_good
