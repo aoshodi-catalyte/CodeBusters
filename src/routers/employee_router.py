@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
+from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 
@@ -155,12 +156,10 @@ def update_employee(
             detail=str(exc),
         ) from exc
 
-    # except (
-    #     EmployeeEmailAlreadyExistsError,
-    #     EmployeePhoneAlreadyExistsError,
-    #     EmployeeConstraintError,
-    # ) as exc:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_409_CONFLICT,
-    #         detail=str(exc),
-    #     ) from exc
+    except (
+        EmployeeEmailAlreadyExistsError
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
