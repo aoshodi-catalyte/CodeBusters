@@ -242,8 +242,8 @@ class BakedGoodRepository:
             raise BakedGoodAlreadyDeactivatedError(baked_good_id)
 
         baked_good.active = False
-        
+
         self.session.commit()
         self.session.refresh(baked_good)
-        
+
         return baked_good
