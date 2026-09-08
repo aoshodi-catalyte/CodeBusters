@@ -43,13 +43,11 @@ class PurchaseService:
             PurchaseSchema: The persisted purchase record.
         """
 
+        pricing = {"subtotal": 0.0, "discount": 0.0}
         line_items = []
-        subtotal = 0.0
 
         for item in purchase_create.items:
             price = self.repo.get_item_price(item.item_type, item.item_id)
-            line_total = price * item.quantity
-
             line_items.append(
                 {
                     "item_type": item.item_type,
@@ -58,10 +56,7 @@ class PurchaseService:
                     "price_at_sale": price,
                 }
             )
-
-            subtotal += line_total
-
-        discount_amount = 0.0
+            pricing["subtotal"] += price * item.quantity
 
         if purchase_create.promo_id is not None:
             promo = self.repo.get_promotion(purchase_create.promo_id)
@@ -78,27 +73,25 @@ class PurchaseService:
                 )
 
             now = datetime.now(UTC)
-
             if promo.start_datetime > now or now > promo.end_datetime:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Promotion is not within valid date range",
                 )
 
-            discount_percentage = promo.discount_percentage / 100
-            discount_amount = subtotal * discount_percentage
+            pricing["discount"] = pricing["subtotal"] * (promo.discount_percentage / 100)
 
-        taxable_amount = subtotal - discount_amount
-        tax_amount = taxable_amount * 0.07
-        total = taxable_amount + tax_amount
+        taxable = pricing["subtotal"] - pricing["discount"]
+        tax_amount = taxable * 0.07
+        total = taxable + tax_amount
 
         # Round values
-        subtotal = round(subtotal, 2)
-        discount_amount = round(discount_amount, 2)
+        pricing["subtotal"] = round(pricing["subtotal"], 2)
+        pricing["discount"] = round(pricing["discount"], 2)
         tax_amount = round(tax_amount, 2)
         total = round(total, 2)
 
-        loyalty_points_awarded = floor(total)
+        loyalty_points = floor(total)
 
         if purchase_create.customer_id is not None:
             customer = (
@@ -113,19 +106,17 @@ class PurchaseService:
                     detail=f"Customer ID {purchase_create.customer_id} not found",
                 )
 
-            customer.loyalty_points += loyalty_points_awarded
+            customer.loyalty_points += loyalty_points
             self.db.add(customer)
 
         purchase_data = {
-            "subtotal": subtotal,
-            "discount_amount": discount_amount,
+            "subtotal": pricing["subtotal"],
+            "discount_amount": pricing["discount"],
             "tax_amount": tax_amount,
             "total": total,
-            "loyalty_points_awarded": loyalty_points_awarded,
+            "loyalty_points_awarded": loyalty_points,
             "customer_id": purchase_create.customer_id,
             "promo_id": purchase_create.promo_id,
         }
 
-        purchase = self.repo.create_purchase(purchase_data, line_items)
-
-        return purchase
+        return self.repo.create_purchase(purchase_data, line_items)
