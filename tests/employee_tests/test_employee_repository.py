@@ -6,11 +6,21 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema, Base
 from employee.employee_role_schema import EmployeeRoleSchema
+from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 from secure_login.secure_login_schema import EmployeeAuth
+from routers.employee_router import router
 from pydantic import ValidationError
 from datetime import date, timedelta
+
+
+@pytest.fixture
+def repo(db):
+    role = EmployeeRoleSchema(role="manager")
+    db.add(role)
+    db.commit()
+    return EmployeeRepository(db)
 
 
 def run_db():
@@ -289,3 +299,93 @@ def test_get_employee_by_id_negative_id():
         repo.get_employee_by_id(-1)
 
     db.close()
+
+
+def test_repo_update_success(repo, db):
+    emp = repo.create_new_employee(
+        Employee(
+            active=True,
+            first_name="John",
+            last_name="Doe",
+            email="john@doe.com",
+            role="manager",
+            hourly_rate="10.50",
+            hire_date="01/01/2023",
+            term_date=None,
+        )
+    )
+
+    update_model = Employee(
+        active=False,
+        first_name="Johnny",
+        last_name="Doe",
+        email="johnny@doe.com",
+        role="manager",
+        hourly_rate="15.00",
+        hire_date="01/01/2023",
+        term_date="01/02/2023"
+    )
+
+    updated = repo.update_employee(emp.id, update_model)
+
+    assert updated.first_name == "Johnny"
+    assert updated.email == "johnny@doe.com"
+    assert updated.active is False
+
+
+def test_repo_update_not_found(repo):
+    update_model = Employee(
+        active=True,
+        first_name="Jane",
+        last_name="Doe",
+        email="jane@doe.com",
+        role="manager",
+        hourly_rate="12.00",
+        hire_date="01/01/2023",
+        term_date=None,
+    )
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.update_employee(999, update_model)
+
+
+def test_repo_update_email_conflict(repo, db):
+    emp1 = repo.create_new_employee(
+        Employee(
+            active=True,
+            first_name="John",
+            last_name="Doe",
+            email="john@doe.com",
+            role="manager",
+            hourly_rate="10.50",
+            hire_date="01/01/2023",
+            term_date=None,
+        )
+    )
+
+    emp2 = repo.create_new_employee(
+        Employee(
+            active=True,
+            first_name="Jane",
+            last_name="Doe",
+            email="jane@doe.com",
+            role="manager",
+            hourly_rate="10.50",
+            hire_date="01/01/2023",
+            term_date=None,
+        )
+    )
+
+    update_model = Employee(
+        active=True,
+        first_name="Jane",
+        last_name="Doe",
+        email="john@doe.com",
+        role="manager",
+        hourly_rate="10.50",
+        hire_date="01/01/2023",
+        term_date=None,
+    )
+
+    with pytest.raises(EmployeeEmailAlreadyExistsError):
+        repo.update_employee(emp2.id, update_model)
