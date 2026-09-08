@@ -470,3 +470,88 @@ def test_update_vendor_invalid_phone(client):
     )
 
     assert response.status_code == 422
+
+def test_deactivate_vendor(client):
+    """Test that a vendor can be deactivated through the API and returns 204."""
+    create_response = client.post(
+        "/vendors",
+        json={
+            "active": True,
+            "name": "Deactivate Vendor",
+            "contact_name": "John Smith",
+            "contact_role": "Manager",
+            "email": "deactivate@example.com",
+            "phone": "5551234567",
+        },
+    )
+
+    vendor_id = create_response.json()["id"]
+
+    response = client.delete(f"/vendors/{vendor_id}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+def test_deactivate_vendor_sets_active_false(client):
+    """Test that deactivating a vendor is reflected on a subsequent GET."""
+    create_response = client.post(
+        "/vendors",
+        json={
+            "active": True,
+            "name": "Another Vendor",
+            "contact_name": "Jane Smith",
+            "contact_role": "Owner",
+            "email": "another@example.com",
+            "phone": "5559876543",
+        },
+    )
+
+    vendor_id = create_response.json()["id"]
+
+    client.delete(f"/vendors/{vendor_id}")
+
+    get_response = client.get(f"/vendors/{vendor_id}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["active"] is False
+
+
+def test_deactivate_vendor_not_found_returns_404(client):
+    """Test that deactivating a nonexistent vendor returns 404."""
+    response = client.delete("/vendors/999999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Vendor with ID 999999 was not found."
+    )
+
+
+def test_deactivate_vendor_preserves_record(client):
+    """Test that deactivating a vendor preserves the historical record."""
+    create_response = client.post(
+        "/vendors",
+        json={
+            "active": True,
+            "name": "Preserved Vendor",
+            "contact_name": "Sam Lee",
+            "contact_role": "Director",
+            "email": "preserved@example.com",
+            "phone": "5551112222",
+        },
+    )
+
+    vendor_id = create_response.json()["id"]
+
+    client.delete(f"/vendors/{vendor_id}")
+
+    get_response = client.get(f"/vendors/{vendor_id}")
+
+    assert get_response.status_code == 200
+
+    data = get_response.json()
+
+    assert data["id"] == vendor_id
+    assert data["name"] == "Preserved Vendor"
+    assert data["contact_name"] == "Sam Lee"
+    assert data["active"] is False
