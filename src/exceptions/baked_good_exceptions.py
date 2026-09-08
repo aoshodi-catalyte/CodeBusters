@@ -35,3 +35,12 @@ class BakedGoodNotFoundError(Exception):
     def __init__(self, baked_good_id: int):
         self.baked_good_id = baked_good_id
         super().__init__(f"Baked good with ID {baked_good_id} was not found.")
+
+
+class BakedGoodAlreadyDeactivatedError(Exception):
+    """
+    Raised when a baked good is already deactivated.
+    """
+    def __init__(self, baked_good_id: int):
+        self.baked_good_id = baked_good_id
+        super().__init__(f"Baked good with ID {baked_good_id} is already deactivated.")

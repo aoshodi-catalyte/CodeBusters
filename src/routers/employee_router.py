@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
+from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 from repositories.secure_manager_login import check_role
@@ -91,6 +92,25 @@ async def get_all_employees(db: Session = Depends(get_db)):
     return repo.get_all_employees()
 
 
+def _handle_repo_errors(exc: Exception) -> None:
+    """
+    Convert repository exceptions into HTTPExceptions.
+    """
+    if isinstance(exc, EmployeeNotFoundError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    if isinstance(exc, EmployeeEmailAlreadyExistsError):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    raise exc
+
+
 @router.get(
     "/employees/{employee_id}",
     response_model=EmployeeResponse,
@@ -120,5 +140,44 @@ def get_single_employee_by_id(
     except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.put(
+    "/employees/{employee_id}",
+    response_model=EmployeeResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_employee(
+    employee_id: int,
+    employee: Employee,
+    db: Session = Depends(get_db),
+):
+    """
+    Update an existing employee's properties.
+
+    Raises:
+        HTTPException 404:
+            If no employee exists with the provided ID.
+        HTTPException 409:
+            If the updated email or phone number belongs to another
+            employee, or the record violates another database
+            constraint.
+    """
+    repo = EmployeeRepository(db)
+
+    try:
+        return repo.update_employee(employee_id, employee)
+
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except EmployeeEmailAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
