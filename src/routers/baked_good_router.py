@@ -161,7 +161,13 @@ def put_baked_good(
 @router.delete("/{baked_good_id}",
     status_code=status.HTTP_204_NO_CONTENT)
 def deactivate_baked_good(baked_good_id:int, db: Session = Depends(get_db)):
-    
+    """
+    Deactivates a baked good and returns a 204 No Content response.
+
+    Raises:
+        HTTPException: 404 if the baked good does not exist.
+        HTTPException: 409 if the baked good is already deactivated.
+    """
     repo = BakedGoodRepository(db)
 
     try:

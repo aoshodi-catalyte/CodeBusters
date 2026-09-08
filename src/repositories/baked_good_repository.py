@@ -220,6 +220,19 @@ class BakedGoodRepository:
         return baked_good
 
     def deactivate_baked_good(self, baked_good_id: int) -> BakedGoodSchema:
+        """
+        Deactivates an existing baked good by setting its active status to False.
+
+        Args:
+            baked_good_id: The ID of the baked good to deactivate.
+
+        Raises:
+            BakedGoodNotFoundError: If the baked good does not exist.
+            BakedGoodAlreadyDeactivatedError: If the baked good is already inactive.
+
+        Returns:
+            The updated baked good with its active status set to False.
+        """
         baked_good = self.get_baked_good_by_id(baked_good_id)
 
         if baked_good is None:

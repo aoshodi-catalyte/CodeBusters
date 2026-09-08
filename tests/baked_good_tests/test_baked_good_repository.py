@@ -581,4 +581,3 @@ def test_deactivate_baked_good_already_deactivated(db):
 
     with pytest.raises(BakedGoodAlreadyDeactivatedError):
         repo.deactivate_baked_good(baked_good.id)
-

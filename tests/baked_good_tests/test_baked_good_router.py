@@ -561,3 +561,104 @@ def test_put_baked_good_updates_vendor(client):
 
     get_response = client.get(f"/baked_goods/{baked_good_id}")
     assert get_response.json()["vendor_id"] == vendor_2_id
+
+def test_delete_baked_good_persists_change(client):
+    """Verifies the deactivation is reflected on a subsequent GET."""
+
+    vendor_id = create_vendor(client)
+
+    create_response = client.post(
+        "/baked_goods/",
+        json={
+            "active": True,
+            "name": "Bagel",
+            "description": "A plain bagel",
+            "purchasing_cost": 1.0,
+            "retail_price": 2.5,
+            "vendor_id": vendor_id,
+        },
+    )
+
+    baked_good_id = create_response.json()["id"]
+
+    delete_response = client.delete(
+        f"/baked_goods/{baked_good_id}"
+    )
+
+    assert delete_response.status_code == 204
+
+    get_response = client.get(
+        f"/baked_goods/{baked_good_id}"
+    )
+
+    assert get_response.status_code == 200
+    assert get_response.json()["active"] is False
+
+def test_delete_baked_good_not_found(client):
+    """Verifies a 404 is returned when the baked good does not exist."""
+
+    response = client.delete("/baked_goods/9999")
+
+    assert response.status_code == 404
+
+def test_delete_baked_good_already_deactivated(client):
+    """Verifies a 409 is returned when the baked good is already inactive."""
+
+    vendor_id = create_vendor(client)
+
+    create_response = client.post(
+        "/baked_goods/",
+        json={
+            "active": True,
+            "name": "Bagel",
+            "description": "A plain bagel",
+            "purchasing_cost": 1.0,
+            "retail_price": 2.5,
+            "vendor_id": vendor_id,
+        },
+    )
+
+    baked_good_id = create_response.json()["id"]
+
+    first_delete_response = client.delete(
+        f"/baked_goods/{baked_good_id}"
+    )
+
+    assert first_delete_response.status_code == 204
+
+    second_delete_response = client.delete(
+        f"/baked_goods/{baked_good_id}"
+    )
+
+    assert second_delete_response.status_code == 409
+
+def test_delete_baked_good_already_deactivated(client):
+    """Verifies a 409 is returned when the baked good is already inactive."""
+
+    vendor_id = create_vendor(client)
+
+    create_response = client.post(
+        "/baked_goods/",
+        json={
+            "active": True,
+            "name": "Bagel",
+            "description": "A plain bagel",
+            "purchasing_cost": 1.0,
+            "retail_price": 2.5,
+            "vendor_id": vendor_id,
+        },
+    )
+
+    baked_good_id = create_response.json()["id"]
+
+    first_delete_response = client.delete(
+        f"/baked_goods/{baked_good_id}"
+    )
+
+    assert first_delete_response.status_code == 204
+
+    second_delete_response = client.delete(
+        f"/baked_goods/{baked_good_id}"
+    )
+
+    assert second_delete_response.status_code == 409
