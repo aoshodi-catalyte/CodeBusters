@@ -79,14 +79,12 @@ class PurchaseService:
 
             now = datetime.now(UTC)
 
-            # Fix C0325: remove unnecessary parentheses
             if promo.start_datetime > now or now > promo.end_datetime:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Promotion is not within valid date range",
                 )
 
-            # Convert whole-number percentage (e.g., 20) → decimal (0.20)
             discount_percentage = promo.discount_percentage / 100
             discount_amount = subtotal * discount_percentage
 
@@ -118,15 +116,16 @@ class PurchaseService:
             customer.loyalty_points += loyalty_points_awarded
             self.db.add(customer)
 
-        purchase = self.repo.create_purchase(
-            subtotal=subtotal,
-            discount_amount=discount_amount,
-            tax_amount=tax_amount,
-            total=total,
-            loyalty_points_awarded=loyalty_points_awarded,
-            customer_id=purchase_create.customer_id,
-            promo_id=purchase_create.promo_id,
-            items=line_items,
-        )
+        purchase_data = {
+            "subtotal": subtotal,
+            "discount_amount": discount_amount,
+            "tax_amount": tax_amount,
+            "total": total,
+            "loyalty_points_awarded": loyalty_points_awarded,
+            "customer_id": purchase_create.customer_id,
+            "promo_id": purchase_create.promo_id,
+        }
+
+        purchase = self.repo.create_purchase(purchase_data, line_items)
 
         return purchase
