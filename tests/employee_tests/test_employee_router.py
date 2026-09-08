@@ -329,7 +329,7 @@ def test_update_employee_not_found(client):
         "last_name": "Doe",
         "email": "jane@doe.com",
         "role": "manager",
-        "hourly_rate": 12.00,     # FIXED
+        "hourly_rate": 12.00,
         "hire_date": "01/01/2023",
         "term_date": None
     }
