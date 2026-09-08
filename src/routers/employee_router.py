@@ -146,6 +146,7 @@ def get_single_employee_by_id(
 
 @router.put(
     "/employees/{employee_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=EmployeeResponse,
     status_code=status.HTTP_200_OK,
 )
