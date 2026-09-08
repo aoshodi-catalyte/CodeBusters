@@ -78,3 +78,17 @@ class CredentialsAlreadyExistError(Exception):
         super().__init__(
             f"Employee with ID {employee_id} already has login credentials."
         )
+
+
+class TokenMissingJTIError(Exception):
+    """Raised when a JWT token is missing JTI."""
+
+    def __init__(self) -> None:
+        super().__init__("Token is missing JTI.")
+
+
+class TokenBlacklistedError(Exception):
+    """Raised when a JWT token has been revoked and is no longer valid."""
+
+    def __init__(self) -> None:
+        super().__init__("Token has been revoked and is no longer valid.")

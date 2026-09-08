@@ -4,26 +4,28 @@ management, password hashing, and JWT token operations.
 """
 
 from datetime import datetime, timedelta, timezone
+import uuid
 
-from jose import ExpiredSignatureError, JWTError, jwt  # type: ignore
-from passlib.context import CryptContext  # type: ignore
+from jose import jwt
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from config import settings
 from employee.employee_schema import EmployeeSchema
+from repositories.employee_repository import EmployeeRepository
 from exceptions.secure_login_exceptions import (
     CredentialsAlreadyExistError,
     EmployeeNotFoundError,
     IncorrectPasswordError,
-    TokenDecodeError,
-    TokenExpiredError,
-    TokenInvalidSignatureError,
+    TokenBlacklistedError,
     TokenMissingClaimError,
     UsernameNotFoundError,
     UsernameTakenError,
 )
 from secure_login.secure_login_model import EmployeeAuthCreate
 from secure_login.secure_login_schema import EmployeeAuth
+from secure_logout.secure_logout_schema import TokenBlacklist
+from utils.jwt_utils import decode_token, extract_jti
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -147,10 +149,15 @@ class SecureLoginRepository:
         """
 
         to_encode = data.copy()
+
+        jti = uuid.uuid4().hex
+        to_encode.update({"jti": jti})
+
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
         to_encode.update({"exp": expire})
+
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     def get_current_employee(self, token: str, db: Session):
@@ -184,30 +191,25 @@ class SecureLoginRepository:
                 If the referenced employee does not exist.
         """
 
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode_token(token)
 
-        except ExpiredSignatureError as exc:
-            raise TokenExpiredError() from exc
+        # Extract JTI using shared utility
+        jti = extract_jti(payload)
 
-        except JWTError as exc:
-            msg = str(exc).lower()
-
-            if "signature" in msg or "invalid signature" in msg:
-                raise TokenInvalidSignatureError() from exc
-
-            raise TokenDecodeError(msg) from exc
+        blacklisted = (
+            db.query(TokenBlacklist)
+            .filter(TokenBlacklist.token_signature == jti)
+            .first()
+        )
+        if blacklisted:
+            raise TokenBlacklistedError()
 
         employee_id = payload.get("employee_id")
         if employee_id is None:
             raise TokenMissingClaimError("employee_id")
 
-        employee = (
-            db.query(EmployeeSchema).filter(EmployeeSchema.id == employee_id).first()
-        )
-
-        if employee is None:
-            raise EmployeeNotFoundError(employee_id)
+        repo = EmployeeRepository(db)
+        employee = repo.get_employee_by_id(employee_id)
 
         return employee
 
