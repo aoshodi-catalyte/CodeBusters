@@ -88,6 +88,38 @@ class PromotionRepository:
             PromotionSchema.id == promotion_id
         ).first()
 
+    def update_promotion(
+        self,
+        promotion_id: int,
+        promotion: Promotion,
+    ) -> PromotionSchema | None:
+        """
+        Update an existing promotion's properties.
+
+        Args:
+            promotion_id: The unique identifier of the promotion to
+                update.
+            promotion: Validated promotion data to apply.
+
+        Returns:
+            The updated PromotionSchema object if found, otherwise
+            None.
+        """
+        db_promotion = self.get_promotion_by_id(promotion_id)
+
+        if db_promotion is None:
+            return None
+
+        update_data = promotion.model_dump()
+
+        for field, value in update_data.items():
+            setattr(db_promotion, field, value)
+
+        self.session.commit()
+        self.session.refresh(db_promotion)
+
+        return db_promotion
+
     def deactivate_promotion(
         self,
         promotion_id: int

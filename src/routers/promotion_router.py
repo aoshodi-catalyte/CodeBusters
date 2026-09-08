@@ -107,6 +107,54 @@ def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> Pro
         )
     return promotion
 
+@router.put(
+    "/{promotion_id}",
+    response_model=PromotionResponseModel,
+    status_code=status.HTTP_200_OK,
+)
+def update_promotion(
+    promotion_id: int,
+    promotion_model: Promotion,
+    db: Session = Depends(get_db),
+) -> PromotionResponseModel:
+    """
+    Update an existing promotion.
+
+    Args:
+        promotion_id: The unique identifier of the promotion to
+            update.
+        promotion_model: The updated promotion data provided by
+            the client.
+        db: The database session provided by the get_db dependency.
+
+    Returns:
+        PromotionResponseModel: The updated promotion.
+
+    Raises:
+        HTTPException: If the promotion does not exist, or if the
+            update violates the unique promo code constraint.
+    """
+    repo = PromotionRepository(db)
+
+    try:
+        updated_promotion = repo.update_promotion(
+            promotion_id, promotion_model
+        )
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Promotion with promo code "
+                   f"'{promotion_model.promo_code}' already exists.",
+        ) from exc
+
+    if updated_promotion is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
+        )
+
+    return updated_promotion
+
 @router.delete(
     "/{promotion_id}",
     status_code=status.HTTP_204_NO_CONTENT,

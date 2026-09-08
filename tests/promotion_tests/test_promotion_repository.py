@@ -218,3 +218,91 @@ def test_deactivate_promotion_preserves_other_fields(db):
     assert result.start_datetime == created.start_datetime
     assert result.end_datetime == created.end_datetime
     assert result.active is False
+
+
+def test_update_promotion(db):
+    """
+    Test that update_promotion updates and returns an existing
+    promotion's fields.
+    """
+    repo = PromotionRepository(db)
+
+    original = Promotion(
+        active=True,
+        promo_code="ORIGINAL",
+        discount_percentage=10.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(original)
+
+    updated_data = Promotion(
+        active=False,
+        promo_code="UPDATED",
+        discount_percentage=50.0,
+        start_datetime="07/01/2026 09:00 AM",
+        end_datetime="07/31/2026 11:59 PM",
+    )
+
+    updated = repo.update_promotion(created.id, updated_data)
+
+    assert updated.id == created.id
+    assert updated.active is False
+    assert updated.promo_code == "UPDATED"
+    assert updated.discount_percentage == 50.0
+
+
+def test_update_promotion_persists_to_database(db):
+    """
+    Test that an update is actually persisted in the database.
+    """
+    repo = PromotionRepository(db)
+
+    original = Promotion(
+        active=True,
+        promo_code="PERSIST1",
+        discount_percentage=10.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(original)
+
+    updated_data = Promotion(
+        active=True,
+        promo_code="PERSIST2",
+        discount_percentage=25.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    repo.update_promotion(created.id, updated_data)
+
+    stored_promotion = (
+        db.query(PromotionSchema)
+        .filter_by(id=created.id)
+        .first()
+    )
+
+    assert stored_promotion.promo_code == "PERSIST2"
+    assert stored_promotion.discount_percentage == 25.0
+
+
+def test_update_promotion_returns_none_when_not_found(db):
+    """
+    Test that update_promotion returns None for a nonexistent ID.
+    """
+    repo = PromotionRepository(db)
+
+    updated_data = Promotion(
+        active=True,
+        promo_code="NOTFOUND",
+        discount_percentage=10.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    result = repo.update_promotion(999, updated_data)
+
+    assert result is None
