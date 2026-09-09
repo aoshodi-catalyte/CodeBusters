@@ -54,15 +54,22 @@ def post_promotion(
         HTTPException: If the promo code already exists.
     """
     repo = PromotionRepository(db)
+
     try:
         post_promotions = repo.create_promotion(promotion_model)
+
+    except PromotionCodeAlreadyExistsError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Promotion with promo code '{promotion_model.promo_code}' already exists."
+        ) from exc
 
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Promotion with promo code "
-            f"'{promotion_model.promo_code}' already exists."
+            detail=f"Promotion with promo code '{promotion_model.promo_code}' already exists."
         ) from exc
 
     return post_promotions
