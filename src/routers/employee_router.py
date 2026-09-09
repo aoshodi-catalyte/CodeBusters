@@ -18,7 +18,8 @@ from security.secure_manager_login import check_role
 router = APIRouter()
 
 
-@router.post("/employees", dependencies=[Depends(check_role(["manager"]))], response_model=EmployeeResponse, status_code=201)
+@router.post("/employees", dependencies=[Depends(check_role(["manager"]))],
+             response_model=EmployeeResponse, status_code=201)
 async def post_new_employee(employee_data: Employee, db: Session = Depends(get_db)):
     """
     Create a new employee record and return the newly created employee.

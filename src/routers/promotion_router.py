@@ -22,7 +22,8 @@ router = APIRouter(
 )
 
 
-@router.post("/", dependencies=[Depends(check_role(["manager"]))], response_model=PromotionResponseModel, status_code=201)
+@router.post("/", dependencies=[Depends(check_role(["manager"]))],
+             response_model=PromotionResponseModel, status_code=201)
 def post_promotion(
     promotion_model: Promotion,
     db: Session = Depends(get_db)

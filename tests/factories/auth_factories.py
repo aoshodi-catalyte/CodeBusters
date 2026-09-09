@@ -1,5 +1,6 @@
-from config import settings
 from jose import jwt  # type: ignore
+
+from config import settings
 
 
 def manager_token():

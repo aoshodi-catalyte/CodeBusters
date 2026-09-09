@@ -18,7 +18,8 @@ from repositories.vendor_repository import VendorRepository
 router = APIRouter()
 
 
-@router.post("/vendors", dependencies=[Depends(check_role(["manager"]))], response_model=VendorResponse, status_code=201)
+@router.post("/vendors", dependencies=[Depends(check_role(["manager"]))],
+             response_model=VendorResponse, status_code=201)
 async def post_new_vendor(
     vendor_data: VendorBase,
     db: Session = Depends(get_db),
@@ -148,6 +149,7 @@ def update_vendor(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
 
 @router.delete(
     "/vendors/{vendor_id}",

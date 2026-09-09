@@ -30,7 +30,8 @@ router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
 
 
 @router.post(
-    "/", dependencies=[Depends(check_role(["manager"]))], status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel
+    "/", dependencies=[Depends(check_role(["manager"]))],
+    status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel
 )
 def post_baked_good(
     baked_good: BakedGood, db: Session = Depends(get_db)

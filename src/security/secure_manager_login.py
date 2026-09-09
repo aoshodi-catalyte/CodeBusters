@@ -1,8 +1,19 @@
+"""
+Security utilities for role‑based authorization in the FastAPI application.
+
+This module defines the `check_role` dependency, which validates the user's
+JWT token, extracts the assigned role, and ensures the user has permission
+to access protected routes. Unauthorized or invalid access attempts are
+logged and rejected with appropriate HTTP error responses.
+"""
+
+import logging
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError  # type: ignore
-from datetime import datetime, timezone
-import logging
+from jose import JWTError, jwt  # type: ignore
+
 from config import settings
 
 SECRET_KEY = settings.JWT_SECRET_KEY
@@ -14,6 +25,21 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 def check_role(allowed_roles: list[str]):
+    """
+    Creates a FastAPI dependency that enforces role‑based access control.
+
+    Parameters
+    ----------
+    allowed_roles : list[str]
+        A list of roles permitted to access the protected route.
+
+    Returns
+    -------
+    Callable
+        A dependency function that validates the JWT token, checks the user's
+        role, and either returns the decoded payload or raises an HTTPException
+        if access is unauthorized.
+    """
     def role_checker(token: str = Depends(oauth2_scheme)):
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

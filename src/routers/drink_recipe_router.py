@@ -85,7 +85,8 @@ def serialize_recipe(recipe):
     }
 
 
-@router.post("/", dependencies=[Depends(check_role(["manager"]))], response_model=DrinkRecipeResponse, status_code=201)
+@router.post("/", dependencies=[Depends(check_role(["manager"]))],
+             response_model=DrinkRecipeResponse, status_code=201)
 def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
     """
     Create a new drink recipe, including ingredient usage, production
@@ -196,7 +197,8 @@ def get_all_drink_recipes(db: Session = Depends(get_db)):
     ]
 
 
-@router.put("/{recipe_id}", dependencies=[Depends(check_role(["manager"]))], response_model=DrinkRecipeResponse, status_code=200)
+@router.put("/{recipe_id}", dependencies=[Depends(check_role(["manager"]))],
+            response_model=DrinkRecipeResponse, status_code=200)
 def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
     """
     Update an existing drink recipe by its ID.
