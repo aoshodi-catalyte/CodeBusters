@@ -8,7 +8,7 @@ purchase data, and support ORM mode via `from_attributes=True`.
 
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class PurchaseItemCreate(BaseModel):
@@ -56,7 +56,9 @@ class PurchaseItemResponse(BaseModel):
     quantity: int
     price_at_sale: Decimal
 
-    model_config = ConfigDict(from_attributes=True)
+    @field_serializer("price_at_sale")
+    def serialize_decimal(self, value: Decimal):
+        return float(value)
 
 
 class PurchaseResponse(BaseModel):
@@ -89,4 +91,6 @@ class PurchaseResponse(BaseModel):
 
     items: list[PurchaseItemResponse]
 
-    model_config = ConfigDict(from_attributes=True)
+    @field_serializer("subtotal", "discount_amount", "tax_amount", "total")
+    def serialize_decimal(self, value: Decimal):
+        return float(value)
