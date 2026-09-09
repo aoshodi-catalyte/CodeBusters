@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-import jwt
+from jose import jwt
 import pytest
 
 from exceptions.secure_login_exceptions import (
