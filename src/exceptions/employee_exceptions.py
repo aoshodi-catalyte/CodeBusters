@@ -7,7 +7,6 @@ rather than relying on generic Exception handling.
 """
 
 
-import employee
 
 
 class EmployeeEmailAlreadyExistsError(Exception):
