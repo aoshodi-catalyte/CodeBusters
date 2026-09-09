@@ -1,6 +1,7 @@
-import jwt
+from jose import jwt  # type: ignore
 from secure_logout.secure_logout_schema import TokenBlacklist
 from utils.jwt_utils import SECRET_KEY, ALGORITHM
+
 
 def create_test_token(jti: str):
     return jwt.encode({"sub": "user123", "jti": jti}, SECRET_KEY, algorithm=ALGORITHM)
@@ -18,7 +19,8 @@ def test_logout_success(client, db):
     assert response.status_code == 200
     assert response.json() == {"detail": "Token successfully revoked"}
 
-    saved = db.query(TokenBlacklist).filter_by(token_signature=jti_value).first()
+    saved = db.query(TokenBlacklist).filter_by(
+        token_signature=jti_value).first()
     assert saved is not None
 
 
@@ -26,7 +28,8 @@ def test_logout_missing_authorization_header(client):
     response = client.post("/auth/logout")
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Missing or invalid Authorization header"
+    assert response.json()[
+        "detail"] == "Missing or invalid Authorization header"
 
 
 def test_logout_invalid_authorization_format(client):
@@ -36,7 +39,8 @@ def test_logout_invalid_authorization_format(client):
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Missing or invalid Authorization header"
+    assert response.json()[
+        "detail"] == "Missing or invalid Authorization header"
 
 
 def test_logout_invalid_signature(client):

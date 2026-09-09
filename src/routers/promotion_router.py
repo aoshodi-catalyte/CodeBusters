@@ -8,6 +8,7 @@ appropriate HTTP responses.
 """
 from typing import List
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -20,12 +21,15 @@ from exceptions.promotion_exceptions import (
 from repositories.promotion_repository import PromotionRepository
 from promotion.promotion_response_model import PromotionResponseModel
 from promotion.promotion_model import Promotion
+from security.secure_manager_login import check_role
 router = APIRouter(
     prefix="/promotions",
     tags=["promotions"]
 )
 
-@router.post("/", response_model = PromotionResponseModel, status_code=201)
+
+@router.post("/", dependencies=[Depends(check_role(["manager"]))],
+             response_model=PromotionResponseModel, status_code=201)
 def post_promotion(
     promotion_model: Promotion,
     db: Session = Depends(get_db)
@@ -47,24 +51,31 @@ def post_promotion(
         PromotionResponseModel: The newly created promotion.
 
     Raises:
-        HTTPException: If the promo code already exists, or the
-            record violates another database constraint.
+        HTTPException: If the promo code already exists.
     """
     repo = PromotionRepository(db)
 
     try:
-        return repo.create_promotion(promotion_model)
+        post_promotions = repo.create_promotion(promotion_model)
 
-    except (
-        PromotionCodeAlreadyExistsError,
-        PromotionConstraintError,
-    ) as exc:
+    except PromotionCodeAlreadyExistsError as exc:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
+            detail=f"Promotion with promo code '{promotion_model.promo_code}' already exists."
         ) from exc
 
-@router.get("/", response_model= List[PromotionResponseModel], status_code=200)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Promotion with promo code '{promotion_model.promo_code}' already exists."
+        ) from exc
+
+    return post_promotions
+
+
+@router.get("/", response_model=List[PromotionResponseModel], status_code=200)
 def get_all_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseModel]:
     """
     Retrieve all promotions.
@@ -84,6 +95,7 @@ def get_all_promotions(db: Session = Depends(get_db)) -> List[PromotionResponseM
     get_promos = repo.get_all_promotions()
 
     return get_promos
+
 
 @router.get(
     "/{promotion_id}",
@@ -113,6 +125,7 @@ def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> Pro
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
 
 @router.put(
     "/{promotion_id}",
@@ -162,8 +175,10 @@ def update_promotion(
             detail=str(exc),
         ) from exc
 
+
 @router.delete(
     "/{promotion_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_promotion(
