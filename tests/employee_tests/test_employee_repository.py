@@ -390,48 +390,59 @@ def test_repo_update_email_conflict(repo, db):
     with pytest.raises(EmployeeEmailAlreadyExistsError):
         repo.update_employee(emp2.id, update_model)
 
-def test_deactivate_employee_success(db):
-    """Test successfully deactivating an employee."""
+def test_deactivate_employee_success():
+    db, repo, role = run_db()
 
-    employee = EmployeeSchema(
+    employee_model = Employee(
+        active=True,
         first_name="John",
         last_name="Doe",
-        active=True,
+        email="john@doe.com",
+        role=EmployeeRole.MANAGER,
+        hourly_rate="10.50",
+        hire_date="01/01/2023",
+        term_date=None,
     )
 
-    db.add(employee)
-    db.commit()
-    db.refresh(employee)
+    created = repo.create_new_employee(employee_model)
+    result = repo.deactivate_employee(created.id)
 
-    repo = EmployeeRepository(db)
-
-    result = repo.deactivate_employee(employee.id)
-
-    assert result.id == employee.id
+    assert isinstance(result, EmployeeSchema)
+    assert result.id == created.id
+    assert result.first_name == "John"
+    assert result.last_name == "Doe"
+    assert result.email == "john@doe.com"
+    assert result.hourly_rate == 10.50
+    assert result.role_id == role.id
     assert result.active is False
 
-def test_deactivate_employee_not_found(db):
-    """Test deactivating an employee that does not exist."""
+    db.close()
 
-    repo = EmployeeRepository(db)
+def test_deactivate_employee_not_found():
+    db, repo, role = run_db()
 
     with pytest.raises(EmployeeNotFoundError):
         repo.deactivate_employee(9999)
 
-def test_deactivate_employee_already_deactivated(db):
-    """Test attempting to deactivate an employee that is already inactive."""
+    db.close()
 
-    employee = EmployeeSchema(
+def test_deactivate_employee_already_deactivated():
+    db, repo, role = run_db()
+
+    employee_model = Employee(
+        active=False,
         first_name="John",
         last_name="Doe",
-        active=False,
+        email="john@doe.com",
+        role=EmployeeRole.MANAGER,
+        hourly_rate="10.50",
+        hire_date="01/01/2023",
+        term_date="01/01/2025",
     )
 
-    db.add(employee)
-    db.commit()
-    db.refresh(employee)
-
-    repo = EmployeeRepository(db)
+    created = repo.create_new_employee(employee_model)
 
     with pytest.raises(EmployeeAlreadyDeactivatedError):
-        repo.deactivate_employee(employee.id)
+        repo.deactivate_employee(created.id)
+
+    db.close()

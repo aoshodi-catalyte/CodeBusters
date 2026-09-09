@@ -183,7 +183,7 @@ def update_employee(
         ) from exc
 
 @router.delete(
-    "/{employee_id}",
+    "/employees/{employee_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_employee(
