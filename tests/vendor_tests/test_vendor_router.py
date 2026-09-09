@@ -505,8 +505,10 @@ def test_update_vendor_invalid_phone(client):
 
     assert response.status_code == 422
 
+
 def test_deactivate_vendor(client):
     """Test that a vendor can be deactivated through the API and returns 204."""
+    token = manager_token()
     create_response = client.post(
         "/vendors",
         json={
@@ -517,11 +519,13 @@ def test_deactivate_vendor(client):
             "email": "deactivate@example.com",
             "phone": "5551234567",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     vendor_id = create_response.json()["id"]
 
-    response = client.delete(f"/vendors/{vendor_id}")
+    response = client.delete(
+        f"/vendors/{vendor_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 204
     assert response.content == b""
@@ -529,6 +533,7 @@ def test_deactivate_vendor(client):
 
 def test_deactivate_vendor_sets_active_false(client):
     """Test that deactivating a vendor is reflected on a subsequent GET."""
+    token = manager_token()
     create_response = client.post(
         "/vendors",
         json={
@@ -539,11 +544,13 @@ def test_deactivate_vendor_sets_active_false(client):
             "email": "another@example.com",
             "phone": "5559876543",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     vendor_id = create_response.json()["id"]
 
-    client.delete(f"/vendors/{vendor_id}")
+    client.delete(f"/vendors/{vendor_id}",
+                  headers={"Authorization": f"Bearer {token}"})
 
     get_response = client.get(f"/vendors/{vendor_id}")
 
@@ -553,7 +560,9 @@ def test_deactivate_vendor_sets_active_false(client):
 
 def test_deactivate_vendor_not_found_returns_404(client):
     """Test that deactivating a nonexistent vendor returns 404."""
-    response = client.delete("/vendors/999999")
+    token = manager_token()
+    response = client.delete(
+        "/vendors/999999", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
     assert response.json()["detail"] == (
@@ -563,6 +572,7 @@ def test_deactivate_vendor_not_found_returns_404(client):
 
 def test_deactivate_vendor_preserves_record(client):
     """Test that deactivating a vendor preserves the historical record."""
+    token = manager_token()
     create_response = client.post(
         "/vendors",
         json={
@@ -573,11 +583,13 @@ def test_deactivate_vendor_preserves_record(client):
             "email": "preserved@example.com",
             "phone": "5551112222",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     vendor_id = create_response.json()["id"]
 
-    client.delete(f"/vendors/{vendor_id}")
+    client.delete(f"/vendors/{vendor_id}",
+                  headers={"Authorization": f"Bearer {token}"})
 
     get_response = client.get(f"/vendors/{vendor_id}")
 
