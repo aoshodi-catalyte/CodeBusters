@@ -166,20 +166,21 @@ class EmployeeRepository:
         return db_employee
 
     def deactivate_employee(self, employee_id:int):
-            """Deactivate an employee by setting active to False.
+        """
+        Deactivate an employee by setting active to False.
 
-            The employee record is preserved for historical purposes.
-            """
-            employee = self.get_employee_by_id(employee_id)
+        The employee record is preserved for historical purposes.
+        """
+        employee = self.get_employee_by_id(employee_id)
 
-            if employee is None:
-                raise EmployeeNotFoundError(employee_id)
+        if employee is None:
+            raise EmployeeNotFoundError(employee_id)
 
-            if employee.active is False:
-                raise EmployeeAlreadyDeactivatedError(employee_id)
+        if employee.active is False:
+            raise EmployeeAlreadyDeactivatedError(employee_id)
 
-            employee.active = False
-            self.db.commit()
-            self.db.refresh(employee)
+        employee.active = False
+        self.db.commit()
+        self.db.refresh(employee)
 
-            return employee
+        return employee
