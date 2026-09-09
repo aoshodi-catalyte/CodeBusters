@@ -35,7 +35,8 @@ def test_logout(db):
 
     result = repo.logout(token, db)
 
-    saved = db.query(TokenBlacklist).filter_by(token_signature=jti_value).first()
+    saved = db.query(TokenBlacklist).filter_by(
+        token_signature=jti_value).first()
 
     assert saved.blacklisted_on is not None
     assert saved.token_signature == jti_value
