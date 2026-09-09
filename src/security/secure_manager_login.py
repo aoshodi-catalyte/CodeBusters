@@ -47,7 +47,8 @@ def check_role(allowed_roles: list[str]):
 
             if user_role not in allowed_roles:
                 logger.warning(
-                    "Unauthorized access attempt at %s Role '%s' tried to access manager-only route.",
+                    "Unauthorized access attempt at %s "
+                    "Role '%s' tried to access manager-only route.",
                     datetime.now(timezone.utc),
                     user_role,
                 )
