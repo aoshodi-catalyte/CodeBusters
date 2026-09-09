@@ -26,3 +26,17 @@ def manager_token():
         "role": "manager"
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def employee_token():
+    """
+    Generate a JWT token representing a standard employee.
+
+    Used to verify that employee-level users are restricted from
+    manager-only routes but allowed on employee-accessible routes.
+    """
+    payload = {
+        "employee_id": 2,
+        "role": "employee"
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
