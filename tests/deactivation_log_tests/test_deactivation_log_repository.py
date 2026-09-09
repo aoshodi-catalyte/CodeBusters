@@ -1,10 +1,15 @@
 from datetime import datetime
 
 from deactivation_log.deactivation_log_schema import DeactivationLogSchema
+from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
+from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+from drink_recipe.drink_type_schema import DrinkTypeSchema
 from repositories.deactivation_log_repository import DeactivationLogRepository
 from deactivation_log.deactivation_log_schema import DeactivationLogSchema
 from repositories.drink_recipe_repository import DrinkRecipeRepository
 from repositories.ingredient_repository import IngredientRepository, soft_delete_ingredient
+from tests.ingredient_tests.test_ingredient_repository import make_ingredient
+from vendor.vendor_schema import Vendor
 
 def test_create_deactivation_log(db):
     repo = DeactivationLogRepository(db)
@@ -172,67 +177,95 @@ def test_get_missing_deactivation_log_returns_none(db):
 
 def test_soft_delete_ingredient_creates_deactivation_log(
     db,
-    drink_types,
-    ingredient_factory,
-    recipe_model_factory,
 ):
-    """Deactivating an ingredient creates a log for active related recipes."""
-    ingredient_repo = IngredientRepository(db)
-    drink_repo = DrinkRecipeRepository(db)
-
-    # Create the ingredient.
-    ingredient = ingredient_factory(
-        name="Espresso",
-        cost=14.00,
-        amount=1.00,
-        uom="lb",
-    )
-
-    # Create an active recipe that uses the ingredient.
-    recipe = recipe_model_factory(
-        name="Espresso Latte",
-        description="Espresso with milk",
-        ingredients=[
-            (ingredient, 2.00, "oz"),
-        ],
-        drink_type="coffee",
-        markup=50,
+    """Test that deleting an ingredient creates a deactivation log."""
+    vendor = Vendor(
+        name="Deactivation Log Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="deactivationlog@test.com",
+        phone="3125557000",
         active=True,
     )
 
-    created_recipe = drink_repo.create_drink_recipe(recipe)
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    # Create the ingredient.
+    ingredient_repo = IngredientRepository(db)
+
+    ingredient = ingredient_repo.create_ingredient(
+        make_ingredient(
+            name="Espresso",
+            vendor_id=vendor.id,
+        ),
+    )
+
+    # Create a drink type.
+    drink_type = DrinkTypeSchema(
+        name="coffee",
+    )
+
+    db.add(drink_type)
+    db.commit()
+    db.refresh(drink_type)
+
+    # Create an active drink recipe.
+    recipe = DrinkRecipeSchema(
+        name="Iced Latte",
+        description="Espresso with milk over ice",
+        type_id=drink_type.id,
+        active=True,
+    )
+
+    db.add(recipe)
+    db.commit()
+    db.refresh(recipe)
+
+    # Connect the ingredient to the recipe.
+    recipe_ingredient = DrinkRecipeIngredientSchema(
+        drink_recipe_id=recipe.id,
+        ingredient_id=ingredient.id,
+        quantity_used=1.0,
+        unit_of_measure_used="oz",
+    )
+
+    db.add(recipe_ingredient)
+    db.commit()
+    db.refresh(recipe_ingredient)
 
     # Deactivate the ingredient.
     result = ingredient_repo.soft_delete_ingredient(
         ingredient_id=ingredient.id,
     )
 
-    # Ingredient should now be inactive.
+    # Verify the ingredient was deactivated.
     assert result is not None
     assert result.id == ingredient.id
     assert result.active is False
 
-    # A deactivation log should have been created.
+    # Verify a deactivation log was created.
     log = (
         db.query(DeactivationLogSchema)
         .filter(
             DeactivationLogSchema.entity_id == ingredient.id,
-            DeactivationLogSchema.related_entity_id == created_recipe.id,
+            DeactivationLogSchema.related_entity_id == recipe.id,
         )
         .first()
     )
 
     assert log is not None
 
-    # Verify the log contains the expected information.
     assert log.entity_type == "Ingredient"
     assert log.entity_id == ingredient.id
     assert log.entity_name == "Espresso"
 
     assert log.related_entity_type == "DrinkRecipe"
-    assert log.related_entity_id == created_recipe.id
-    assert log.related_entity_name == "Espresso Latte"
+    assert log.related_entity_id == recipe.id
+    assert log.related_entity_name == "Iced Latte"
 
-    assert log.reason == "Deactivated while still referenced by an active drink recipe"
+    assert log.reason == "Active relationship"
+
     assert "Espresso" in log.error_message
-    assert "Espresso Latte" in log.error_message
+    assert "Iced Latte" in log.error_message

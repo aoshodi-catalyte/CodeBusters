@@ -209,48 +209,49 @@ class IngredientRepository:
             self.db.rollback()
             raise exc
 
-def soft_delete_ingredient(
-    self,
-    ingredient_id: int,
-) -> IngredientSchema | None:
-    """Soft delete an ingredient and record active relationships."""
-    try:
-        ingredient = self.get_ingredient_by_id(ingredient_id)
+    def soft_delete_ingredient(
+        self,
+        ingredient_id: int,
+    ) -> IngredientSchema | None:
+        """Soft delete an ingredient and record active relationships."""
+        try:
+            ingredient = self.get_ingredient_by_id(ingredient_id)
 
-        if ingredient is None:
-            return None
+            if ingredient is None:
+                return None
 
-        active_recipes = [
-            recipe_link.drink_recipe
-            for recipe_link in ingredient.ingredient_recipes
-            if recipe_link.drink_recipe.active
-        ]
+            active_recipes = [
+                recipe_link.drink_recipe
+                for recipe_link in ingredient.ingredient_recipes
+                if recipe_link.drink_recipe is not None
+                and recipe_link.drink_recipe.active
+            ]
 
-        ingredient.active = False
+            ingredient.active = False
 
-        log_repo = DeactivationLogRepository(self.db)
+            log_repo = DeactivationLogRepository(self.db)
 
-        for recipe in active_recipes:
-            log_repo.create(
-                entity_type="Ingredient",
-                entity_id=ingredient.id,
-                entity_name=ingredient.name,
-                related_entity_type="DrinkRecipe",
-                related_entity_id=recipe.id,
-                related_entity_name=recipe.name,
-                reason="Active relationship",
-                error_message=(
-                    f'Ingredient "{ingredient.name}" was deactivated '
-                    f'while still referenced by active drink recipe '
-                    f'"{recipe.name}".'
-                ),
-            )
+            for recipe in active_recipes:
+                log_repo.create(
+                    entity_type="Ingredient",
+                    entity_id=ingredient.id,
+                    entity_name=ingredient.name,
+                    related_entity_type="DrinkRecipe",
+                    related_entity_id=recipe.id,
+                    related_entity_name=recipe.name,
+                    reason="Active relationship",
+                    error_message=(
+                        f'Ingredient "{ingredient.name}" was deactivated '
+                        f'while still referenced by active drink recipe '
+                        f'"{recipe.name}".'
+                    ),
+                )
 
-        self.db.commit()
-        self.db.refresh(ingredient)
+            self.db.commit()
+            self.db.refresh(ingredient)
 
-        return ingredient
+            return ingredient
 
-    except SQLAlchemyError as exc:
-        self.db.rollback()
-        raise exc
+        except SQLAlchemyError as exc:
+            self.db.rollback()
+            raise exc
