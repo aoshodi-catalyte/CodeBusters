@@ -104,9 +104,6 @@ def get_deactivation_log(
 
         return DeactivationLog.model_validate(log)
 
-    except HTTPException:
-        raise
-
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,14 +1,18 @@
+"""Repository for creating and retrieving deactivation log entries."""
+
 from sqlalchemy.orm import Session
 
 from deactivation_log.deactivation_log_schema import DeactivationLogSchema
 
 
 class DeactivationLogRepository:
+    """Provide database operations for deactivation logs."""
 
     def __init__(self, db: Session):
+        """Initialize the repository with a database session."""
         self.db = db
 
-    def create(
+    def create(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         entity_type: str,
         entity_id: int,
@@ -18,7 +22,8 @@ class DeactivationLogRepository:
         related_entity_name: str,
         reason: str,
         error_message: str,
-    ):
+    ) -> DeactivationLogSchema:
+        """Create a new deactivation log entry."""
         log = DeactivationLogSchema(
             entity_type=entity_type,
             entity_id=entity_id,
@@ -38,6 +43,7 @@ class DeactivationLogRepository:
         skip: int = 0,
         limit: int = 50,
     ) -> list[DeactivationLogSchema]:
+        """Return deactivation logs ordered from newest to oldest."""
         return (
             self.db.query(DeactivationLogSchema)
             .order_by(
@@ -50,6 +56,7 @@ class DeactivationLogRepository:
         )
 
     def get_by_id(self, log_id: int) -> DeactivationLogSchema | None:
+        """Return a deactivation log by ID, or None if it does not exist."""
         return (
             self.db.query(DeactivationLogSchema)
             .filter(DeactivationLogSchema.id == log_id)

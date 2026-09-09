@@ -1,3 +1,5 @@
+"""SQLAlchemy schema for deactivation log entries."""
+
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Integer, String, Text
@@ -6,6 +8,8 @@ from database import Base
 
 
 class DeactivationLogSchema(Base):
+    """Represent a database record for an entity deactivation event."""
+
     __tablename__ = "deactivation_log"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -21,8 +25,8 @@ class DeactivationLogSchema(Base):
     reason = Column(String(255), nullable=False)
     error_message = Column(Text, nullable=False)
 
-    deactivated_at =  Column(
-    DateTime(timezone=True),
-    nullable=False,
-    default=lambda: datetime.now(timezone.utc),
-)
+    deactivated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )

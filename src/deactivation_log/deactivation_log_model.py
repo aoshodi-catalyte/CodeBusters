@@ -1,9 +1,13 @@
+"""Pydantic model for deactivation log entries."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
 
 class DeactivationLog(BaseModel):
+    """Represent a log entry for an entity deactivated while related entities remained active."""
+
     id: int
 
     entity_type: str
