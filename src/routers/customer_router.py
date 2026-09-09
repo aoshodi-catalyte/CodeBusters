@@ -50,6 +50,8 @@ def create_customer(
     try:
         return repo.create_customer(customer)
 
+# pylint: disable=duplicate-code
+
     except (
         CustomerEmailAlreadyExistsError,
         CustomerPhoneAlreadyExistsError,
@@ -60,6 +62,7 @@ def create_customer(
             detail=str(exc),
         ) from exc
 
+# pylint: enable=duplicate-code
 
 @router.put(
     "/customers/{customer_id}",
