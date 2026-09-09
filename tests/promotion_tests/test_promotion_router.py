@@ -268,7 +268,229 @@ def test_get_promotion_by_id_invalid_id(client):
 
     assert response.status_code == 404
 
-    assert response.json()["detail"] == "Invalid Promotion ID"
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
+
+
+def test_update_promotion(client):
+    """
+    Test that a promotion can be updated through the API and the
+    updated entity is returned.
+    """
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "BEFORE2026",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    update_payload = {
+        "active": False,
+        "promo_code": "AFTER2026",
+        "discount_percentage": 45.0,
+        "start_datetime": "07/01/2026 09:00 AM",
+        "end_datetime": "07/31/2026 11:59 PM",
+    }
+
+    response = client.put(
+        f"/promotions/{promotion_id}", json=update_payload
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == promotion_id
+    assert data["active"] is False
+    assert data["promo_code"] == "AFTER2026"
+    assert data["discount_percentage"] == 45.0
+
+
+def test_update_promotion_persists_change(client):
+    """
+    Test that an update is reflected on a subsequent GET request.
+    """
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "PATCH1",
+            "discount_percentage": 5.0,
+            "start_datetime": "08/01/2026 09:00 AM",
+            "end_datetime": "08/31/2026 11:59 PM",
+        },
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "PATCH2",
+            "discount_percentage": 15.0,
+            "start_datetime": "08/01/2026 09:00 AM",
+            "end_datetime": "08/31/2026 11:59 PM",
+        },
+    )
+
+    get_response = client.get(f"/promotions/{promotion_id}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["promo_code"] == "PATCH2"
+    assert get_response.json()["discount_percentage"] == 15.0
+
+
+def test_update_promotion_with_invalid_id(client):
+    """
+    Test that updating a promotion with an ID that does not exist
+    returns HTTP 404.
+    """
+    update_payload = {
+        "active": True,
+        "promo_code": "NOTFOUND2026",
+        "discount_percentage": 10.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM",
+    }
+
+    response = client.put("/promotions/9999", json=update_payload)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
+
+
+def test_update_promotion_rejects_lowercase_promo_code(client):
+    """
+    Test that the API rejects an update payload with a lowercase
+    promo code.
+    """
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "VALIDCODE",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "lowercase",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_promotion_rejects_discount_over_100(client):
+    """
+    Test that the API rejects an update payload with a discount
+    percentage above 100.
+    """
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "OVERLIMIT",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "OVERLIMIT",
+            "discount_percentage": 150.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_promotion_rejects_end_before_start(client):
+    """
+    Test that the API rejects an update payload where the end
+    datetime is before the start datetime.
+    """
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "BADDATES",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "BADDATES",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/30/2026 11:59 PM",
+            "end_datetime": "06/01/2026 09:00 AM",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_promotion_missing_required_field(client):
+    """
+    Test that the API rejects an update payload missing a required
+    field.
+    """
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "MISSINGFIELD",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+    )
+
+    assert response.status_code == 422
+
 
 def test_deactivate_promotion(client):
     """
@@ -324,7 +546,7 @@ def test_deactivate_promotion_with_invalid_id(client):
     response = client.delete("/promotions/9999")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Invalid Promotion ID"
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
 
 
 def test_deactivate_promotion_preserves_record(client):
