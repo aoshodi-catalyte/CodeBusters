@@ -12,8 +12,8 @@ from exceptions.ingredient_exceptions import (
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from vendor.vendor_schema import Vendor
-from deactivation_log_repository import DeactivationLogRepository
-from drink_recipe.drink_recipe_schema import DrinkRecipe
+from repositories.deactivation_log_repository import DeactivationLogRepository
+from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 
 def get_or_create_allergen(
     db: Session,
