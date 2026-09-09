@@ -64,7 +64,7 @@ def create(
     repo = IngredientRepository(db)
     try:
         created = repo.create_ingredient(ingredient)
-        logger.info(f"Ingredient created successfully: id={ingredient.id}")
+        logger.info(f"Ingredient created successfully: id={created.id}")
         return to_response(IngredientOut, created)
 
     except VendorNotFoundError as exc:
