@@ -220,17 +220,14 @@ def soft_delete_ingredient(
         if ingredient is None:
             return None
 
-        # Find active drink recipes using this ingredient
         active_recipes = [
-            recipe
-            for recipe in ingredient.ingredient_recipes
-            if recipe.active
+            recipe_link.drink_recipe
+            for recipe_link in ingredient.ingredient_recipes
+            if recipe_link.drink_recipe.active
         ]
 
-        # Deactivate ingredient
         ingredient.active = False
 
-        # Create a log for every active related recipe
         log_repo = DeactivationLogRepository(self.db)
 
         for recipe in active_recipes:
@@ -249,7 +246,6 @@ def soft_delete_ingredient(
                 ),
             )
 
-        # Commit ingredient + logs together
         self.db.commit()
         self.db.refresh(ingredient)
 
