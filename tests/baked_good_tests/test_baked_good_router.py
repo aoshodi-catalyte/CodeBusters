@@ -121,6 +121,8 @@ def test_get_baked_goods(client):
         client, name="Test Vendor", email="christian@robinsonvendor.com"
     )
 
+    token = manager_token()
+
     baked_good = {
         "active": True,
         "name": "Chocolate Cake",
@@ -130,12 +132,17 @@ def test_get_baked_goods(client):
         "vendor_id": vendor_id,
     }
 
-    baked_good_response = client.post("/baked_goods/", json=baked_good)
-
+    baked_good_response = client.post(
+        "/baked_goods/",
+        json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
+    )
     assert baked_good_response.status_code == 201
 
-    response = client.get("/baked_goods/")
-
+    response = client.get(
+        "/baked_goods/",
+        headers={"Authorization": f"Bearer {token}"}
+    )
     assert response.status_code == 200
 
     data = response.json()
@@ -147,6 +154,8 @@ def test_get_baked_goods(client):
 
 
 def test_post_baked_good_invalid_vendor(client):
+
+    token = manager_token()
     baked_good = {
         "active": True,
         "name": "Chocolate Cake",
@@ -156,7 +165,8 @@ def test_post_baked_good_invalid_vendor(client):
         "vendor_id": 9999,
     }
 
-    response = client.post("/baked_goods/", json=baked_good)
+    response = client.post("/baked_goods/", json=baked_good,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
 
@@ -165,6 +175,8 @@ def test_post_duplicate_baked_good(client):
     vendor_id = create_vendor(
         client, name="Test Vendor", email="christian@robinsonvendor.com"
     )
+
+    token = manager_token()
 
     baked_good = {
         "active": True,
@@ -175,11 +187,13 @@ def test_post_duplicate_baked_good(client):
         "vendor_id": vendor_id,
     }
 
-    first_response = client.post("/baked_goods/", json=baked_good)
+    first_response = client.post("/baked_goods/", json=baked_good,
+                                 headers={"Authorization": f"Bearer {token}"})
 
     assert first_response.status_code == 201
 
-    second_response = client.post("/baked_goods/", json=baked_good)
+    second_response = client.post("/baked_goods/", json=baked_good,
+                                  headers={"Authorization": f"Bearer {token}"})
 
     assert second_response.status_code == 409
 
@@ -202,6 +216,7 @@ def test_post_same_baked_good_different_vendor(client):
         client, name="Test Vendor Two", email="vendortwo@example.com"
     )
 
+    token = manager_token()
     baked_good_1 = {
         "active": True,
         "name": "Blueberry Muffin",
@@ -220,8 +235,10 @@ def test_post_same_baked_good_different_vendor(client):
         "vendor_id": vendor_2_id,
     }
 
-    response_1 = client.post("/baked_goods/", json=baked_good_1)
-    response_2 = client.post("/baked_goods/", json=baked_good_2)
+    response_1 = client.post("/baked_goods/", json=baked_good_1,
+                             headers={"Authorization": f"Bearer {token}"})
+    response_2 = client.post("/baked_goods/", json=baked_good_2,
+                             headers={"Authorization": f"Bearer {token}"})
 
     assert response_1.status_code == 201
     assert response_2.status_code == 409
@@ -232,6 +249,7 @@ def test_get_baked_good_by_id(client):
         client, name="Test Vendor", email="christian@robinsonvendor.com"
     )
 
+    token = manager_token()
     baked_good = {
         "active": True,
         "name": "Blueberry Muffin",
@@ -241,7 +259,8 @@ def test_get_baked_good_by_id(client):
         "vendor_id": vendor_id,
     }
 
-    baked_good_response = client.post("/baked_goods/", json=baked_good)
+    baked_good_response = client.post("/baked_goods/", json=baked_good,
+                                      headers={"Authorization": f"Bearer {token}"})
 
     assert baked_good_response.status_code == 201
 
@@ -273,6 +292,7 @@ def test_put_baked_good_success(client):
     """AC1: valid PUT updates the baked good and returns the entity."""
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -282,7 +302,7 @@ def test_put_baked_good_success(client):
             "purchasing_cost": 5.0,
             "retail_price": 10.0,
             "vendor_id": vendor_id,
-        },
+        }, headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -295,7 +315,8 @@ def test_put_baked_good_success(client):
         "vendor_id": vendor_id,
     }
 
-    response = client.put(f"/baked_goods/{baked_good_id}", json=update_payload)
+    response = client.put(f"/baked_goods/{baked_good_id}", json=update_payload,
+                          headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
 
@@ -314,6 +335,7 @@ def test_put_baked_good_persists_change(client):
     """Verifies the update is reflected on a subsequent GET."""
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -324,6 +346,7 @@ def test_put_baked_good_persists_change(client):
             "retail_price": 2.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -337,6 +360,7 @@ def test_put_baked_good_persists_change(client):
             "retail_price": 3.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     get_response = client.get(f"/baked_goods/{baked_good_id}")
@@ -350,6 +374,7 @@ def test_put_baked_good_with_nonexistent_id(client):
     """AC2: invalid ID returns 404."""
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     update_payload = {
         "active": True,
         "name": "Ghost Pastry",
@@ -359,7 +384,8 @@ def test_put_baked_good_with_nonexistent_id(client):
         "vendor_id": vendor_id,
     }
 
-    response = client.put("/baked_goods/9999", json=update_payload)
+    response = client.put("/baked_goods/9999", json=update_payload,
+                          headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
     assert response.json()[
@@ -369,6 +395,7 @@ def test_put_baked_good_with_nonexistent_id(client):
 def test_put_baked_good_with_invalid_vendor(client):
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -379,6 +406,7 @@ def test_put_baked_good_with_invalid_vendor(client):
             "retail_price": 3.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -391,7 +419,8 @@ def test_put_baked_good_with_invalid_vendor(client):
         "vendor_id": 9999,
     }
 
-    response = client.put(f"/baked_goods/{baked_good_id}", json=update_payload)
+    response = client.put(
+        f"/baked_goods/{baked_good_id}", json=update_payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
 
@@ -399,6 +428,7 @@ def test_put_baked_good_with_invalid_vendor(client):
 def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -409,6 +439,7 @@ def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
             "retail_price": 4.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -422,6 +453,7 @@ def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
             "retail_price": 5.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -432,6 +464,7 @@ def test_put_baked_good_duplicate_name(client):
     """AC3-adjacent conflict case: name collides with another baked good."""
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     client.post(
         "/baked_goods/",
         json={
@@ -442,6 +475,7 @@ def test_put_baked_good_duplicate_name(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     second_response = client.post(
@@ -454,6 +488,7 @@ def test_put_baked_good_duplicate_name(client):
             "retail_price": 4.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     second_id = second_response.json()["id"]
 
@@ -467,6 +502,7 @@ def test_put_baked_good_duplicate_name(client):
             "retail_price": 4.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 409
@@ -476,6 +512,7 @@ def test_put_baked_good_invalid_payload(client):
     """AC3: Pydantic validation rejects a malformed update payload."""
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -486,6 +523,7 @@ def test_put_baked_good_invalid_payload(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -499,6 +537,7 @@ def test_put_baked_good_invalid_payload(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -508,6 +547,7 @@ def test_put_baked_good_invalid_payload_retail_price_too_low(client):
     """AC3: retail_price <= purchasing_cost is rejected."""
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -518,6 +558,7 @@ def test_put_baked_good_invalid_payload_retail_price_too_low(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -531,6 +572,7 @@ def test_put_baked_good_invalid_payload_retail_price_too_low(client):
             "retail_price": 3.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -552,6 +594,7 @@ def test_put_baked_good_updates_vendor(client):
         client, name="Vendor Two", email="vendortwo@example.com"
     )
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -562,6 +605,7 @@ def test_put_baked_good_updates_vendor(client):
             "retail_price": 3.0,
             "vendor_id": vendor_1_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
     baked_good_id = create_response.json()["id"]
 
@@ -575,6 +619,7 @@ def test_put_baked_good_updates_vendor(client):
             "retail_price": 3.0,
             "vendor_id": vendor_2_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -589,6 +634,7 @@ def test_delete_baked_good_persists_change(client):
 
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -599,12 +645,13 @@ def test_delete_baked_good_persists_change(client):
             "retail_price": 2.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     baked_good_id = create_response.json()["id"]
 
     delete_response = client.delete(
-        f"/baked_goods/{baked_good_id}"
+        f"/baked_goods/{baked_good_id}", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert delete_response.status_code == 204
@@ -619,8 +666,9 @@ def test_delete_baked_good_persists_change(client):
 
 def test_delete_baked_good_not_found(client):
     """Verifies a 404 is returned when the baked good does not exist."""
-
-    response = client.delete("/baked_goods/9999")
+    token = manager_token()
+    response = client.delete(
+        "/baked_goods/9999", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
 
@@ -630,6 +678,7 @@ def test_delete_baked_good_already_deactivated(client):
 
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -640,18 +689,19 @@ def test_delete_baked_good_already_deactivated(client):
             "retail_price": 2.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     baked_good_id = create_response.json()["id"]
 
     first_delete_response = client.delete(
-        f"/baked_goods/{baked_good_id}"
+        f"/baked_goods/{baked_good_id}", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_delete_response.status_code == 204
 
     second_delete_response = client.delete(
-        f"/baked_goods/{baked_good_id}"
+        f"/baked_goods/{baked_good_id}", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_delete_response.status_code == 409
@@ -662,6 +712,7 @@ def test_delete_baked_good_already_deactivated(client):
 
     vendor_id = create_vendor(client)
 
+    token = manager_token()
     create_response = client.post(
         "/baked_goods/",
         json={
@@ -672,18 +723,19 @@ def test_delete_baked_good_already_deactivated(client):
             "retail_price": 2.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     baked_good_id = create_response.json()["id"]
 
     first_delete_response = client.delete(
-        f"/baked_goods/{baked_good_id}"
+        f"/baked_goods/{baked_good_id}", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_delete_response.status_code == 204
 
     second_delete_response = client.delete(
-        f"/baked_goods/{baked_good_id}"
+        f"/baked_goods/{baked_good_id}", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_delete_response.status_code == 409
