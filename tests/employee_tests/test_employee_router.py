@@ -384,7 +384,9 @@ def test_update_employee_invalid_payload(client):
 
     assert resp.status_code == 422
 
+
 def test_deactivate_employee_success(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -396,23 +398,30 @@ def test_deactivate_employee_success(client):
         "term_date": None,
     }
 
-    post_response = client.post("/employees", json=payload)
+    post_response = client.post(
+        "/employees", json=payload, headers={"Authorization": f"Bearer {token}"})
     assert post_response.status_code == 201
 
     created = post_response.json()
     employee_id = created["id"]
 
-    delete_response = client.delete(f"/employees/{employee_id}")
+    delete_response = client.delete(
+        f"/employees/{employee_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert delete_response.status_code == 204
 
+
 def test_deactivate_employee_not_found(client):
-    response = client.delete("/employees/999")
+    token = manager_token()
+    response = client.delete(
+        "/employees/999", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
     assert "does not exist" in response.json()["detail"].lower()
 
+
 def test_deactivate_employee_already_deactivated(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -424,16 +433,20 @@ def test_deactivate_employee_already_deactivated(client):
         "term_date": None,
     }
 
-    post_response = client.post("/employees", json=payload)
+    post_response = client.post(
+        "/employees", json=payload, headers={"Authorization": f"Bearer {token}"})
     assert post_response.status_code == 201
 
     created = post_response.json()
     employee_id = created["id"]
 
-    first_delete_response = client.delete(f"/employees/{employee_id}")
+    first_delete_response = client.delete(
+        f"/employees/{employee_id}", headers={"Authorization": f"Bearer {token}"})
     assert first_delete_response.status_code == 204
 
-    second_delete_response = client.delete(f"/employees/{employee_id}")
+    second_delete_response = client.delete(
+        f"/employees/{employee_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert second_delete_response.status_code == 409
-    assert "already deactivated" in second_delete_response.json()["detail"].lower()
+    assert "already deactivated" in second_delete_response.json()[
+        "detail"].lower()
