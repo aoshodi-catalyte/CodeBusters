@@ -42,7 +42,7 @@ def get_deactivation_logs(
     repo = DeactivationLogRepository(db)
 
     try:
-        logs = repo.get_all()
+        logs = repo.get_all(skip=skip, limit=limit)
 
         return [
             DeactivationLog.model_validate(log)
