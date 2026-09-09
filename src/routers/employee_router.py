@@ -12,7 +12,7 @@ from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
-from exceptions.employee_exceptions import EmployeeNotFoundError
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 from repositories.employee_repository import EmployeeRepository
 
 router = APIRouter()
@@ -190,6 +190,18 @@ def deactivate_employee(
     employee_id: int,
     db: Session = Depends(get_db),
 ):
+    """
+        Deactivate an employee by setting their active status to False.
+
+        The employee record is preserved in the database for historical purposes.
+
+        Returns:
+            A 204 No Content response when the employee is successfully deactivated.
+
+        Raises:
+            HTTPException: 404 Not Found if the employee does not exist.
+            HTTPException: 409 Conflict if the employee is already deactivated.
+    """
     repo = EmployeeRepository(db)
 
     try:
@@ -197,5 +209,10 @@ def deactivate_employee(
     except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except EmployeeAlreadyDeactivatedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc

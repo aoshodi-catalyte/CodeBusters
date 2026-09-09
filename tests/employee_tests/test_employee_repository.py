@@ -6,7 +6,7 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema, Base
 from employee.employee_role_schema import EmployeeRoleSchema
-from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError, EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 from secure_login.secure_login_schema import EmployeeAuth
@@ -389,3 +389,49 @@ def test_repo_update_email_conflict(repo, db):
 
     with pytest.raises(EmployeeEmailAlreadyExistsError):
         repo.update_employee(emp2.id, update_model)
+
+def test_deactivate_employee_success(db):
+    """Test successfully deactivating an employee."""
+
+    employee = EmployeeSchema(
+        first_name="John",
+        last_name="Doe",
+        active=True,
+    )
+
+    db.add(employee)
+    db.commit()
+    db.refresh(employee)
+
+    repo = EmployeeRepository(db)
+
+    result = repo.deactivate_employee(employee.id)
+
+    assert result.id == employee.id
+    assert result.active is False
+
+def test_deactivate_employee_not_found(db):
+    """Test deactivating an employee that does not exist."""
+
+    repo = EmployeeRepository(db)
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.deactivate_employee(9999)
+
+def test_deactivate_employee_already_deactivated(db):
+    """Test attempting to deactivate an employee that is already inactive."""
+
+    employee = EmployeeSchema(
+        first_name="John",
+        last_name="Doe",
+        active=False,
+    )
+
+    db.add(employee)
+    db.commit()
+    db.refresh(employee)
+
+    repo = EmployeeRepository(db)
+
+    with pytest.raises(EmployeeAlreadyDeactivatedError):
+        repo.deactivate_employee(employee.id)
