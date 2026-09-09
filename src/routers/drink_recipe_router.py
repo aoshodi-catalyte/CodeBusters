@@ -43,6 +43,7 @@ from exceptions.drink_recipe_exceptions import (
     UnitConversionError,
 )
 from repositories.drink_recipe_repository import DrinkRecipeRepository
+from security.secure_manager_login import check_role
 from utils.response import to_response
 
 router = APIRouter(
@@ -84,7 +85,8 @@ def serialize_recipe(recipe):
     }
 
 
-@router.post("/", response_model=DrinkRecipeResponse, status_code=201)
+@router.post("/", dependencies=[Depends(check_role(["manager"]))],
+             response_model=DrinkRecipeResponse, status_code=201)
 def create_drink_recipe(drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
     """
     Create a new drink recipe, including ingredient usage, production
@@ -195,7 +197,8 @@ def get_all_drink_recipes(db: Session = Depends(get_db)):
     ]
 
 
-@router.put("/{recipe_id}", response_model=DrinkRecipeResponse, status_code=200)
+@router.put("/{recipe_id}", dependencies=[Depends(check_role(["manager"]))],
+            response_model=DrinkRecipeResponse, status_code=200)
 def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session = Depends(get_db)):
     """
     Update an existing drink recipe by its ID.
@@ -222,7 +225,8 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
     repo = DrinkRecipeRepository(db)
 
     try:
-        updated_recipe = repo.update_drink_recipe_by_id(recipe_id, drink_recipe)
+        updated_recipe = repo.update_drink_recipe_by_id(
+            recipe_id, drink_recipe)
         return to_response(DrinkRecipeResponse, serialize_recipe(updated_recipe))
     except DrinkRecipeNotFoundError as e:
         db.rollback()
@@ -248,7 +252,7 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
         ) from e
 
 
-@router.delete("/{recipe_id}", status_code=204)
+@router.delete("/{recipe_id}", dependencies=[Depends(check_role(["manager"]))], status_code=204)
 def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
     """
     Deactivate a drink recipe by its ID.
