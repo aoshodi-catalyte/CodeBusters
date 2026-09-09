@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 """
 FastAPI router for deactivation relationship logs.
 
@@ -49,8 +50,8 @@ def get_deactivation_logs(
             for log in logs
         ]
 
-    except SQLAlchemyError as exc: # pylint: disable=duplicate-code
-        raise HTTPException(
+    except SQLAlchemyError as exc:
+        raise HTTPException(  # pylint: disable=duplicate-code
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "database_error",
@@ -104,8 +105,8 @@ def get_deactivation_log(
 
         return DeactivationLog.model_validate(log)
 
-    except SQLAlchemyError as exc:  # pylint: disable=duplicate-code
-        raise HTTPException(
+    except SQLAlchemyError as exc:
+        raise HTTPException(  # pylint: disable=duplicate-code
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "database_error",
