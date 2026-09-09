@@ -47,8 +47,9 @@ def check_role(allowed_roles: list[str]):
 
             if user_role not in allowed_roles:
                 logger.warning(
-                    f"Unauthorized access attempt at {datetime.now(timezone.utc)} "
-                    f"Role '{user_role}' tried to access manager-only route."
+                    "Unauthorized access attempt at %s Role '%s' tried to access manager-only route.",
+                    datetime.now(timezone.utc),
+                    user_role,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -57,10 +58,10 @@ def check_role(allowed_roles: list[str]):
 
             return payload
 
-        except JWTError:
+        except JWTError as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token."
-            )
+            ) from exc
 
     return role_checker
