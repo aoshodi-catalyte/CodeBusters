@@ -23,7 +23,7 @@ from routers.promotion_router import router as promotion_router
 from routers.secure_login_router import router as secure_login_router
 from routers.secure_logout_router import router as secure_logout_router
 from routers.vendor_router import router as vendor_router
-
+from routers.deactivation_log_router import router as deactivation_log_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
