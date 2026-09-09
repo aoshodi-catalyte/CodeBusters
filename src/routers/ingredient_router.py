@@ -165,7 +165,7 @@ def read_ingredient(
             detail={
                 "error": "ingredient_not_found",
                 "message": (
-                    "Ingredient with ID %s was not found." % ingredient_id
+                    f"Ingredient with ID {ingredient_id} was not found."
                 ),
             },
         )
@@ -304,7 +304,7 @@ def delete_ingredient_endpoint(
                 detail={
                     "error": "ingredient_not_found",
                     "message": (
-                        "Ingredient with ID %s was not found." % ingredient_id
+                        f"Ingredient with ID {ingredient_id} was not found."
                     ),
                 },
             )
