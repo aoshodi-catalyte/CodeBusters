@@ -15,7 +15,6 @@ from fastapi import HTTPException, status
 from customer.customer_schema import CustomerSchema
 from repositories.purchase_repository import PurchaseRepository
 
-
 class PurchaseService:
     """
     Service layer responsible for executing the business rules
@@ -32,19 +31,19 @@ class PurchaseService:
         self.db = db
         self.repo = PurchaseRepository(db)
 
-    def create_purchase(self, purchase_create):
+
+    def _build_line_items_and_subtotal(self, purchase_create):
         """
-        Create a purchase transaction.
+        Build line items and compute the subtotal.
 
         Args:
             purchase_create (PurchaseCreate): Incoming purchase payload.
 
         Returns:
-            PurchaseSchema: The persisted purchase record.
+            tuple[list[dict], float]: Line items and subtotal.
         """
-
-        pricing = {"subtotal": 0.0, "discount": 0.0}
         line_items = []
+        subtotal = 0.0
 
         for item in purchase_create.items:
             price = self.repo.get_item_price(item.item_type, item.item_id)
@@ -56,66 +55,119 @@ class PurchaseService:
                     "price_at_sale": price,
                 }
             )
-            pricing["subtotal"] += price * item.quantity
+            subtotal += price * item.quantity
 
-        if purchase_create.promo_id is not None:
-            promo = self.repo.get_promotion(purchase_create.promo_id)
-            if promo is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Promotion ID {purchase_create.promo_id} not found",
-                )
+        return line_items, subtotal
 
-            if not promo.active:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Promotion is not active",
-                )
+    def _apply_promotion(self, promo_id, subtotal):
+        """
+        Validate and apply a promotion to compute the discount amount.
 
-            now = datetime.now(UTC)
+        Args:
+            promo_id (int | None): Promotion ID.
+            subtotal (float): Current subtotal.
 
-            start = promo.start_datetime.replace(tzinfo=UTC)
-            end = promo.end_datetime.replace(tzinfo=UTC)
+        Returns:
+            float: Discount amount.
+        """
+        if promo_id is None:
+            return 0.0
 
-            if start > now or now > end:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Promotion is not within valid date range",
-                )
+        promo = self.repo.get_promotion(promo_id)
+        if promo is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Promotion ID {promo_id} not found",
+            )
 
-            pricing["discount"] = pricing["subtotal"] * (promo.discount_percentage / 100)
+        if not promo.active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Promotion is not active",
+            )
 
-        taxable = pricing["subtotal"] - pricing["discount"]
+        now = datetime.now(UTC)
+        start = promo.start_datetime.replace(tzinfo=UTC)
+        end = promo.end_datetime.replace(tzinfo=UTC)
+
+        if start > now or now > end:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Promotion is not within valid date range",
+            )
+
+        return subtotal * (promo.discount_percentage / 100)
+
+    def _compute_totals(self, subtotal, discount):
+        """
+        Compute taxable amount, tax, total, and loyalty points.
+
+        Args:
+            subtotal (float): Subtotal before discount.
+            discount (float): Discount amount.
+
+        Returns:
+            tuple[float, float, float, int]: tax_amount, total, loyalty_points
+        """
+        taxable = subtotal - discount
         tax_amount = taxable * 0.07
         total = taxable + tax_amount
 
-        # Round values
-        pricing["subtotal"] = round(pricing["subtotal"], 2)
-        pricing["discount"] = round(pricing["discount"], 2)
         tax_amount = round(tax_amount, 2)
         total = round(total, 2)
-
         loyalty_points = floor(total)
 
-        if purchase_create.customer_id is not None:
-            customer = (
-                self.db.query(CustomerSchema)
-                .filter(CustomerSchema.id == purchase_create.customer_id)
-                .first()
+        return tax_amount, total, loyalty_points
+
+    def _update_loyalty_points(self, customer_id, loyalty_points):
+        """
+        Update loyalty points for a customer if applicable.
+
+        Args:
+            customer_id (int | None): Customer ID.
+            loyalty_points (int): Points to award.
+        """
+        if customer_id is None:
+            return
+
+        customer = (
+            self.db.query(CustomerSchema)
+            .filter(CustomerSchema.id == customer_id)
+            .first()
+        )
+
+        if customer is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Customer ID {customer_id} not found",
             )
 
-            if customer is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Customer ID {purchase_create.customer_id} not found",
-                )
+        customer.loyalty_points += loyalty_points
+        self.db.add(customer)
 
-            customer.loyalty_points += loyalty_points
-            self.db.add(customer)
+
+    def create_purchase(self, purchase_create):
+        """
+        Create a purchase transaction.
+
+        Args:
+            purchase_create (PurchaseCreate): Incoming purchase payload.
+
+        Returns:
+            PurchaseSchema: The persisted purchase record.
+        """
+        line_items, subtotal = self._build_line_items_and_subtotal(purchase_create)
+        discount = self._apply_promotion(purchase_create.promo_id, subtotal)
+
+        subtotal = round(subtotal, 2)
+        discount = round(discount, 2)
+
+        tax_amount, total, loyalty_points = self._compute_totals(subtotal, discount)
+        self._update_loyalty_points(purchase_create.customer_id, loyalty_points)
 
         purchase_data = {
-            "subtotal": pricing["subtotal"],
-            "discount_amount": pricing["discount"],
+            "subtotal": subtotal,
+            "discount_amount": discount,
             "tax_amount": tax_amount,
             "total": total,
             "loyalty_points_awarded": loyalty_points,

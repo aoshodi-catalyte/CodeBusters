@@ -8,7 +8,30 @@ purchase data, and support ORM mode via `from_attributes=True`.
 
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, Field, field_serializer
+
+class DecimalSerializerModel(BaseModel):
+    """
+    Base model providing shared Decimal-to-float serialization for monetary fields.
+
+    Any subclass can declare Decimal fields and they will automatically be
+    serialized as floats in JSON responses.
+    """
+
+    @field_serializer("*")
+    def serialize_decimal_fields(self, value):
+        """
+        Convert Decimal values into floats for JSON serialization.
+
+        Args:
+            value (Any): A field value that may be a Decimal.
+
+        Returns:
+            Any: A float if the value is a Decimal, otherwise the original value.
+        """
+        if isinstance(value, Decimal):
+            return float(value)
+        return value
 
 
 class PurchaseItemCreate(BaseModel):
@@ -39,7 +62,7 @@ class PurchaseCreate(BaseModel):
     items: list[PurchaseItemCreate] = Field(min_length=1)
 
 
-class PurchaseItemResponse(BaseModel):
+class PurchaseItemResponse(DecimalSerializerModel):
     """
     Represents a single item returned in a purchase response.
 
@@ -56,12 +79,8 @@ class PurchaseItemResponse(BaseModel):
     quantity: int
     price_at_sale: Decimal
 
-    @field_serializer("price_at_sale")
-    def serialize_decimal(self, value: Decimal):
-        return float(value)
 
-
-class PurchaseResponse(BaseModel):
+class PurchaseResponse(DecimalSerializerModel):
     """
     Represents the full purchase returned by the API.
 
@@ -90,7 +109,3 @@ class PurchaseResponse(BaseModel):
     created_at: datetime
 
     items: list[PurchaseItemResponse]
-
-    @field_serializer("subtotal", "discount_amount", "tax_amount", "total")
-    def serialize_decimal(self, value: Decimal):
-        return float(value)
