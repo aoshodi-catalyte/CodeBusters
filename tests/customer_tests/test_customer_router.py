@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
 from routers.customer_router import router
+from tests.factories.auth_factories import manager_token
 
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -59,7 +60,7 @@ def test_create_customer(client):
     The phone number is submitted without formatting and should be
     returned in xxx-xxx-xxxx format by the API.
     """
-
+    token = manager_token()
     customer = {
         "first_name": "John",
         "last_name": "Doe",
@@ -71,7 +72,7 @@ def test_create_customer(client):
 
     response = client.post(
         "/customers",
-        json=customer
+        json=customer, headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 201
@@ -94,6 +95,7 @@ def test_get_customers(client):
     Phone numbers should be returned in xxx-xxx-xxxx format.
     """
 
+    token = manager_token()
     customer_one = {
         "first_name": "John",
         "last_name": "Doe",
@@ -114,12 +116,12 @@ def test_get_customers(client):
 
     client.post(
         "/customers",
-        json=customer_one
+        json=customer_one, headers={"Authorization": f"Bearer {token}"}
     )
 
     client.post(
         "/customers",
-        json=customer_two
+        json=customer_two, headers={"Authorization": f"Bearer {token}"}
     )
 
     response = client.get("/customers")
@@ -155,6 +157,7 @@ def test_get_customer_by_id(client):
     customer ID is provided.
     """
 
+    token = manager_token()
     customer = {
         "first_name": "John",
         "last_name": "Doe",
@@ -166,7 +169,8 @@ def test_get_customer_by_id(client):
 
     create_response = client.post(
         "/customers",
-        json=customer
+        json=customer,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert create_response.status_code == 201
@@ -214,6 +218,7 @@ def test_create_customer_with_duplicate_email(client):
     HTTP 409 with the correct error message.
     """
 
+    token = manager_token()
     first_customer = {
         "first_name": "John",
         "last_name": "Doe",
@@ -234,21 +239,23 @@ def test_create_customer_with_duplicate_email(client):
 
     first_response = client.post(
         "/customers",
-        json=first_customer
+        json=first_customer,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201
 
     second_response = client.post(
         "/customers",
-        json=second_customer
+        json=second_customer,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_response.status_code == 409
 
     assert second_response.json() == {
         "detail": "A customer with the email 'john@example.com' "
-                   "already exists."
+        "already exists."
     }
 
 
@@ -258,6 +265,7 @@ def test_create_customer_with_duplicate_phone_number(client):
     returns HTTP 409 with the correct error message.
     """
 
+    token = manager_token()
     first_customer = {
         "first_name": "John",
         "last_name": "Doe",
@@ -278,21 +286,23 @@ def test_create_customer_with_duplicate_phone_number(client):
 
     first_response = client.post(
         "/customers",
-        json=first_customer
+        json=first_customer,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201
 
     second_response = client.post(
         "/customers",
-        json=second_customer
+        json=second_customer,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_response.status_code == 409
 
     assert second_response.json() == {
         "detail": "A customer with the phone number '5551234567' "
-                   "already exists."
+        "already exists."
     }
 
 
@@ -302,6 +312,7 @@ def test_create_customer_with_invalid_phone_number(client):
     exactly 10 digits.
     """
 
+    token = manager_token()
     customer = {
         "first_name": "John",
         "last_name": "Doe",
@@ -313,7 +324,8 @@ def test_create_customer_with_invalid_phone_number(client):
 
     response = client.post(
         "/customers",
-        json=customer
+        json=customer,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -325,6 +337,7 @@ def test_update_customer(client):
     updated entity is returned.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -334,7 +347,8 @@ def test_update_customer(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 100
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -350,7 +364,8 @@ def test_update_customer(client):
 
     response = client.put(
         f"/customers/{customer_id}",
-        json=update_payload
+        json=update_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -372,6 +387,7 @@ def test_update_customer_persists_change(client):
     subsequent GET request.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -381,7 +397,8 @@ def test_update_customer_persists_change(client):
             "phone_number": "5551112222",
             "active": True,
             "loyalty_points": 50
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -395,7 +412,8 @@ def test_update_customer_persists_change(client):
             "email": "janet@example.com",
             "phone_number": "5551112222",
             "loyalty_points": 75
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     get_response = client.get(f"/customers/{customer_id}")
@@ -411,6 +429,7 @@ def test_update_customer_with_nonexistent_id(client):
     returns HTTP 404.
     """
 
+    token = manager_token()
     update_payload = {
         "active": True,
         "first_name": "John",
@@ -421,7 +440,8 @@ def test_update_customer_with_nonexistent_id(client):
 
     response = client.put(
         "/customers/999",
-        json=update_payload
+        json=update_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 404
@@ -436,7 +456,7 @@ def test_update_customer_with_duplicate_email(client):
     Verifies that updating a customer to use another customer's email
     returns HTTP 409.
     """
-
+    token = manager_token()
     client.post(
         "/customers",
         json={
@@ -445,7 +465,8 @@ def test_update_customer_with_duplicate_email(client):
             "phone_number": "5551111111",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     second_response = client.post(
@@ -456,7 +477,8 @@ def test_update_customer_with_duplicate_email(client):
             "phone_number": "5552222222",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     second_customer_id = second_response.json()["id"]
@@ -469,14 +491,15 @@ def test_update_customer_with_duplicate_email(client):
             "email": "john@example.com",
             "phone_number": "5552222222",
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 409
 
     assert response.json() == {
         "detail": "A customer with the email 'john@example.com' "
-                   "already exists."
+        "already exists."
     }
 
 
@@ -485,7 +508,7 @@ def test_update_customer_with_duplicate_phone_number(client):
     Verifies that updating a customer to use another customer's phone
     number returns HTTP 409.
     """
-
+    token = manager_token()
     client.post(
         "/customers",
         json={
@@ -494,7 +517,8 @@ def test_update_customer_with_duplicate_phone_number(client):
             "phone_number": "5551111111",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     second_response = client.post(
@@ -505,7 +529,8 @@ def test_update_customer_with_duplicate_phone_number(client):
             "phone_number": "5552222222",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     second_customer_id = second_response.json()["id"]
@@ -518,14 +543,15 @@ def test_update_customer_with_duplicate_phone_number(client):
             "email": "jane@example.com",
             "phone_number": "5551111111",
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 409
 
     assert response.json() == {
         "detail": "A customer with the phone number '5551111111' "
-                   "already exists."
+        "already exists."
     }
 
 
@@ -535,6 +561,7 @@ def test_update_customer_allows_keeping_own_email_and_phone(client):
     email or phone number.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -543,7 +570,8 @@ def test_update_customer_allows_keeping_own_email_and_phone(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -556,7 +584,8 @@ def test_update_customer_allows_keeping_own_email_and_phone(client):
             "email": "john@example.com",
             "phone_number": "5551234567",
             "loyalty_points": 10
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -570,6 +599,7 @@ def test_update_customer_with_invalid_phone_number(client):
     phone number.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -578,7 +608,8 @@ def test_update_customer_with_invalid_phone_number(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -591,7 +622,8 @@ def test_update_customer_with_invalid_phone_number(client):
             "email": "john@example.com",
             "phone_number": "555-123-456",
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -603,6 +635,7 @@ def test_update_customer_with_invalid_email(client):
     email address.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -611,7 +644,8 @@ def test_update_customer_with_invalid_email(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -624,7 +658,8 @@ def test_update_customer_with_invalid_email(client):
             "email": "not-an-email",
             "phone_number": "5551234567",
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -636,6 +671,7 @@ def test_update_customer_with_negative_loyalty_points(client):
     loyalty points.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -644,7 +680,8 @@ def test_update_customer_with_negative_loyalty_points(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -657,7 +694,8 @@ def test_update_customer_with_negative_loyalty_points(client):
             "email": "john@example.com",
             "phone_number": "5551234567",
             "loyalty_points": -5
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -669,6 +707,7 @@ def test_update_customer_missing_required_field(client):
     required field.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -677,7 +716,8 @@ def test_update_customer_missing_required_field(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
@@ -689,7 +729,8 @@ def test_update_customer_missing_required_field(client):
             "email": "john@example.com",
             "phone_number": "5551234567",
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -701,6 +742,7 @@ def test_deactivate_customer(client):
     through the API and returns HTTP 204.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -709,12 +751,14 @@ def test_deactivate_customer(client):
             "phone_number": "5551234567",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
 
-    response = client.delete(f"/customers/{customer_id}")
+    response = client.delete(
+        f"/customers/{customer_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 204
     assert response.content == b""
@@ -726,6 +770,7 @@ def test_deactivate_customer_sets_active_false(client):
     the change is reflected on a subsequent GET request.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -734,12 +779,14 @@ def test_deactivate_customer_sets_active_false(client):
             "phone_number": "5559876543",
             "active": True,
             "loyalty_points": 0
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
 
-    client.delete(f"/customers/{customer_id}")
+    client.delete(f"/customers/{customer_id}",
+                  headers={"Authorization": f"Bearer {token}"})
 
     get_response = client.get(f"/customers/{customer_id}")
 
@@ -753,7 +800,9 @@ def test_deactivate_customer_with_nonexistent_id(client):
     exist returns HTTP 404.
     """
 
-    response = client.delete("/customers/999")
+    token = manager_token()
+    response = client.delete(
+        "/customers/999", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
 
@@ -768,6 +817,7 @@ def test_deactivate_customer_preserves_record(client):
     record rather than deleting it.
     """
 
+    token = manager_token()
     create_response = client.post(
         "/customers",
         json={
@@ -777,12 +827,14 @@ def test_deactivate_customer_preserves_record(client):
             "phone_number": "5551237890",
             "active": True,
             "loyalty_points": 250
-        }
+        },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     customer_id = create_response.json()["id"]
 
-    client.delete(f"/customers/{customer_id}")
+    client.delete(f"/customers/{customer_id}",
+                  headers={"Authorization": f"Bearer {token}"})
 
     get_response = client.get(f"/customers/{customer_id}")
 

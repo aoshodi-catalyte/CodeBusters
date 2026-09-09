@@ -14,11 +14,13 @@ from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 from repositories.employee_repository import EmployeeRepository
+from security.secure_manager_login import check_role
 
 router = APIRouter()
 
 
-@router.post("/employees", response_model=EmployeeResponse, status_code=201)
+@router.post("/employees", dependencies=[Depends(check_role(["manager"]))],
+             response_model=EmployeeResponse, status_code=201)
 async def post_new_employee(employee_data: Employee, db: Session = Depends(get_db)):
     """
     Create a new employee record and return the newly created employee.
@@ -146,6 +148,7 @@ def get_single_employee_by_id(
 
 @router.put(
     "/employees/{employee_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=EmployeeResponse,
     status_code=status.HTTP_200_OK,
 )

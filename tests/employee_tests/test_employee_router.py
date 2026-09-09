@@ -10,6 +10,7 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_schema import EmployeeSchema
+from tests.factories.auth_factories import manager_token
 
 TEST_DB_URL = "sqlite:///:memory:"
 
@@ -51,6 +52,7 @@ def client(db):
 
 
 def test_post_new_employee_success(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -62,7 +64,8 @@ def test_post_new_employee_success(client):
         "term_date": None,
     }
 
-    response = client.post("/employees", json=payload)
+    response = client.post("/employees", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
     data = response.json()
@@ -72,6 +75,7 @@ def test_post_new_employee_success(client):
 
 
 def test_post_new_employee_duplicate_email(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -83,9 +87,11 @@ def test_post_new_employee_duplicate_email(client):
         "term_date": None,
     }
 
-    client.post("/employees", json=payload)
+    client.post("/employees", json=payload,
+                headers={"Authorization": f"Bearer {token}"})
 
-    response = client.post("/employees", json=payload)
+    response = client.post("/employees", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 409
     assert response.json()[
@@ -93,6 +99,7 @@ def test_post_new_employee_duplicate_email(client):
 
 
 def test_post_new_employee_invalid_model(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -104,7 +111,8 @@ def test_post_new_employee_invalid_model(client):
         "term_date": None,
     }
 
-    response = client.post("/employees", json=payload)
+    response = client.post("/employees", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
@@ -119,6 +127,7 @@ def test_post_new_employee_value_error(monkeypatch, client):
         EmployeeRepository, "create_new_employee", fake_create_new_employee
     )
 
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -130,7 +139,8 @@ def test_post_new_employee_value_error(monkeypatch, client):
         "term_date": None,
     }
 
-    response = client.post("/employees", json=payload)
+    response = client.post("/employees", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid role mapping"
@@ -148,6 +158,7 @@ def test_post_new_employee_integrity_error(monkeypatch, client):
         EmployeeRepository, "create_new_employee", fake_create_new_employee
     )
 
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -159,7 +170,8 @@ def test_post_new_employee_integrity_error(monkeypatch, client):
         "term_date": None,
     }
 
-    response = client.post("/employees", json=payload)
+    response = client.post("/employees", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 409
     assert response.json()[
@@ -176,6 +188,7 @@ def test_get_all_employees_empty(client):
 
 def test_get_all_employees(client):
     """Test retrieving all employees."""
+    token = manager_token()
     payload_1 = {
         "active": True,
         "first_name": "John",
@@ -198,8 +211,10 @@ def test_get_all_employees(client):
         "term_date": None,
     }
 
-    client.post("/employees", json=payload_1)
-    client.post("/employees", json=payload_2)
+    client.post("/employees", json=payload_1,
+                headers={"Authorization": f"Bearer {token}"})
+    client.post("/employees", json=payload_2,
+                headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/employees")
 
@@ -217,6 +232,7 @@ def test_get_all_employees(client):
 
 def test_get_all_employees_response_contains_expected_fields(client):
     """Test that employee list response contains expected fields."""
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -228,7 +244,8 @@ def test_get_all_employees_response_contains_expected_fields(client):
         "term_date": None,
     }
 
-    client.post("/employees", json=payload)
+    client.post("/employees", json=payload,
+                headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/employees")
 
@@ -245,6 +262,7 @@ def test_get_all_employees_response_contains_expected_fields(client):
 
 
 def test_get_single_employee_by_id_success(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -256,7 +274,8 @@ def test_get_single_employee_by_id_success(client):
         "term_date": None,
     }
 
-    post_response = client.post("/employees", json=payload)
+    post_response = client.post(
+        "/employees", json=payload, headers={"Authorization": f"Bearer {token}"})
     assert post_response.status_code == 201
 
     created = post_response.json()
@@ -289,6 +308,7 @@ def test_get_single_employee_by_id_invalid_id_type(client):
 
 
 def test_update_employee_success(client):
+    token = manager_token()
     payload = {
         "active": True,
         "first_name": "John",
@@ -300,7 +320,8 @@ def test_update_employee_success(client):
         "term_date": None
     }
 
-    create_resp = client.post("/employees", json=payload)
+    create_resp = client.post(
+        "/employees", json=payload, headers={"Authorization": f"Bearer {token}"})
     employee_id = create_resp.json()["id"]
 
     update_payload = {
@@ -314,7 +335,8 @@ def test_update_employee_success(client):
         "term_date": "01/02/2023"
     }
 
-    resp = client.put(f"/employees/{employee_id}", json=update_payload)
+    resp = client.put(f"/employees/{employee_id}", json=update_payload,
+                      headers={"Authorization": f"Bearer {token}"})
 
     assert resp.status_code == 200
     data = resp.json()
@@ -325,6 +347,7 @@ def test_update_employee_success(client):
 
 
 def test_update_employee_not_found(client):
+    token = manager_token()
     update_payload = {
         "active": True,
         "first_name": "Jane",
@@ -336,13 +359,15 @@ def test_update_employee_not_found(client):
         "term_date": None
     }
 
-    resp = client.put("/employees/999", json=update_payload)
+    resp = client.put("/employees/999", json=update_payload,
+                      headers={"Authorization": f"Bearer {token}"})
 
     assert resp.status_code == 404
     assert "does not exist" in resp.json()["detail"].lower()
 
 
 def test_update_employee_invalid_payload(client):
+    token = manager_token()
     invalid_payload = {
         "active": True,
         "first_name": "Jane",
@@ -354,7 +379,8 @@ def test_update_employee_invalid_payload(client):
         "term_date": None
     }
 
-    resp = client.put("/employees/1", json=invalid_payload)
+    resp = client.put("/employees/1", json=invalid_payload,
+                      headers={"Authorization": f"Bearer {token}"})
 
     assert resp.status_code == 422
 
