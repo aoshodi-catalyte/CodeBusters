@@ -87,6 +87,8 @@ def update_customer(
     try:
         return repo.update_customer(customer_id, customer)
 
+# pylint: disable=duplicate-code
+
     except CustomerNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -103,8 +105,9 @@ def update_customer(
             detail=str(exc),
         ) from exc
 
+# pylint: enable=duplicate-code
 
-# pylint: disable=duplicate-code
+
 @router.get(
     "/customers",
     response_model=list[CustomerResponse],
@@ -150,7 +153,6 @@ def get_customer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-# pylint: enable=duplicate-code
 
 
 @router.delete(
