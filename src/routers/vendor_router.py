@@ -148,3 +148,34 @@ def update_vendor(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+@router.delete(
+    "/vendors/{vendor_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_vendor(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+):
+    """Deactivate a vendor (soft delete) by setting active to False.
+
+    The vendor's record is preserved for historical purposes.
+
+    Args:
+        vendor_id: The unique identifier of the vendor.
+        db: Database session injected through FastAPI dependency
+            injection.
+
+    Raises:
+        HTTPException: If the vendor does not exist.
+    """
+    repo = VendorRepository(db)
+
+    try:
+        repo.deactivate_vendor(vendor_id)
+
+    except VendorNotFoundException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
