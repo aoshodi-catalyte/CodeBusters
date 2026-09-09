@@ -7,12 +7,14 @@ from tests.factories.drink_recipe_factories import (
     ingredient_factory,
     recipe_payload_factory,
 )
+from tests.factories.auth_factories import manager_token
 
 
 def test_create_drink_recipe(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing1 = ingredient_factory("Sugar", 5.50, 10.00, "lb")
     ing2 = ingredient_factory("Milk", 7.30, 1.00, "gal")
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Sweet Coffee",
         description="Coffee with sugar and milk",
@@ -24,7 +26,8 @@ def test_create_drink_recipe(client, db, drink_types, ingredient_factory, recipe
         markup=100,
     )
 
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_201_CREATED
 
     data = response.json()
@@ -47,6 +50,7 @@ def test_create_drink_recipe(client, db, drink_types, ingredient_factory, recipe
 
 
 def test_duplicate_drink_name_rejected(client, db, drink_types, recipe_payload_factory):
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Sweet Coffee",
         description="Coffee with sugar",
@@ -55,10 +59,12 @@ def test_duplicate_drink_name_rejected(client, db, drink_types, recipe_payload_f
         markup=20,
     )
 
-    first = client.post("/drink_recipes/", json=payload)
+    first = client.post("/drink_recipes/", json=payload,
+                        headers={"Authorization": f"Bearer {token}"})
     assert first.status_code == status.HTTP_201_CREATED
 
-    second = client.post("/drink_recipes/", json=payload)
+    second = client.post("/drink_recipes/", json=payload,
+                         headers={"Authorization": f"Bearer {token}"})
     assert second.status_code == status.HTTP_409_CONFLICT
     assert "already exists" in second.json()["detail"].lower()
 
@@ -66,6 +72,7 @@ def test_duplicate_drink_name_rejected(client, db, drink_types, recipe_payload_f
 def test_negative_quantity_used(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory("Milk", 7.30, 1.00, "gal")
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Negative Quantity Used",
         description="Should fail",
@@ -74,7 +81,8 @@ def test_negative_quantity_used(client, db, drink_types, ingredient_factory, rec
         markup=20,
     )
 
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert any(
         "greater than 0" in err["msg"].lower()
@@ -85,6 +93,7 @@ def test_negative_quantity_used(client, db, drink_types, ingredient_factory, rec
 def test_invalid_ingredient_id(client, db, drink_types, recipe_payload_factory):
     fake = type("Fake", (), {"id": 9999})
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Invalid Ingredient Drink",
         description="Should fail",
@@ -93,7 +102,8 @@ def test_invalid_ingredient_id(client, db, drink_types, recipe_payload_factory):
         markup=20,
     )
 
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_409_CONFLICT
     assert "ingredient id" in response.json()["detail"].lower()
 
@@ -102,6 +112,7 @@ def test_get_drink_recipe_by_id(client, db, drink_types, ingredient_factory, rec
     ing1 = ingredient_factory("Sugar", 5.50, 10.00, "lb")
     ing2 = ingredient_factory("Green Tea", 7.30, 100.00, "g")
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Plain Tea",
         description="Simple tea",
@@ -113,7 +124,8 @@ def test_get_drink_recipe_by_id(client, db, drink_types, ingredient_factory, rec
         markup=81,
     )
 
-    created = client.post("/drink_recipes/", json=payload).json()
+    created = client.post("/drink_recipes/", json=payload,
+                          headers={"Authorization": f"Bearer {token}"}).json()
     recipe_id = created["id"]
 
     response = client.get(f"/drink_recipes/{recipe_id}")
@@ -132,6 +144,7 @@ def test_get_drink_recipe_by_id_not_found(client):
 
 
 def test_invalid_drink_type(client, db, drink_types, recipe_payload_factory):
+    token = manager_token()
     payload = recipe_payload_factory(
         name="A",
         description="desc",
@@ -140,11 +153,13 @@ def test_invalid_drink_type(client, db, drink_types, recipe_payload_factory):
         markup=10,
     )
 
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_all_valid_drink_types(client, db, drink_types, recipe_payload_factory):
+    token = manager_token()
     recipes = [
         recipe_payload_factory("A", "desc", [], "Coffee", 10),
         recipe_payload_factory("B", "desc", [], "tea", 15),
@@ -153,7 +168,8 @@ def test_all_valid_drink_types(client, db, drink_types, recipe_payload_factory):
     ]
 
     for r in recipes:
-        client.post("/drink_recipes/", json=r)
+        client.post("/drink_recipes/", json=r,
+                    headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/drink_recipes/")
     assert response.status_code == status.HTTP_200_OK
@@ -166,11 +182,15 @@ def test_get_all_drink_recipes(client, db, drink_types, ingredient_factory, reci
     ing1 = ingredient_factory("Sugar", 5.50, 10.00, "lb")
     ing2 = ingredient_factory("Green Tea", 7.30, 100.00, "g")
 
-    r1 = recipe_payload_factory("A", "desc", [(ing1, 5.00, "g"), (ing2, 10.00, "g")], "tea", 10)
+    token = manager_token()
+    r1 = recipe_payload_factory(
+        "A", "desc", [(ing1, 5.00, "g"), (ing2, 10.00, "g")], "tea", 10)
     r2 = recipe_payload_factory("B", "desc", [], "coffee", 15)
 
-    client.post("/drink_recipes/", json=r1)
-    client.post("/drink_recipes/", json=r2)
+    client.post("/drink_recipes/", json=r1,
+                headers={"Authorization": f"Bearer {token}"})
+    client.post("/drink_recipes/", json=r2,
+                headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/drink_recipes/")
     assert response.status_code == status.HTTP_200_OK
@@ -190,6 +210,7 @@ def test_get_all_returns_empty_list(client, db):
 def test_update_drink_recipe_success(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory("Milk", 8.00, 1.00, "gal")
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Latte",
         description="Steamed milk + espresso",
@@ -199,7 +220,8 @@ def test_update_drink_recipe_success(client, db, drink_types, ingredient_factory
     )
 
     # Create initial recipe
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     recipe_id = response.json()["id"]
 
     # Update payload
@@ -213,7 +235,8 @@ def test_update_drink_recipe_success(client, db, drink_types, ingredient_factory
 
     update_response = client.put(
         f"/drink_recipes/{recipe_id}",
-        json=updated_payload
+        json=updated_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert update_response.status_code == status.HTTP_200_OK
@@ -231,6 +254,7 @@ def test_update_drink_recipe_replaces_ingredients(client, db, drink_types, ingre
     sugar = ingredient_factory("Sugar", 5.00, 1.00, "lb")
     espresso = ingredient_factory("Espresso", 14.00, 1.00, "lb")
 
+    token = manager_token()
     # Initial recipe: Milk + Sugar
     initial_payload = recipe_payload_factory(
         name="Latte",
@@ -246,6 +270,7 @@ def test_update_drink_recipe_replaces_ingredients(client, db, drink_types, ingre
     create_response = client.post(
         "/drink_recipes/",
         json=initial_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
     assert create_response.status_code == status.HTTP_201_CREATED
 
@@ -267,6 +292,7 @@ def test_update_drink_recipe_replaces_ingredients(client, db, drink_types, ingre
     update_response = client.put(
         f"/drink_recipes/{recipe_id}",
         json=updated_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert update_response.status_code == status.HTTP_200_OK
@@ -306,6 +332,7 @@ def test_update_drink_recipe_invalid_ingredient_rolls_back(client, db, drink_typ
     milk = ingredient_factory("Milk", 8.00, 1.00, "gal")
     sugar = ingredient_factory("Sugar", 5.00, 1.00, "lb")
 
+    token = manager_token()
     initial_payload = recipe_payload_factory(
         name="Latte",
         description="Original recipe",
@@ -320,6 +347,7 @@ def test_update_drink_recipe_invalid_ingredient_rolls_back(client, db, drink_typ
     create_response = client.post(
         "/drink_recipes/",
         json=initial_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
     assert create_response.status_code == status.HTTP_201_CREATED
 
@@ -341,6 +369,7 @@ def test_update_drink_recipe_invalid_ingredient_rolls_back(client, db, drink_typ
     update_response = client.put(
         f"/drink_recipes/{recipe_id}",
         json=bad_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert update_response.status_code == status.HTTP_409_CONFLICT
@@ -380,6 +409,7 @@ def test_update_drink_recipe_invalid_ingredient_rolls_back(client, db, drink_typ
 
 def test_update_drink_recipe_not_found(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory()
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Latte",
         description="desc",
@@ -388,13 +418,15 @@ def test_update_drink_recipe_not_found(client, db, drink_types, ingredient_facto
         markup=20,
     )
 
-    response = client.put("/drink_recipes/999", json=payload)
+    response = client.put("/drink_recipes/999", json=payload,
+                          headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_update_drink_recipe_ingredient_not_found(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory()
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Latte",
         description="desc",
@@ -404,7 +436,8 @@ def test_update_drink_recipe_ingredient_not_found(client, db, drink_types, ingre
     )
 
     # Create recipe
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     recipe_id = response.json()["id"]
 
     # Update with invalid ingredient ID
@@ -418,7 +451,8 @@ def test_update_drink_recipe_ingredient_not_found(client, db, drink_types, ingre
 
     update_response = client.put(
         f"/drink_recipes/{recipe_id}",
-        json=bad_payload
+        json=bad_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert update_response.status_code == status.HTTP_409_CONFLICT
@@ -427,6 +461,7 @@ def test_update_drink_recipe_ingredient_not_found(client, db, drink_types, ingre
 def test_update_drink_recipe_drink_type_not_found(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory()
 
+    token = manager_token()
     payload = recipe_payload_factory(
         name="Latte",
         description="desc",
@@ -436,7 +471,8 @@ def test_update_drink_recipe_drink_type_not_found(client, db, drink_types, ingre
     )
 
     # Create recipe
-    response = client.post("/drink_recipes/", json=payload)
+    response = client.post("/drink_recipes/", json=payload,
+                           headers={"Authorization": f"Bearer {token}"})
     recipe_id = response.json()["id"]
 
     # Remove drink types
@@ -453,7 +489,8 @@ def test_update_drink_recipe_drink_type_not_found(client, db, drink_types, ingre
 
     update_response = client.put(
         f"/drink_recipes/{recipe_id}",
-        json=bad_payload
+        json=bad_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert update_response.status_code == status.HTTP_404_NOT_FOUND
@@ -462,6 +499,7 @@ def test_update_drink_recipe_drink_type_not_found(client, db, drink_types, ingre
 def test_update_drink_recipe_duplicate_name(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     ing = ingredient_factory()
 
+    token = manager_token()
     # Create first recipe
     payload1 = recipe_payload_factory(
         name="Latte",
@@ -470,7 +508,8 @@ def test_update_drink_recipe_duplicate_name(client, db, drink_types, ingredient_
         drink_type="coffee",
         markup=20,
     )
-    r1 = client.post("/drink_recipes/", json=payload1)
+    r1 = client.post("/drink_recipes/", json=payload1,
+                     headers={"Authorization": f"Bearer {token}"})
     assert r1.status_code == 201, r1.json()
 
     # Create second recipe
@@ -481,7 +520,8 @@ def test_update_drink_recipe_duplicate_name(client, db, drink_types, ingredient_
         drink_type="coffee",
         markup=20,
     )
-    r2 = client.post("/drink_recipes/", json=payload2)
+    r2 = client.post("/drink_recipes/", json=payload2,
+                     headers={"Authorization": f"Bearer {token}"})
     assert r2.status_code == 201, r2.json()
     r2_json = r2.json()
 
@@ -496,7 +536,8 @@ def test_update_drink_recipe_duplicate_name(client, db, drink_types, ingredient_
 
     response = client.put(
         f"/drink_recipes/{r2_json['id']}",
-        json=updated_payload2
+        json=updated_payload2,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 409
@@ -505,6 +546,7 @@ def test_update_drink_recipe_duplicate_name(client, db, drink_types, ingredient_
 def test_update_drink_recipe_negative_quantity_returns_422(client, db, drink_types, ingredient_factory, recipe_payload_factory):
     milk = ingredient_factory("Milk", 8.00, 1.00, "gal")
 
+    token = manager_token()
     initial_payload = recipe_payload_factory(
         name="Latte",
         description="Original recipe",
@@ -518,6 +560,7 @@ def test_update_drink_recipe_negative_quantity_returns_422(client, db, drink_typ
     create_response = client.post(
         "/drink_recipes/",
         json=initial_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
     assert create_response.status_code == status.HTTP_201_CREATED
 
@@ -536,6 +579,7 @@ def test_update_drink_recipe_negative_quantity_returns_422(client, db, drink_typ
     response = client.put(
         f"/drink_recipes/{recipe_id}",
         json=invalid_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -548,6 +592,8 @@ def test_update_drink_recipe_negative_quantity_returns_422(client, db, drink_typ
 
 def test_deactivate_drink_recipe_success(client, db, drink_types, recipe_payload_factory):
     """DELETE /drink_recipes/{id} should deactivate the recipe and return 204."""
+
+    token = manager_token()
     recipe = recipe_payload_factory(
         name="Americano",
         description="desc",
@@ -559,12 +605,14 @@ def test_deactivate_drink_recipe_success(client, db, drink_types, recipe_payload
     created = client.post(
         "/drink_recipes/",
         json=recipe,
+        headers={"Authorization": f"Bearer {token}"}
     )
     assert created.status_code == status.HTTP_201_CREATED
 
     recipe_id = created.json()["id"]
 
-    response = client.delete(f"/drink_recipes/{recipe_id}")
+    response = client.delete(
+        f"/drink_recipes/{recipe_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert response.text == ""  # DELETE 204 returns no body
@@ -575,7 +623,9 @@ def test_deactivate_drink_recipe_success(client, db, drink_types, recipe_payload
 
 def test_deactivate_drink_recipe_not_found(client):
     """DELETE should return 404 when recipe does not exist."""
-    response = client.delete("/drink_recipes/999")
+    token = manager_token()
+    response = client.delete("/drink_recipes/999",
+                             headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "not found" in response.json()["detail"].lower()
@@ -583,6 +633,7 @@ def test_deactivate_drink_recipe_not_found(client):
 
 def test_deactivate_drink_recipe_already_inactive(client, db, drink_types, recipe_payload_factory):
     """DELETE should return 409 when recipe is already inactive."""
+    token = manager_token()
     recipe = recipe_payload_factory(
         name="Cappuccino",
         description="desc",
@@ -590,16 +641,18 @@ def test_deactivate_drink_recipe_already_inactive(client, db, drink_types, recip
         active=False,
         markup=50
     )
-    
+
     created = client.post(
         "/drink_recipes/",
         json=recipe,
+        headers={"Authorization": f"Bearer {token}"}
     )
     assert created.status_code == status.HTTP_201_CREATED
 
     recipe_id = created.json()["id"]
 
-    response = client.delete(f"/drink_recipes/{recipe_id}")
+    response = client.delete(
+        f"/drink_recipes/{recipe_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == status.HTTP_409_CONFLICT
     assert "already" in response.json()["detail"].lower()
