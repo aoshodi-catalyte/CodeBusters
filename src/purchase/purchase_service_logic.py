@@ -12,7 +12,7 @@ from math import floor
 
 from fastapi import HTTPException, status
 
-from customer.customer_schema import CustomerSchema
+from repositories.customer_repository import CustomerRepository
 from repositories.purchase_repository import PurchaseRepository
 
 class PurchaseService:
@@ -30,6 +30,7 @@ class PurchaseService:
         """
         self.db = db
         self.repo = PurchaseRepository(db)
+        self.customer_repo = CustomerRepository(db)
 
 
     def _build_line_items_and_subtotal(self, purchase_create):
@@ -130,17 +131,7 @@ class PurchaseService:
         if customer_id is None:
             return
 
-        customer = (
-            self.db.query(CustomerSchema)
-            .filter(CustomerSchema.id == customer_id)
-            .first()
-        )
-
-        if customer is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Customer ID {customer_id} not found",
-            )
+        customer = self.customer_repo.get_customer_or_404(customer_id)
 
         customer.loyalty_points += loyalty_points
         self.db.add(customer)
