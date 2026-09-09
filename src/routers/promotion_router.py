@@ -1,17 +1,23 @@
 """
 FastAPI router for promotion endpoints.
 
-This module defines API endpoints for creating and retrieving promotions.
-It uses the PromotionRepository to interact with the database and handles
-duplicate promo codes by returning an appropriate HTTP error response.
+This module defines API endpoints for creating, retrieving, updating,
+and deactivating promotions. It uses the PromotionRepository to interact
+with the database and translates typed repository exceptions into the
+appropriate HTTP responses.
 """
 from typing import List
 
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from database import get_db
+from exceptions.promotion_exceptions import (
+    PromotionCodeAlreadyExistsError,
+    PromotionConstraintError,
+    PromotionNotFoundError,
+)
 from repositories.promotion_repository import PromotionRepository
 from promotion.promotion_response_model import PromotionResponseModel
 from promotion.promotion_model import Promotion
@@ -104,13 +110,63 @@ def get_promotion_by_id(promotion_id: int, db: Session = Depends(get_db)) -> Pro
         does not exist.
     """
     repo = PromotionRepository(db)
-    promotion = repo.get_promotion_by_id(promotion_id)
 
-    if promotion is None:
+    try:
+        return repo.get_promotion_by_id(promotion_id)
+    except PromotionNotFoundError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
-        )
-    return promotion
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.put(
+    "/{promotion_id}",
+    response_model=PromotionResponseModel,
+    status_code=status.HTTP_200_OK,
+)
+def update_promotion(
+    promotion_id: int,
+    promotion_model: Promotion,
+    db: Session = Depends(get_db),
+) -> PromotionResponseModel:
+    """
+    Update an existing promotion.
+
+    Args:
+        promotion_id: The unique identifier of the promotion to
+            update.
+        promotion_model: The updated promotion data provided by
+            the client.
+        db: The database session provided by the get_db dependency.
+
+    Returns:
+        PromotionResponseModel: The updated promotion.
+
+    Raises:
+        HTTPException: If the promotion does not exist, the update
+            uses a promo code that already exists, or the record
+            violates another database constraint.
+    """
+    repo = PromotionRepository(db)
+
+    try:
+        return repo.update_promotion(promotion_id, promotion_model)
+
+    except PromotionNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except (
+        PromotionCodeAlreadyExistsError,
+        PromotionConstraintError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
 
 
 @router.delete(
@@ -137,9 +193,11 @@ def deactivate_promotion(
         ID does not exist.
     """
     repo = PromotionRepository(db)
-    promotion = repo.deactivate_promotion(promotion_id)
 
-    if promotion is None:
+    try:
+        repo.deactivate_promotion(promotion_id)
+    except PromotionNotFoundError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Promotion ID"
-        )
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
