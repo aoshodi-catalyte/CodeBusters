@@ -5,7 +5,7 @@ Provides read-only endpoints for staff to review relationships
 that remained active when an entity was deactivated.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -25,6 +25,8 @@ router = APIRouter(
     response_model=list[DeactivationLog],
 )
 def get_deactivation_logs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     """

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Integer, String, Text
 
@@ -21,8 +21,8 @@ class DeactivationLogSchema(Base):
     reason = Column(String(255), nullable=False)
     error_message = Column(Text, nullable=False)
 
-    deactivated_at = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.utcnow,
-    )
+    deactivated_at =  Column(
+    DateTime(timezone=True),
+    nullable=False,
+    default=lambda: datetime.now(timezone.utc),
+)

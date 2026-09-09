@@ -33,14 +33,23 @@ class DeactivationLogRepository:
         self.db.add(log)
         return log
 
-    def get_all(self):
-        return (
-            self.db.query(DeactivationLogSchema)
-            .order_by(DeactivationLogSchema.deactivated_at.desc())
-            .all()
+def get_all(
+    self,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[DeactivationLogSchema]:
+    return (
+        self.db.query(DeactivationLogSchema)
+        .order_by(
+            DeactivationLogSchema.deactivated_at.desc(),
+            DeactivationLogSchema.id.desc(),
         )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
-    def get_by_id(self, log_id: int):
+    def get_by_id(self, log_id: int) -> DeactivationLogSchema | None:
         return (
             self.db.query(DeactivationLogSchema)
             .filter(DeactivationLogSchema.id == log_id)
