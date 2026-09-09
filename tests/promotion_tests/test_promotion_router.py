@@ -268,93 +268,7 @@ def test_get_promotion_by_id_invalid_id(client):
 
     assert response.status_code == 404
 
-    assert response.json()["detail"] == "Invalid Promotion ID"
-
-def test_deactivate_promotion(client):
-    """
-    Test that a promotion can be deactivated (soft deleted) through
-    the API and returns HTTP 204.
-    """
-    promotion = {
-        "active": True,
-        "promo_code": "DEACTIVATE1",
-        "discount_percentage": 20.0,
-        "start_datetime": "06/01/2026 09:00 AM",
-        "end_datetime": "06/30/2026 11:59 PM"
-    }
-
-    create_response = client.post("/promotions/", json=promotion)
-    promotion_id = create_response.json()["id"]
-
-    response = client.delete(f"/promotions/{promotion_id}")
-
-    assert response.status_code == 204
-    assert response.content == b""
-
-
-def test_deactivate_promotion_sets_active_false(client):
-    """
-    Test that deactivating a promotion sets active to False and the
-    change is reflected on a subsequent GET request.
-    """
-    promotion = {
-        "active": True,
-        "promo_code": "DEACTIVATE2",
-        "discount_percentage": 10.0,
-        "start_datetime": "07/01/2026 09:00 AM",
-        "end_datetime": "07/31/2026 11:59 PM"
-    }
-
-    create_response = client.post("/promotions/", json=promotion)
-    promotion_id = create_response.json()["id"]
-
-    client.delete(f"/promotions/{promotion_id}")
-
-    get_response = client.get(f"/promotions/{promotion_id}")
-
-    assert get_response.status_code == 200
-    assert get_response.json()["active"] is False
-
-
-def test_deactivate_promotion_with_invalid_id(client):
-    """
-    Test that deactivating a promotion with an ID that does not exist
-    returns HTTP 404.
-    """
-    response = client.delete("/promotions/9999")
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Invalid Promotion ID"
-
-
-def test_deactivate_promotion_preserves_record(client):
-    """
-    Test that deactivating a promotion preserves the historical
-    record rather than deleting it.
-    """
-    promotion = {
-        "active": True,
-        "promo_code": "PRESERVE2026",
-        "discount_percentage": 40.0,
-        "start_datetime": "08/01/2026 09:00 AM",
-        "end_datetime": "08/31/2026 11:59 PM"
-    }
-
-    create_response = client.post("/promotions/", json=promotion)
-    promotion_id = create_response.json()["id"]
-
-    client.delete(f"/promotions/{promotion_id}")
-
-    get_response = client.get(f"/promotions/{promotion_id}")
-
-    assert get_response.status_code == 200
-
-    data = get_response.json()
-
-    assert data["id"] == promotion_id
-    assert data["promo_code"] == "PRESERVE2026"
-    assert data["discount_percentage"] == 40.0
-    assert data["active"] is False
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
 
 
 def test_update_promotion(client):
@@ -448,7 +362,7 @@ def test_update_promotion_with_invalid_id(client):
     response = client.put("/promotions/9999", json=update_payload)
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Invalid Promotion ID"
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
 
 
 def test_update_promotion_rejects_lowercase_promo_code(client):
@@ -576,3 +490,90 @@ def test_update_promotion_missing_required_field(client):
     )
 
     assert response.status_code == 422
+
+
+def test_deactivate_promotion(client):
+    """
+    Test that a promotion can be deactivated (soft deleted) through
+    the API and returns HTTP 204.
+    """
+    promotion = {
+        "active": True,
+        "promo_code": "DEACTIVATE1",
+        "discount_percentage": 20.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM"
+    }
+
+    create_response = client.post("/promotions/", json=promotion)
+    promotion_id = create_response.json()["id"]
+
+    response = client.delete(f"/promotions/{promotion_id}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+def test_deactivate_promotion_sets_active_false(client):
+    """
+    Test that deactivating a promotion sets active to False and the
+    change is reflected on a subsequent GET request.
+    """
+    promotion = {
+        "active": True,
+        "promo_code": "DEACTIVATE2",
+        "discount_percentage": 10.0,
+        "start_datetime": "07/01/2026 09:00 AM",
+        "end_datetime": "07/31/2026 11:59 PM"
+    }
+
+    create_response = client.post("/promotions/", json=promotion)
+    promotion_id = create_response.json()["id"]
+
+    client.delete(f"/promotions/{promotion_id}")
+
+    get_response = client.get(f"/promotions/{promotion_id}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["active"] is False
+
+
+def test_deactivate_promotion_with_invalid_id(client):
+    """
+    Test that deactivating a promotion with an ID that does not exist
+    returns HTTP 404.
+    """
+    response = client.delete("/promotions/9999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
+
+
+def test_deactivate_promotion_preserves_record(client):
+    """
+    Test that deactivating a promotion preserves the historical
+    record rather than deleting it.
+    """
+    promotion = {
+        "active": True,
+        "promo_code": "PRESERVE2026",
+        "discount_percentage": 40.0,
+        "start_datetime": "08/01/2026 09:00 AM",
+        "end_datetime": "08/31/2026 11:59 PM"
+    }
+
+    create_response = client.post("/promotions/", json=promotion)
+    promotion_id = create_response.json()["id"]
+
+    client.delete(f"/promotions/{promotion_id}")
+
+    get_response = client.get(f"/promotions/{promotion_id}")
+
+    assert get_response.status_code == 200
+
+    data = get_response.json()
+
+    assert data["id"] == promotion_id
+    assert data["promo_code"] == "PRESERVE2026"
+    assert data["discount_percentage"] == 40.0
+    assert data["active"] is False

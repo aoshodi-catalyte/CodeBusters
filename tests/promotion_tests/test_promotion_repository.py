@@ -5,6 +5,11 @@ from sqlalchemy import create_engine
 from datetime import datetime
 
 from database import Base
+from exceptions.promotion_exceptions import (
+    PromotionCodeAlreadyExistsError,
+    PromotionConstraintError,
+    PromotionNotFoundError,
+)
 from promotion.promotion_model import Promotion
 from promotion.promotion_schema import PromotionSchema
 from repositories.promotion_repository import PromotionRepository
@@ -134,90 +139,41 @@ def test_create_promotion_stores_end_datetime(db):
 
     assert result.end_datetime == expected
 
-def test_deactivate_promotion(db):
+
+def test_create_promotion_duplicate_promo_code_raises_error(db):
     """
-    Test that deactivate_promotion sets active to False for an
-    existing promotion.
+    Test that creating a promotion with a duplicate promo code raises
+    PromotionCodeAlreadyExistsError.
     """
     repo = PromotionRepository(db)
 
     promotion = Promotion(
         active=True,
-        promo_code="SUMMER2026",
-        discount_percentage=20.0,
+        promo_code="DUPLICATE",
+        discount_percentage=10.0,
         start_datetime="06/01/2026 09:00 AM",
         end_datetime="06/30/2026 11:59 PM",
     )
 
-    created = repo.create_promotion(promotion)
+    repo.create_promotion(promotion)
 
-    result = repo.deactivate_promotion(created.id)
+    with pytest.raises(PromotionCodeAlreadyExistsError) as exc_info:
+        repo.create_promotion(promotion)
 
-    assert result is not None
-    assert result.active is False
+    assert exc_info.value.promo_code == "DUPLICATE"
 
 
-def test_deactivate_promotion_persists_to_database(db):
+def test_get_promotion_by_id_raises_not_found_error(db):
     """
-    Test that deactivation is actually persisted in the database.
-    """
-    repo = PromotionRepository(db)
-
-    promotion = Promotion(
-        active=True,
-        promo_code="FALLSALE",
-        discount_percentage=15.0,
-        start_datetime="09/01/2026 09:00 AM",
-        end_datetime="09/30/2026 11:59 PM",
-    )
-
-    created = repo.create_promotion(promotion)
-
-    repo.deactivate_promotion(created.id)
-
-    stored_promotion = (
-        db.query(PromotionSchema)
-        .filter_by(id=created.id)
-        .first()
-    )
-
-    assert stored_promotion.active is False
-
-
-def test_deactivate_promotion_returns_none_when_not_found(db):
-    """
-    Test that deactivate_promotion returns None for a nonexistent ID.
+    Test that get_promotion_by_id raises PromotionNotFoundError for a
+    nonexistent ID.
     """
     repo = PromotionRepository(db)
 
-    result = repo.deactivate_promotion(999)
+    with pytest.raises(PromotionNotFoundError) as exc_info:
+        repo.get_promotion_by_id(999)
 
-    assert result is None
-
-
-def test_deactivate_promotion_preserves_other_fields(db):
-    """
-    Test that deactivating a promotion does not alter its other fields.
-    """
-    repo = PromotionRepository(db)
-
-    promotion = Promotion(
-        active=True,
-        promo_code="WINTER2026",
-        discount_percentage=30.0,
-        start_datetime="12/01/2026 09:00 AM",
-        end_datetime="12/31/2026 11:59 PM",
-    )
-
-    created = repo.create_promotion(promotion)
-
-    result = repo.deactivate_promotion(created.id)
-
-    assert result.promo_code == "WINTER2026"
-    assert result.discount_percentage == 30.0
-    assert result.start_datetime == created.start_datetime
-    assert result.end_datetime == created.end_datetime
-    assert result.active is False
+    assert exc_info.value.promotion_id == 999
 
 
 def test_update_promotion(db):
@@ -289,9 +245,10 @@ def test_update_promotion_persists_to_database(db):
     assert stored_promotion.discount_percentage == 25.0
 
 
-def test_update_promotion_returns_none_when_not_found(db):
+def test_update_promotion_raises_not_found_error(db):
     """
-    Test that update_promotion returns None for a nonexistent ID.
+    Test that update_promotion raises PromotionNotFoundError for a
+    nonexistent ID.
     """
     repo = PromotionRepository(db)
 
@@ -303,6 +260,160 @@ def test_update_promotion_returns_none_when_not_found(db):
         end_datetime="06/30/2026 11:59 PM",
     )
 
-    result = repo.update_promotion(999, updated_data)
+    with pytest.raises(PromotionNotFoundError) as exc_info:
+        repo.update_promotion(999, updated_data)
 
-    assert result is None
+    assert exc_info.value.promotion_id == 999
+
+
+def test_update_promotion_duplicate_promo_code_raises_error(db):
+    """
+    Test that updating a promotion to use another promotion's promo
+    code raises PromotionCodeAlreadyExistsError.
+    """
+    repo = PromotionRepository(db)
+
+    first = repo.create_promotion(
+        Promotion(
+            active=True,
+            promo_code="FIRSTCODE",
+            discount_percentage=10.0,
+            start_datetime="06/01/2026 09:00 AM",
+            end_datetime="06/30/2026 11:59 PM",
+        )
+    )
+
+    second = repo.create_promotion(
+        Promotion(
+            active=True,
+            promo_code="SECONDCODE",
+            discount_percentage=15.0,
+            start_datetime="07/01/2026 09:00 AM",
+            end_datetime="07/31/2026 11:59 PM",
+        )
+    )
+
+    updated_data = Promotion(
+        active=True,
+        promo_code="FIRSTCODE",
+        discount_percentage=15.0,
+        start_datetime="07/01/2026 09:00 AM",
+        end_datetime="07/31/2026 11:59 PM",
+    )
+
+    with pytest.raises(PromotionCodeAlreadyExistsError):
+        repo.update_promotion(second.id, updated_data)
+
+
+def test_deactivate_promotion(db):
+    """
+    Test that deactivate_promotion sets active to False for an
+    existing promotion.
+    """
+    repo = PromotionRepository(db)
+
+    promotion = Promotion(
+        active=True,
+        promo_code="SUMMER2026DEACT",
+        discount_percentage=20.0,
+        start_datetime="06/01/2026 09:00 AM",
+        end_datetime="06/30/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(promotion)
+
+    result = repo.deactivate_promotion(created.id)
+
+    assert result is not None
+    assert result.active is False
+
+
+def test_deactivate_promotion_persists_to_database(db):
+    """
+    Test that deactivation is actually persisted in the database.
+    """
+    repo = PromotionRepository(db)
+
+    promotion = Promotion(
+        active=True,
+        promo_code="FALLSALE",
+        discount_percentage=15.0,
+        start_datetime="09/01/2026 09:00 AM",
+        end_datetime="09/30/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(promotion)
+
+    repo.deactivate_promotion(created.id)
+
+    stored_promotion = (
+        db.query(PromotionSchema)
+        .filter_by(id=created.id)
+        .first()
+    )
+
+    assert stored_promotion.active is False
+
+
+def test_deactivate_promotion_raises_not_found_error(db):
+    """
+    Test that deactivate_promotion raises PromotionNotFoundError for a
+    nonexistent ID.
+    """
+    repo = PromotionRepository(db)
+
+    with pytest.raises(PromotionNotFoundError) as exc_info:
+        repo.deactivate_promotion(999)
+
+    assert exc_info.value.promotion_id == 999
+
+
+def test_deactivate_promotion_preserves_other_fields(db):
+    """
+    Test that deactivating a promotion does not alter its other fields.
+    """
+    repo = PromotionRepository(db)
+
+    promotion = Promotion(
+        active=True,
+        promo_code="WINTER2026",
+        discount_percentage=30.0,
+        start_datetime="12/01/2026 09:00 AM",
+        end_datetime="12/31/2026 11:59 PM",
+    )
+
+    created = repo.create_promotion(promotion)
+
+    result = repo.deactivate_promotion(created.id)
+
+    assert result.promo_code == "WINTER2026"
+    assert result.discount_percentage == 30.0
+
+
+def test_promotion_not_found_error():
+    """Test the PromotionNotFoundError exception."""
+    exception = PromotionNotFoundError(123)
+
+    assert exception.promotion_id == 123
+    assert str(exception) == "Promotion with ID 123 was not found."
+
+
+def test_promotion_code_already_exists_error():
+    """Test the PromotionCodeAlreadyExistsError exception."""
+    exception = PromotionCodeAlreadyExistsError("SUMMER2026")
+
+    assert exception.promo_code == "SUMMER2026"
+    assert (
+        str(exception)
+        == "Promotion with promo code 'SUMMER2026' already exists."
+    )
+
+
+def test_promotion_constraint_error():
+    """Test the PromotionConstraintError exception."""
+    exception = PromotionConstraintError()
+
+    assert (
+        str(exception)
+        == "The promotion record violates a database constraint."
+    )
