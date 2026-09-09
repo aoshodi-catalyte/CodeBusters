@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 from database import Base, get_db
 import models
 from routers.vendor_router import router
+from tests.factories.auth_factories import manager_token
 
 
 @pytest.fixture
@@ -47,6 +48,7 @@ def client():
 
 def test_post_new_vendor(client):
     """Test creating a new vendor."""
+    token = manager_token()
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
@@ -56,7 +58,8 @@ def test_post_new_vendor(client):
         "phone": "1234567896",
     }
 
-    response = client.post("/vendors", json=vendor_payload)
+    response = client.post("/vendors", json=vendor_payload,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
 
@@ -73,6 +76,7 @@ def test_post_new_vendor(client):
 
 def test_post_duplicate_vendor_returns_409(client):
     """Test that creating a duplicate vendor returns HTTP 409."""
+    token = manager_token()
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
@@ -85,6 +89,7 @@ def test_post_duplicate_vendor_returns_409(client):
     first_response = client.post(
         "/vendors",
         json=vendor_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201
@@ -92,11 +97,12 @@ def test_post_duplicate_vendor_returns_409(client):
     second_response = client.post(
         "/vendors",
         json=vendor_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_response.status_code == 409
     assert "already exists" in second_response.json()["detail"]
-    
+
 
 def test_get_all_vendors_empty(client):
     """Test retrieving vendors when no vendors exist."""
@@ -108,6 +114,7 @@ def test_get_all_vendors_empty(client):
 
 def test_get_all_vendors(client):
     """Test retrieving all vendors."""
+    token = manager_token()
     vendor_payload_1 = {
         "active": True,
         "name": "Bob's Burgers",
@@ -126,8 +133,10 @@ def test_get_all_vendors(client):
         "phone": "9876543210",
     }
 
-    client.post("/vendors", json=vendor_payload_1)
-    client.post("/vendors", json=vendor_payload_2)
+    client.post("/vendors", json=vendor_payload_1,
+                headers={"Authorization": f"Bearer {token}"})
+    client.post("/vendors", json=vendor_payload_2,
+                headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/vendors")
 
@@ -142,6 +151,7 @@ def test_get_all_vendors(client):
 
 def test_get_all_vendors_returns_multiple_vendors(client):
     """Test retrieving multiple vendors."""
+    token = manager_token()
     vendors = [
         {
             "active": True,
@@ -170,7 +180,8 @@ def test_get_all_vendors_returns_multiple_vendors(client):
     ]
 
     for vendor in vendors:
-        response = client.post("/vendors", json=vendor)
+        response = client.post("/vendors", json=vendor,
+                               headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 201
 
     response = client.get("/vendors")
@@ -187,6 +198,7 @@ def test_get_all_vendors_returns_multiple_vendors(client):
 
 def test_get_all_vendors_response_contains_expected_fields(client):
     """Test that vendor responses contain expected fields."""
+    token = manager_token()
     vendor_payload = {
         "active": True,
         "name": "Stark Industries",
@@ -199,6 +211,7 @@ def test_get_all_vendors_response_contains_expected_fields(client):
     response = client.post(
         "/vendors",
         json=vendor_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 201
@@ -220,6 +233,7 @@ def test_get_all_vendors_response_contains_expected_fields(client):
 
 def test_post_vendor_missing_required_field_returns_422(client):
     """Test that missing required fields return HTTP 422."""
+    token = manager_token()
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
@@ -231,6 +245,7 @@ def test_post_vendor_missing_required_field_returns_422(client):
     response = client.post(
         "/vendors",
         json=vendor_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -238,6 +253,7 @@ def test_post_vendor_missing_required_field_returns_422(client):
 
 def test_post_vendor_invalid_email_returns_422(client):
     """Test that an invalid email returns HTTP 422."""
+    token = manager_token()
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
@@ -250,12 +266,15 @@ def test_post_vendor_invalid_email_returns_422(client):
     response = client.post(
         "/vendors",
         json=vendor_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
 
+
 def test_get_vendor_by_id(client):
     """Test retrieving a vendor by ID."""
+    token = manager_token()
     vendor_payload = {
         "active": True,
         "name": "Bob's Burgers",
@@ -268,6 +287,7 @@ def test_get_vendor_by_id(client):
     create_response = client.post(
         "/vendors",
         json=vendor_payload,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert create_response.status_code == 201
@@ -292,6 +312,7 @@ def test_get_vendor_by_id(client):
 
 def test_get_vendor_by_id_returns_correct_vendor(client):
     """Test retrieving the correct vendor when multiple vendors exist."""
+    token = manager_token()
     vendor_payload_1 = {
         "active": True,
         "name": "Bob's Burgers",
@@ -313,11 +334,13 @@ def test_get_vendor_by_id_returns_correct_vendor(client):
     first_response = client.post(
         "/vendors",
         json=vendor_payload_1,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     second_response = client.post(
         "/vendors",
         json=vendor_payload_2,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201
@@ -368,6 +391,7 @@ def test_get_vendor_by_id_negative_id_returns_404(client):
 
 def test_update_vendor_success(client):
     """Test that an existing vendor can be updated."""
+    token = manager_token()
     create_response = client.post(
         "/vendors",
         json={
@@ -378,6 +402,7 @@ def test_update_vendor_success(client):
             "email": "original@example.com",
             "phone": "555-123-4567",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     vendor_id = create_response.json()["id"]
@@ -392,6 +417,7 @@ def test_update_vendor_success(client):
             "email": "updated@example.com",
             "phone": "555-987-6543",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -406,8 +432,10 @@ def test_update_vendor_success(client):
     assert data["email"] == "updated@example.com"
     assert data["phone"] == "555-987-6543"
 
+
 def test_update_vendor_not_found(client):
     """Test that updating a nonexistent vendor returns 404."""
+    token = manager_token()
     response = client.put(
         "/vendors/999999",
         json={
@@ -418,6 +446,7 @@ def test_update_vendor_not_found(client):
             "email": "updated@example.com",
             "phone": "555-123-4567",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 404
@@ -425,6 +454,7 @@ def test_update_vendor_not_found(client):
 
 def test_update_vendor_invalid_email(client):
     """Test that invalid email data returns a validation error."""
+    token = manager_token()
     create_response = client.post(
         "/vendors",
         json={
@@ -435,6 +465,7 @@ def test_update_vendor_invalid_email(client):
             "email": "emailtest@example.com",
             "phone": "555-123-4567",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     vendor_id = create_response.json()["id"]
@@ -449,6 +480,7 @@ def test_update_vendor_invalid_email(client):
             "email": "not-a-valid-email",
             "phone": "555-123-4567",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -457,6 +489,7 @@ def test_update_vendor_invalid_email(client):
 def test_update_vendor_invalid_phone(client):
     """Test that invalid phone data returns a validation error."""
 
+    token = manager_token()
     response = client.put(
         "/vendors/1",
         json={
@@ -467,6 +500,7 @@ def test_update_vendor_invalid_phone(client):
             "email": "phonetest@example.com",
             "phone": "123",
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
