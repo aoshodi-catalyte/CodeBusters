@@ -104,6 +104,7 @@ def update_customer(
         ) from exc
 
 
+# pylint: disable=duplicate-code
 @router.get(
     "/customers",
     response_model=list[CustomerResponse],
@@ -149,6 +150,7 @@ def get_customer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+# pylint: enable=duplicate-code
 
 
 @router.delete(
