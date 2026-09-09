@@ -5,6 +5,7 @@ ignore-patterns=test_.*\.py
 
 [MESSAGES CONTROL]
 disable= too-few-public-methods, no-self-argument
+disable=duplicate-code
 
 [BASIC]
 no-docstring-rgx=^(test|_)
