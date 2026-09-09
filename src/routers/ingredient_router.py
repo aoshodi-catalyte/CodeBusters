@@ -15,6 +15,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
+from security.secure_manager_login import check_role
+from utils.response import to_response
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
@@ -35,6 +37,7 @@ logger = logging.getLogger("codebusters")
 @router.post(
     "/",
     response_model=IngredientOut,
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_201_CREATED,
 )
 def create(
@@ -176,6 +179,7 @@ def read_ingredient(
 
 @router.put(
     "/{ingredient_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=IngredientOut,
 )
 def update(
@@ -262,6 +266,7 @@ def update(
             },
         ) from exc
 
+
 class IngredientDeleteResponse(BaseModel):
     """Schema used when confirming an ingredient soft delete."""
     message: str
@@ -270,6 +275,7 @@ class IngredientDeleteResponse(BaseModel):
 
 @router.delete(
     "/{ingredient_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_ingredient_endpoint(
