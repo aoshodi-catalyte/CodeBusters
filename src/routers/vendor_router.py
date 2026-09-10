@@ -161,28 +161,18 @@ def update_vendor(
 )
 def deactivate_vendor(
     vendor_id: int,
-    user: EmployeeSchema = Depends(get_current_employee),
+    token_payload: dict = Depends(check_role(["manager"])),
     db: Session = Depends(get_db),
-    audit_db: Session = Depends(get_audit_db)
+    audit_db: Session = Depends(get_audit_db),
 ):
-    """Deactivate a vendor (soft delete) by setting active to False.
+    # Build a minimal user object for audit logging
+    acting_user = token_payload.get("email")
 
-    The vendor's record is preserved for historical purposes.
-
-    Args:
-        vendor_id: The unique identifier of the vendor.
-        db: Database session injected through FastAPI dependency
-            injection.
-
-    Raises:
-        HTTPException: If the vendor does not exist.
-    """
     repo = VendorRepository(db)
     audit_repo = VendorAuditRepository(audit_db)
 
     try:
-        repo.deactivate_vendor(vendor_id, user.email, audit_repo)
-
+        repo.deactivate_vendor(vendor_id, acting_user, audit_repo)
     except VendorNotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
