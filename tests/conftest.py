@@ -6,6 +6,9 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
 from main import app
+from constants.employee_roles import EmployeeRole
+from employee.employee_role_schema import EmployeeRoleSchema
+
 
 TEST_DB_URL = "sqlite:///:memory:"
 
@@ -21,10 +24,28 @@ TestingSessionLocal = sessionmaker(
     bind=engine,
 )
 
+
 @pytest.fixture
 def db():
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
+
+    # Seed employee roles only if they do not already exist.
+    for role in EmployeeRole:
+        existing_role = (
+            session.query(EmployeeRoleSchema)
+            .filter(EmployeeRoleSchema.role == role.value)
+            .first()
+        )
+
+        if existing_role is None:
+            session.add(
+                EmployeeRoleSchema(
+                    role=role.value,
+                )
+            )
+
+    session.commit()
 
     try:
         yield session

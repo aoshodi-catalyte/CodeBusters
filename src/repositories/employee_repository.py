@@ -11,14 +11,11 @@ from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
-<<<<<<< HEAD
 from secure_login.secure_login_schema import EmployeeAuth
 from utils.credential_generator import generate_temporary_password, generate_username
 from utils.password_utils import hash_password
-=======
 from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 
->>>>>>> 20580c4f7f08d6634f57c6f51e1271cd3f20ae3f
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
     """
