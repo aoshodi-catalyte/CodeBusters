@@ -25,6 +25,7 @@ class EmployeeSchema(Base):
     first_name = Column(String, index=True, nullable=False)
     last_name = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    phone_number = Column(String, nullable=True)
 
     role_id = Column(Integer, ForeignKey("employee_role.id"), nullable=False)
 
@@ -34,3 +35,4 @@ class EmployeeSchema(Base):
 
     role = relationship("EmployeeRoleSchema", back_populates="employees")
     auth = relationship("EmployeeAuth", back_populates="employee", uselist=False)
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="employee")

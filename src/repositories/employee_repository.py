@@ -60,6 +60,7 @@ class EmployeeRepository:
             first_name=employee_data.first_name.strip(),
             last_name=employee_data.last_name.strip(),
             email=employee_data.email,
+            phone_number=employee_data.phone_number,
             role_id=role_id,
             hourly_rate=float(employee_data.hourly_rate),
             hire_date=employee_data.hire_date,
@@ -182,6 +183,7 @@ class EmployeeRepository:
         db_employee.first_name = employee_data.first_name
         db_employee.last_name = employee_data.last_name
         db_employee.email = employee_data.email
+        db_employee.phone_number = employee_data.phone_number
         db_employee.role_id = role_id
         db_employee.hourly_rate = employee_data.hourly_rate
         db_employee.hire_date = employee_data.hire_date
