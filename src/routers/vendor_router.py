@@ -3,17 +3,20 @@ FastAPI router for vendor-related API endpoints, including creation of new
 vendor records and handling of database integrity errors.
 """
 
-from fastapi import Depends, HTTPException, APIRouter, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db
+
+from database import get_audit_db, get_db
+from employee.employee_schema import EmployeeSchema
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
+from repositories.vendor_repository import VendorAuditRepository, VendorRepository
+from routers.secure_login_router import get_current_employee
 from security.secure_manager_login import check_role
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
-from repositories.vendor_repository import VendorRepository
 
 router = APIRouter()
 
@@ -153,11 +156,14 @@ def update_vendor(
 
 @router.delete(
     "/vendors/{vendor_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_vendor(
     vendor_id: int,
+    user: EmployeeSchema = Depends(get_current_employee),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db)
 ):
     """Deactivate a vendor (soft delete) by setting active to False.
 
@@ -172,9 +178,10 @@ def deactivate_vendor(
         HTTPException: If the vendor does not exist.
     """
     repo = VendorRepository(db)
+    audit_repo = VendorAuditRepository(audit_db)
 
     try:
-        repo.deactivate_vendor(vendor_id)
+        repo.deactivate_vendor(vendor_id, user.email, audit_repo)
 
     except VendorNotFoundException as exc:
         raise HTTPException(

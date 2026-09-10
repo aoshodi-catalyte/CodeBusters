@@ -13,6 +13,7 @@ from exceptions.vendor_exceptions import (
 )
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
+from vendor.vendor_deactivation_model import VendorDeactivationRecord
 
 
 UNIQUE_FIELDS = ("email", "name")
@@ -168,7 +169,7 @@ class VendorRepository:
 
         return vendor
 
-    def deactivate_vendor(self, vendor_id: int) -> VendorSchema:
+    def deactivate_vendor(self, vendor_id: int, acting_user: str, audit_repo: VendorAuditRepository) -> VendorSchema:
         """Deactivate a vendor by setting active to False (soft delete).
 
         The vendor record is preserved for historical purposes; only
@@ -195,4 +196,21 @@ class VendorRepository:
         self.db.commit()
         self.db.refresh(vendor)
 
+        audit_repo.record_vendor_deactivation(vendor_id, acting_user)
+
         return vendor
+
+
+class VendorAuditRepository:
+    def __init__(self, audit_db: Session):
+        self.audit_db = audit_db
+
+    def record_vendor_deactivation(self, vendor_id: int, user: str):
+        record = VendorDeactivationRecord(
+            vendor_id=vendor_id,
+            deactivated_by=user
+        )
+        self.audit_db.add(record)
+        self.audit_db.commit()
+        self.audit_db.refresh(record)
+        return record
