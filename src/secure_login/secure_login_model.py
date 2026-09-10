@@ -24,3 +24,20 @@ class EmployeeAuthCreate(BaseModel):
     employee_id: int
     username: str
     password: str = Field(max_length=72)
+
+class PasswordChangeRequest(BaseModel):
+    """
+    Request model for changing an employee password.
+
+    The employee is identified by the authenticated JWT token.
+    """
+
+    current_password: str = Field(
+        min_length=1,
+        max_length=72,
+    )
+
+    new_password: str = Field(
+        min_length=8,
+        max_length=72,
+    )

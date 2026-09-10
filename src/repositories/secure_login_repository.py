@@ -277,3 +277,38 @@ class SecureLoginRepository:
         db.refresh(new_auth)
 
         return new_auth
+    def change_password(
+        self,
+        db: Session,
+        employee_id: int,
+        current_password: str,
+        new_password: str,
+    ) -> None:
+        """
+        Change an employee's password.
+
+        The current password must be correct before the new password
+        is stored.
+        """
+
+        auth = (
+            db.query(EmployeeAuth)
+            .filter(EmployeeAuth.employee_id == employee_id)
+            .first()
+        )
+
+        if auth is None:
+            raise EmployeeNotFoundError(employee_id)
+
+        if not verify_password(
+            current_password,
+            auth.password_hash,
+        ):
+            raise IncorrectPasswordError(auth.username)
+
+        auth.password_hash = hash_password(new_password)
+
+        auth.is_temporary_password = False
+
+        db.commit()
+        db.refresh(auth)

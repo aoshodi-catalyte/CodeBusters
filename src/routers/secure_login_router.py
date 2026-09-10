@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.secure_login_repository import SecureLoginRepository
-from secure_login.secure_login_model import EmployeeAuthCreate
+from secure_login.secure_login_model import EmployeeAuthCreate, PasswordChangeRequest
 
 from exceptions.secure_login_exceptions import (
     UsernameNotFoundError,
@@ -80,11 +80,63 @@ def login(
     employee = auth.employee
 
     token = auth_repo.create_access_token(
-        {"employee_id": employee.id, "role": employee.role.role}
+        {
+            "employee_id": employee.id,
+            "role": employee.role.role,
+            "must_change_password": auth.is_temporary_password,
+        }
     )
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "must_change_password": auth.is_temporary_password,
+    }
 
+@router.post("/password/change")
+def change_password(
+    data: PasswordChangeRequest,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    """
+    Change the authenticated employee's password.
+    """
+
+    try:
+        employee = auth_repo.get_current_employee(
+            token,
+            db,
+        )
+
+        auth_repo.change_password(
+            db,
+            employee.id,
+            data.current_password,
+            data.new_password,
+        )
+
+    except (
+        TokenExpiredError,
+        TokenInvalidSignatureError,
+        TokenDecodeError,
+        TokenMissingClaimError,
+        EmployeeNotFoundError,
+    ) as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=str(exc),
+        ) from exc
+
+    except IncorrectPasswordError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=str(exc),
+        ) from exc
+
+    return {
+        "message": "Password changed successfully"
+    }
 
 @router.get("/me")
 def get_current_employee(
