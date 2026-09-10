@@ -30,10 +30,19 @@ def db():
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
 
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+def _seed_acting_manager(db):
+    """Insert the employee that manager_token() claims to represent."""
     manager_role = EmployeeRoleSchema(role="manager")
-    session.add(manager_role)
-    session.flush()
-    session.add(
+    db.add(manager_role)
+    db.flush()
+    db.add(
         EmployeeSchema(
             id=1,
             active=True,
@@ -45,16 +54,13 @@ def db():
             hire_date=date(2020, 1, 1),
         )
     )
-    session.commit()
+    db.commit()
 
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture
 def client(db):
+    _seed_acting_manager(db)
+
     def override_get_db():
         yield db
 
