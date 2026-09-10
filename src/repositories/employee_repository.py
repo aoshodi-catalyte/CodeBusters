@@ -11,7 +11,9 @@ from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
-
+from secure_login.secure_login_schema import EmployeeAuth
+from utils.credential_generator import generate_temporary_password, generate_username
+from utils.password_utils import hash_password
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
     """
@@ -44,10 +46,14 @@ class EmployeeRepository:
 
     def create_new_employee(self, employee_data: Employee) -> EmployeeSchema:
         """
-        Create a new employee record in the database.
+        Create a new employee and automatically generate
+        login credentials.
         """
 
-        role_id = map_role_enum_to_fk(employee_data.role, self.db)
+        role_id = map_role_enum_to_fk(
+            employee_data.role,
+            self.db,
+        )
 
         db_employee = EmployeeSchema(
             active=employee_data.active,
@@ -61,7 +67,33 @@ class EmployeeRepository:
         )
 
         self.db.add(db_employee)
+
+        # Assign the employee ID before creating EmployeeAuth.
+        self.db.flush()
+
+        username = self._generate_unique_username(
+            db_employee.first_name,
+            db_employee.last_name,
+        )
+
+        temporary_password = generate_temporary_password()
+
+        password_hash = hash_password(
+            temporary_password
+        )
+
+        new_auth = EmployeeAuth(
+            employee_id=db_employee.id,
+            role=db_employee.role.role,
+            username=username,
+            password_hash=password_hash,
+            is_temporary_password=True,
+        )
+
+        self.db.add(new_auth)
+
         self.db.commit()
+
         self.db.refresh(db_employee)
 
         return db_employee
@@ -163,3 +195,31 @@ class EmployeeRepository:
             raise EmployeeEmailAlreadyExistsError(employee_data.email) from exc
 
         return db_employee
+
+    def _generate_unique_username(
+        self,
+        first_name: str,
+        last_name: str,
+    ) -> str:
+        """
+        Generate a username that does not already exist.
+        """
+
+        base_username = generate_username(
+            first_name,
+            last_name,
+        )
+
+        username = base_username
+        counter = 1
+
+        while (
+            self.db.query(EmployeeAuth)
+            .filter(EmployeeAuth.username == username)
+            .first()
+            is not None
+        ):
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        return username

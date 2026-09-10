@@ -9,7 +9,7 @@ This table stores:
 Each employee may have exactly one authentication record.
 """
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -36,5 +36,7 @@ class EmployeeAuth(Base):
 
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    is_temporary_password = Column(Boolean, nullable=False, default=True,)
+
 
     employee = relationship("EmployeeSchema", back_populates="auth")

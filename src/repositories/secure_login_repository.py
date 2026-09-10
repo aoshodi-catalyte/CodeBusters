@@ -26,6 +26,7 @@ from secure_login.secure_login_model import EmployeeAuthCreate
 from secure_login.secure_login_schema import EmployeeAuth
 from secure_logout.secure_logout_schema import TokenBlacklist
 from utils.jwt_utils import decode_token, extract_jti
+from utils.password_utils import hash_password, verify_password
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -61,7 +62,7 @@ class SecureLoginRepository:
                 A hashed password string suitable for storage.
         """
 
-        return pwd_context.hash(plain)
+        return hash_password(plain)
 
     def verify_password(self, plain: str, hashed: str) -> bool:
         """
@@ -123,7 +124,7 @@ class SecureLoginRepository:
         if auth is None:
             raise UsernameNotFoundError(username)
 
-        if not pwd_context.verify(password, auth.password_hash):
+        if not verify_password(password, auth.password_hash):
             raise IncorrectPasswordError(username)
 
         return auth
