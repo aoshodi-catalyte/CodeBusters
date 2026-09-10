@@ -13,7 +13,7 @@ from exceptions.vendor_exceptions import (
     VendorNotFoundException,
 )
 from repositories.vendor_repository import VendorAuditRepository, VendorRepository
-from routers.secure_login_router import get_current_employee
+from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
@@ -166,13 +166,15 @@ def deactivate_vendor(
     audit_db: Session = Depends(get_audit_db),
 ):
     # Build a minimal user object for audit logging
-    acting_user = token_payload.get("email")
+    employee_repo = EmployeeRepository(db)
+    user_id = token_payload.get("employee_id")
+    acting_user = employee_repo.get_employee_by_id(user_id)
 
     repo = VendorRepository(db)
     audit_repo = VendorAuditRepository(audit_db)
 
     try:
-        repo.deactivate_vendor(vendor_id, acting_user, audit_repo)
+        repo.deactivate_vendor(vendor_id, acting_user.email, audit_repo)
     except VendorNotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
