@@ -6,6 +6,8 @@ from sqlalchemy.pool import StaticPool
 
 from main import app
 from database import Base, get_db
+from constants.employee_roles import EmployeeRole
+from employee.employee_model import Employee
 from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_schema import EmployeeSchema
 from tests.factories.auth_factories import manager_token
@@ -381,3 +383,70 @@ def test_update_employee_invalid_payload(client):
                       headers={"Authorization": f"Bearer {token}"})
 
     assert resp.status_code == 422
+
+
+def test_deactivate_employee_success(client):
+    token = manager_token()
+    payload = {
+        "active": True,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@doe.com",
+        "role": "manager",
+        "hourly_rate": "10.50",
+        "hire_date": "01/01/2023",
+        "term_date": None,
+    }
+
+    post_response = client.post(
+        "/employees", json=payload, headers={"Authorization": f"Bearer {token}"})
+    assert post_response.status_code == 201
+
+    created = post_response.json()
+    employee_id = created["id"]
+
+    delete_response = client.delete(
+        f"/employees/{employee_id}", headers={"Authorization": f"Bearer {token}"})
+
+    assert delete_response.status_code == 204
+
+
+def test_deactivate_employee_not_found(client):
+    token = manager_token()
+    response = client.delete(
+        "/employees/999", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 404
+    assert "does not exist" in response.json()["detail"].lower()
+
+
+def test_deactivate_employee_already_deactivated(client):
+    token = manager_token()
+    payload = {
+        "active": True,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@doe.com",
+        "role": "manager",
+        "hourly_rate": "10.50",
+        "hire_date": "01/01/2023",
+        "term_date": None,
+    }
+
+    post_response = client.post(
+        "/employees", json=payload, headers={"Authorization": f"Bearer {token}"})
+    assert post_response.status_code == 201
+
+    created = post_response.json()
+    employee_id = created["id"]
+
+    first_delete_response = client.delete(
+        f"/employees/{employee_id}", headers={"Authorization": f"Bearer {token}"})
+    assert first_delete_response.status_code == 204
+
+    second_delete_response = client.delete(
+        f"/employees/{employee_id}", headers={"Authorization": f"Bearer {token}"})
+
+    assert second_delete_response.status_code == 409
+    assert "already deactivated" in second_delete_response.json()[
+        "detail"].lower()

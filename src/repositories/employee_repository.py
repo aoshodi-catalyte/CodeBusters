@@ -11,6 +11,7 @@ from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
@@ -163,3 +164,23 @@ class EmployeeRepository:
             raise EmployeeEmailAlreadyExistsError(employee_data.email) from exc
 
         return db_employee
+
+    def deactivate_employee(self, employee_id:int):
+        """
+        Deactivate an employee by setting active to False.
+
+        The employee record is preserved for historical purposes.
+        """
+        employee = self.get_employee_by_id(employee_id)
+
+        if employee is None:
+            raise EmployeeNotFoundError(employee_id)
+
+        if employee.active is False:
+            raise EmployeeAlreadyDeactivatedError(employee_id)
+
+        employee.active = False
+        self.db.commit()
+        self.db.refresh(employee)
+
+        return employee

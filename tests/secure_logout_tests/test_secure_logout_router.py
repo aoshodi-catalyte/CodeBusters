@@ -1,4 +1,4 @@
-from jose import jwt  # type: ignore
+from jose import jwt
 from secure_logout.secure_logout_schema import TokenBlacklist
 from utils.jwt_utils import SECRET_KEY, ALGORITHM
 
