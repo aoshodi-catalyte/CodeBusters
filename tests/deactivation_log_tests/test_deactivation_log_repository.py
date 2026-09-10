@@ -6,8 +6,7 @@ from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from repositories.deactivation_log_repository import DeactivationLogRepository
 from deactivation_log.deactivation_log_schema import DeactivationLogSchema
-from repositories.drink_recipe_repository import DrinkRecipeRepository
-from repositories.ingredient_repository import IngredientRepository, soft_delete_ingredient
+from repositories.ingredient_repository import IngredientRepository
 from tests.ingredient_tests.test_ingredient_repository import make_ingredient
 from vendor.vendor_schema import Vendor
 
