@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_audit_db, get_db
-from employee.employee_schema import EmployeeSchema
+from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
@@ -165,10 +165,16 @@ def deactivate_vendor(
     db: Session = Depends(get_db),
     audit_db: Session = Depends(get_audit_db),
 ):
-    # Build a minimal user object for audit logging
     employee_repo = EmployeeRepository(db)
     user_id = token_payload.get("employee_id")
-    acting_user = employee_repo.get_employee_by_id(user_id)
+
+    try:
+        acting_user = employee_repo.get_employee_by_id(user_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
 
     repo = VendorRepository(db)
     audit_repo = VendorAuditRepository(audit_db)
