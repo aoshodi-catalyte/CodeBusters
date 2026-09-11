@@ -7,34 +7,36 @@ and domain‑specific exception handling to ensure consistent and meaningful
 HTTP responses for ingredient‑related actions.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from utils.response import to_response
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
-    VendorNotFoundError,
     IngredientNotFoundError,
+    VendorNotFoundError,
 )
-from ingredient.ingredient_model import (
-    Ingredient,
-    IngredientOut,
-)
+from ingredient.ingredient_model import Ingredient, IngredientOut
 from repositories.ingredient_repository import IngredientRepository
+from security.secure_manager_login import check_role
+from utils.response import to_response
 
 router = APIRouter(
     prefix="/ingredients",
     tags=["ingredient"],
 )
+logger = logging.getLogger("codebusters")
 
 
 @router.post(
     "/",
     response_model=IngredientOut,
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_201_CREATED,
 )
 def create(
@@ -59,12 +61,16 @@ def create(
         HTTPException:
             500 if an unexpected database error occurs.
     """
+    logger.debug("POST /ingredients called — creating ingredient")
     repo = IngredientRepository(db)
+
     try:
         created = repo.create_ingredient(ingredient)
+        logger.info("Ingredient created successfully: id=%s", created.id)
         return to_response(IngredientOut, created)
 
     except VendorNotFoundError as exc:
+        logger.warning("Vendor %s not found", ingredient.vendor_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
@@ -74,6 +80,7 @@ def create(
         ) from exc
 
     except IngredientAlreadyExistsError as exc:
+        logger.warning("Ingredient creation warning: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -83,6 +90,7 @@ def create(
         ) from exc
 
     except IngredientConstraintError as exc:
+        logger.error("Ingredient creation failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -92,6 +100,7 @@ def create(
         ) from exc
 
     except SQLAlchemyError as exc:
+        logger.error("Ingredient creation failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -119,9 +128,10 @@ def read_all_ingredients(
     Returns:
         A response containing a message and a list of all ingredients.
     """
+    logger.debug("GET /ingredients called — retrieving all ingredients")
     repo = IngredientRepository(db)
     ingredients = repo.get_all_ingredients()
-
+    logger.info("Retrieved %s ingredients", len(ingredients))
     return [to_response(IngredientOut, ingredient) for ingredient in ingredients]
 
 
@@ -146,23 +156,29 @@ def read_ingredient(
         HTTPException:
             404 if the ingredient does not exist.
     """
+    logger.debug("GET /ingredients/%s called — fetching ingredient", ingredient_id)
     repo = IngredientRepository(db)
     ingredient = repo.get_ingredient_by_id(ingredient_id)
 
     if ingredient is None:
+        logger.warning("Ingredient %s not found", ingredient_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "ingredient_not_found",
-                "message": (f"Ingredient with ID {ingredient_id} " "was not found."),
+                "message": (
+                    f"Ingredient with ID {ingredient_id} was not found."
+                ),
             },
         )
 
+    logger.info("Ingredient %s retrieved successfully", ingredient_id)
     return to_response(IngredientOut, ingredient)
 
 
 @router.put(
     "/{ingredient_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=IngredientOut,
 )
 def update(
@@ -188,14 +204,16 @@ def update(
         HTTPException:
             500 if an unexpected database error occurs.
     """
+    logger.debug("PUT /ingredients/%s called — updating ingredient", ingredient_id)
     repo = IngredientRepository(db)
 
     try:
         result = repo.update_ingredient(ingredient_id, ingredient)
-
+        logger.info("Ingredient %s updated successfully", ingredient_id)
         return to_response(IngredientOut, result)
 
     except IngredientNotFoundError as exc:
+        logger.warning("Ingredient %s not found", ingredient_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
@@ -205,6 +223,7 @@ def update(
         ) from exc
 
     except VendorNotFoundError as exc:
+        logger.warning("Vendor %s not found", ingredient.vendor_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
@@ -214,6 +233,7 @@ def update(
         ) from exc
 
     except IngredientAlreadyExistsError as exc:
+        logger.error("Ingredient update failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -223,6 +243,7 @@ def update(
         ) from exc
 
     except IngredientConstraintError as exc:
+        logger.error("Ingredient update failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -232,6 +253,7 @@ def update(
         ) from exc
 
     except SQLAlchemyError as exc:
+        logger.error("Ingredient update failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -242,6 +264,8 @@ def update(
                 ),
             },
         ) from exc
+
+
 class IngredientDeleteResponse(BaseModel):
     """Schema used when confirming an ingredient soft delete."""
     message: str
@@ -250,6 +274,7 @@ class IngredientDeleteResponse(BaseModel):
 
 @router.delete(
     "/{ingredient_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_ingredient_endpoint(
@@ -271,26 +296,29 @@ def delete_ingredient_endpoint(
         HTTPException:
             500 if a database error occurs.
     """
+    logger.debug("DELETE /ingredients/%s called — deleting ingredient", ingredient_id)
     repo = IngredientRepository(db)
 
     try:
         ingredient = repo.soft_delete_ingredient(ingredient_id)
 
         if ingredient is None:
+            logger.warning("Ingredient %s not found for deletion", ingredient_id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "error": "ingredient_not_found",
                     "message": (
-                        f"Ingredient with ID {ingredient_id} "
-                        "was not found."
+                        f"Ingredient with ID {ingredient_id} was not found."
                     ),
                 },
             )
 
+        logger.info("Ingredient %s deleted successfully", ingredient_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     except SQLAlchemyError as exc:
+        logger.error("Ingredient deletion failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

@@ -7,9 +7,10 @@ from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.orm import Session
 from database import get_db
 from exceptions.vendor_exceptions import (
-DuplicateVendorException,
-VendorNotFoundException,
+    DuplicateVendorException,
+    VendorNotFoundException,
 )
+from security.secure_manager_login import check_role
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 from repositories.vendor_repository import VendorRepository
@@ -17,7 +18,8 @@ from repositories.vendor_repository import VendorRepository
 router = APIRouter()
 
 
-@router.post("/vendors", response_model=VendorResponse, status_code=201)
+@router.post("/vendors", dependencies=[Depends(check_role(["manager"]))],
+             response_model=VendorResponse, status_code=201)
 async def post_new_vendor(
     vendor_data: VendorBase,
     db: Session = Depends(get_db),
@@ -72,6 +74,7 @@ async def get_all_vendors(db: Session = Depends(get_db)):
 
     return repo.get_all_vendors()
 
+
 @router.get(
     "/vendors/{vendor_id}",
     response_model=VendorResponse,
@@ -104,8 +107,10 @@ def get_vendor_by_id(
             detail=str(exc),
         ) from exc
 
+
 @router.put(
     "/vendors/{vendor_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=VendorResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -144,6 +149,7 @@ def update_vendor(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
 
 @router.delete(
     "/vendors/{vendor_id}",

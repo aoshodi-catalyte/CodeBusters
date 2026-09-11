@@ -12,12 +12,15 @@ from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 from repositories.employee_repository import EmployeeRepository
+from security.secure_manager_login import check_role
 
 router = APIRouter()
 
 
-@router.post("/employees", response_model=EmployeeResponse, status_code=201)
+@router.post("/employees", dependencies=[Depends(check_role(["manager"]))],
+             response_model=EmployeeResponse, status_code=201)
 async def post_new_employee(employee_data: Employee, db: Session = Depends(get_db)):
     """
     Create a new employee record and return the newly created employee.
@@ -145,6 +148,7 @@ def get_single_employee_by_id(
 
 @router.put(
     "/employees/{employee_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=EmployeeResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -176,6 +180,41 @@ def update_employee(
         ) from exc
 
     except EmployeeEmailAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+@router.delete(
+    "/employees/{employee_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_employee(
+    employee_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+        Deactivate an employee by setting their active status to False.
+
+        The employee record is preserved in the database for historical purposes.
+
+        Returns:
+            A 204 No Content response when the employee is successfully deactivated.
+
+        Raises:
+            HTTPException: 404 Not Found if the employee does not exist.
+            HTTPException: 409 Conflict if the employee is already deactivated.
+    """
+    repo = EmployeeRepository(db)
+
+    try:
+        repo.deactivate_employee(employee_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except EmployeeAlreadyDeactivatedError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),

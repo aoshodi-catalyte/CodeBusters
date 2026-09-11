@@ -23,6 +23,7 @@ from customer.customer_model import (
 )
 from database import get_db
 from repositories.customer_repository import CustomerRepository
+from security.secure_manager_login import check_role
 
 
 router = APIRouter()
@@ -30,6 +31,7 @@ router = APIRouter()
 
 @router.post(
     "/customers",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=CustomerResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -50,6 +52,8 @@ def create_customer(
     try:
         return repo.create_customer(customer)
 
+# pylint: disable=duplicate-code
+
     except (
         CustomerEmailAlreadyExistsError,
         CustomerPhoneAlreadyExistsError,
@@ -60,9 +64,11 @@ def create_customer(
             detail=str(exc),
         ) from exc
 
+# pylint: enable=duplicate-code
 
 @router.put(
     "/customers/{customer_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=CustomerResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -87,6 +93,8 @@ def update_customer(
     try:
         return repo.update_customer(customer_id, customer)
 
+# pylint: disable=duplicate-code
+
     except CustomerNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -102,6 +110,8 @@ def update_customer(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+# pylint: enable=duplicate-code
 
 
 @router.get(
@@ -153,6 +163,7 @@ def get_customer(
 
 @router.delete(
     "/customers/{customer_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_customer(
