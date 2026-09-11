@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str | None = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    AUDIT_DATABASE_URL: str
 
 
 settings = Settings()
