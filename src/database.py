@@ -6,17 +6,20 @@ database initialization function, and database session dependency.
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
 from config import settings
 
 DATABASE_URL = settings.DATABASE_URL
+AUDIT_DATABASE_URL = settings.AUDIT_DATABASE_URL
 
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL)
+audit_engine = create_engine(AUDIT_DATABASE_URL)
 
-# pylint: disable=C0103
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) # pylint: disable=C0103
+AuditSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=audit_engine) # pylint: disable=C0103
 
 Base = declarative_base()
-
+AuditBase = declarative_base()
 
 def create_db() -> None:
     """
@@ -26,6 +29,7 @@ def create_db() -> None:
     """
     # Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    AuditBase.metadata.create_all(bind=audit_engine)
 
 
 def get_db():
@@ -41,6 +45,17 @@ def get_db():
         SQLAlchemyError: If the session fails to initialize or close properly.
     """
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_audit_db():
+    """
+    Creates a new SQLAlchemy session for the audit database.
+    """
+    db = AuditSessionLocal()
     try:
         yield db
     finally:
