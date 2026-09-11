@@ -240,9 +240,9 @@ class IngredientRepository:
                     related_entity_name=recipe.name,
                     reason="Active relationship",
                     error_message=(
-                        f'Ingredient "{ingredient.name}" was deactivated '
-                        f'while still referenced by active drink recipe '
-                        f'"{recipe.name}".'
+                        f"Ingredient {ingredient.name} was deactivated "
+                        f"while still referenced by active drink recipe "
+                        f"{recipe.name}."
                     ),
                 )
 
