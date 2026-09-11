@@ -8,7 +8,7 @@ endpoints and supports ORM mode via `from_attributes=True`.
 
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BakedGoodResponseModel(BaseModel):
@@ -33,4 +33,10 @@ class BakedGoodResponseModel(BaseModel):
     retail_price: Decimal = Field(decimal_places=2)
     vendor_id: int
 
+    @field_validator("purchasing_cost", "retail_price")
+    @classmethod
+    def format_money(cls, value: Decimal) -> Decimal:
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
     model_config = ConfigDict(from_attributes=True)
+

@@ -8,7 +8,7 @@ Both models enforce that required fields are provided and that pricing
 and text fields meet the application's validation requirements.
 """
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -37,6 +37,11 @@ class BakedGoodBase(BaseModel):
     purchasing_cost: Decimal = Field(gt=0, decimal_places=2)
     retail_price: Decimal = Field(gt=0, decimal_places=2)
     vendor_id: int
+
+    @field_validator("purchasing_cost", "retail_price")
+    @classmethod
+    def format_money(cls, value: Decimal) -> Decimal:
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     @field_validator("name")
     @classmethod
