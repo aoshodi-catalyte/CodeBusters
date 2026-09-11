@@ -165,6 +165,24 @@ def deactivate_vendor(
     db: Session = Depends(get_db),
     audit_db: Session = Depends(get_audit_db),
 ):
+    """
+    Deactivate a vendor by setting its active status to False.
+
+    This endpoint performs a soft delete on the vendor record, preserving
+    historical data while preventing further use of the vendor. The acting
+    employee is validated from the JWT payload, and an audit record is
+    created documenting the deactivation event.
+
+    Args:
+        vendor_id (int): The unique identifier of the vendor to deactivate.
+        token_payload (dict): JWT payload containing the acting employee ID.
+        db (Session): Primary database session for vendor operations.
+        audit_db (Session): Audit database session for logging deactivation events.
+
+    Raises:
+        HTTPException: If the acting employee does not exist or the vendor
+            cannot be found.
+    """
     employee_repo = EmployeeRepository(db)
     user_id = token_payload.get("employee_id")
 
