@@ -34,4 +34,3 @@ class BakedGoodResponseModel(BaseModel):
     vendor_id: int
 
     model_config = ConfigDict(from_attributes=True)
-    

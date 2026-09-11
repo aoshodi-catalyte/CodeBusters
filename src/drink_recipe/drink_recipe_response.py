@@ -95,4 +95,3 @@ class DrinkRecipeResponse(BaseModel):
     production_cost: Decimal = Field(decimal_places=2)
     markup_percentage: float
     sale_price: Decimal = Field(decimal_places=2)
-    
