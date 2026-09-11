@@ -6,8 +6,8 @@ using Pydantic Settings. It is responsible for providing the DATABASE_URL
 used by the application and by test workflows (e.g., pytest on GitHub Actions).
 """
 
-from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     model_config = ConfigDict(env_file=".env")
     DATABASE_URL: str
+    AUDIT_DATABASE_URL: str
     JWT_SECRET_KEY: str | None = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

@@ -523,7 +523,17 @@ def test_deactivate_vendor(db_session):
 
     repo = VendorRepository(db_session)
 
-    deactivated_vendor = repo.deactivate_vendor(vendor.id)
+    class FakeAuditRepo:
+        def record_vendor_deactivation(self, vendor_id, user):
+            return None
+
+    audit_repo = FakeAuditRepo()
+
+    deactivated_vendor = repo.deactivate_vendor(
+        vendor.id,
+        acting_user="test_user",
+        audit_repo=audit_repo
+    )
 
     assert deactivated_vendor.active is False
 
@@ -545,23 +555,39 @@ def test_deactivate_vendor_persists_to_database(db_session):
 
     repo = VendorRepository(db_session)
 
-    repo.deactivate_vendor(vendor.id)
+    class FakeAuditRepo:
+        def record_vendor_deactivation(self, vendor_id, user):
+            return None
 
-    stored_vendor = (
-        db_session.query(Vendor)
-        .filter(Vendor.id == vendor.id)
-        .first()
+    audit_repo = FakeAuditRepo()
+
+    repo.deactivate_vendor(
+        vendor.id,
+        acting_user="test_user",
+        audit_repo=audit_repo
     )
 
-    assert stored_vendor.active is False
+    stored_vendor = (
+            db_session.query(Vendor)
+            .filter(Vendor.id == vendor.id)
+            .first()
+        )
+    
+    assert stored_vendor.active is False  
 
 
 def test_deactivate_vendor_raises_not_found_exception(db_session):
     """Test that deactivating a nonexistent vendor raises VendorNotFoundException."""
     repo = VendorRepository(db_session)
+    class FakeAuditRepo:
+        def record_vendor_deactivation(self, vendor_id, user):
+            return None
+
+    audit_repo = FakeAuditRepo()
 
     with pytest.raises(VendorNotFoundException) as exc_info:
-        repo.deactivate_vendor(999)
+        repo.deactivate_vendor(999, acting_user="test_user",
+        audit_repo=audit_repo)
 
     assert exc_info.value.vendor_id == 999
 
@@ -582,8 +608,13 @@ def test_deactivate_vendor_preserves_other_fields(db_session):
     db_session.refresh(vendor)
 
     repo = VendorRepository(db_session)
+    class FakeAuditRepo:
+        def record_vendor_deactivation(self, vendor_id, user):
+            return None
 
-    result = repo.deactivate_vendor(vendor.id)
+    audit_repo = FakeAuditRepo()
+
+    result = repo.deactivate_vendor(vendor.id, "test_user", audit_repo)
 
     assert result.name == "Vendor Three"
     assert result.contact_name == "Alex Kim"

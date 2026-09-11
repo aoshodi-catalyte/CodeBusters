@@ -3,17 +3,20 @@ FastAPI router for vendor-related API endpoints, including creation of new
 vendor records and handling of database integrity errors.
 """
 
-from fastapi import Depends, HTTPException, APIRouter, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db
+
+from database import get_audit_db, get_db
+from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
+from repositories.vendor_repository import VendorAuditRepository, VendorRepository
+from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
-from repositories.vendor_repository import VendorRepository
 
 router = APIRouter()
 
@@ -153,29 +156,49 @@ def update_vendor(
 
 @router.delete(
     "/vendors/{vendor_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_vendor(
     vendor_id: int,
+    token_payload: dict = Depends(check_role(["manager"])),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db),
 ):
-    """Deactivate a vendor (soft delete) by setting active to False.
+    """
+    Deactivate a vendor by setting its active status to False.
 
-    The vendor's record is preserved for historical purposes.
+    This endpoint performs a soft delete on the vendor record, preserving
+    historical data while preventing further use of the vendor. The acting
+    employee is validated from the JWT payload, and an audit record is
+    created documenting the deactivation event.
 
     Args:
-        vendor_id: The unique identifier of the vendor.
-        db: Database session injected through FastAPI dependency
-            injection.
+        vendor_id (int): The unique identifier of the vendor to deactivate.
+        token_payload (dict): JWT payload containing the acting employee ID.
+        db (Session): Primary database session for vendor operations.
+        audit_db (Session): Audit database session for logging deactivation events.
 
     Raises:
-        HTTPException: If the vendor does not exist.
+        HTTPException: If the acting employee does not exist or the vendor
+            cannot be found.
     """
-    repo = VendorRepository(db)
+    employee_repo = EmployeeRepository(db)
+    user_id = token_payload.get("employee_id")
 
     try:
-        repo.deactivate_vendor(vendor_id)
+        acting_user = employee_repo.get_employee_by_id(user_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
 
+    repo = VendorRepository(db)
+    audit_repo = VendorAuditRepository(audit_db)
+
+    try:
+        repo.deactivate_vendor(vendor_id, acting_user.email, audit_repo)
     except VendorNotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
