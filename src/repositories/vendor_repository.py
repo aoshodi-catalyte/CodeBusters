@@ -11,9 +11,9 @@ from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
+from repositories.deactivate_audit_repository import AuditRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
-from vendor.vendor_deactivation_model import VendorDeactivationRecord
 
 
 UNIQUE_FIELDS = ("email", "name")
@@ -173,7 +173,7 @@ class VendorRepository:
         self,
         vendor_id: int,
         acting_user: str,
-        audit_repo: VendorAuditRepository
+        audit_repo: AuditRepository
     ) -> VendorSchema:
         """Deactivate a vendor by setting active to False (soft delete).
 
@@ -201,36 +201,36 @@ class VendorRepository:
         self.db.commit()
         self.db.refresh(vendor)
 
-        audit_repo.record_vendor_deactivation(vendor_id, acting_user)
+        audit_repo.record_deactivation(vendor_id, acting_user)
 
         return vendor
 
 
-class VendorAuditRepository:
-    """
-    Handles audit logging for vendor-related actions, including
-    recording vendor deactivation events.
-    """
-    def __init__(self, audit_db: Session):
-        self.audit_db = audit_db
+# class VendorAuditRepository:
+#     """
+#     Handles audit logging for vendor-related actions, including
+#     recording vendor deactivation events.
+#     """
+#     def __init__(self, audit_db: Session):
+#         self.audit_db = audit_db
 
-    def record_vendor_deactivation(self, vendor_id: int, user: str):
-        """
-        Create and persist an audit record documenting that a vendor
-        was deactivated by a specific user.
+#     def record_vendor_deactivation(self, vendor_id: int, user: str):
+#         """
+#         Create and persist an audit record documenting that a vendor
+#         was deactivated by a specific user.
 
-        Args:
-            vendor_id: ID of the vendor being deactivated.
-            user: Username of the actor performing the deactivation.
+#         Args:
+#             vendor_id: ID of the vendor being deactivated.
+#             user: Username of the actor performing the deactivation.
 
-        Returns:
-            The persisted VendorDeactivationRecord.
-        """
-        record = VendorDeactivationRecord(
-            vendor_id=vendor_id,
-            deactivated_by=user
-        )
-        self.audit_db.add(record)
-        self.audit_db.commit()
-        self.audit_db.refresh(record)
-        return record
+#         Returns:
+#             The persisted VendorDeactivationRecord.
+#         """
+#         record = DeactivationRecord(
+#             vendor_id,
+#             deactivated_by=user
+#         )
+#         self.audit_db.add(record)
+#         self.audit_db.commit()
+#         self.audit_db.refresh(record)
+#         return record

@@ -29,6 +29,7 @@ def create_db() -> None:
     """
     # Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    AuditBase.metadata.drop_all(bind=engine)
     AuditBase.metadata.create_all(bind=audit_engine)
 
 

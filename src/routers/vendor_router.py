@@ -12,8 +12,9 @@ from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
-from repositories.vendor_repository import VendorAuditRepository, VendorRepository
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.employee_repository import EmployeeRepository
+from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
@@ -195,7 +196,7 @@ def deactivate_vendor(
         ) from exc
 
     repo = VendorRepository(db)
-    audit_repo = VendorAuditRepository(audit_db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
         repo.deactivate_vendor(vendor_id, acting_user.email, audit_repo)

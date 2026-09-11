@@ -524,7 +524,7 @@ def test_deactivate_vendor(db_session):
     repo = VendorRepository(db_session)
 
     class FakeAuditRepo:
-        def record_vendor_deactivation(self, vendor_id, user):
+        def record_deactivation(self, vendor_id, user):
             return None
 
     audit_repo = FakeAuditRepo()
@@ -556,7 +556,7 @@ def test_deactivate_vendor_persists_to_database(db_session):
     repo = VendorRepository(db_session)
 
     class FakeAuditRepo:
-        def record_vendor_deactivation(self, vendor_id, user):
+        def record_deactivation(self, vendor_id, user):
             return None
 
     audit_repo = FakeAuditRepo()
@@ -580,7 +580,7 @@ def test_deactivate_vendor_raises_not_found_exception(db_session):
     """Test that deactivating a nonexistent vendor raises VendorNotFoundException."""
     repo = VendorRepository(db_session)
     class FakeAuditRepo:
-        def record_vendor_deactivation(self, vendor_id, user):
+        def record_deactivation(self, vendor_id, user):
             return None
 
     audit_repo = FakeAuditRepo()
@@ -609,7 +609,7 @@ def test_deactivate_vendor_preserves_other_fields(db_session):
 
     repo = VendorRepository(db_session)
     class FakeAuditRepo:
-        def record_vendor_deactivation(self, vendor_id, user):
+        def record_deactivation(self, vendor_id, user):
             return None
 
     audit_repo = FakeAuditRepo()
