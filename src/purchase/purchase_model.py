@@ -8,9 +8,9 @@ purchase data, and support ORM mode via `from_attributes=True`.
 
 from datetime import datetime
 from decimal import Decimal
+
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-import baked_good
 
 class DecimalSerializerModel(BaseModel):
     """
@@ -95,7 +95,7 @@ class PurchaseItemResponse(DecimalSerializerModel):
             return "drink"
 
         raise ValueError(
-            f"Invalid item_type '{v}'. Allowed types: Baked good or drink."
+            f"Invalid item_type '{v}'. Allowed types: baked good or drink."
         )
 
 class PurchaseResponse(DecimalSerializerModel):

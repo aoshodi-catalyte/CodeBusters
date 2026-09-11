@@ -34,8 +34,15 @@ def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db)):
         PurchaseResponse: The created purchase record.
     """
     service = PurchaseService(db)
-    purchase = service.create_purchase(payload)
-    return purchase
+
+    try:
+        return service.create_purchase(payload)
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
 
 
 @router.get(

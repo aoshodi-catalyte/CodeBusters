@@ -50,7 +50,7 @@ class PurchaseRepository:
         if normalized in drink_aliases:
             return "drink_recipe"
 
-        raise ValueError(f"Unknown item_type '{item_type}'")
+        raise ValueError(f"Invalid item_type '{item_type}'. Allowed types: Baked good or drink.")
 
 
     def __init__(self, db: Session):
@@ -100,7 +100,7 @@ class PurchaseRepository:
             return item.sale_price
 
         # Should never reach here because normalization handles errors
-        raise ValueError(f"Unknown item_type '{item_type}'")
+        raise ValueError(f"Invalid item_type '{item_type}'. Allowed types: Baked good or drink.")
 
 
 
@@ -143,13 +143,16 @@ class PurchaseRepository:
         for item in items:
             normalized_type = self._normalize_item_type(item["item_type"])
 
+            price = self.get_item_price(normalized_type, item["item_id"])
+
             purchase_item = PurchaseItemSchema(
                 purchase_id=purchase.id,
                 item_type=normalized_type,
                 item_id=item["item_id"],
                 quantity=item["quantity"],
-                price_at_sale=item["price_at_sale"],
+                price_at_sale=price,
             )
+
             self.db.add(purchase_item)
 
         self.db.commit()

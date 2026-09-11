@@ -80,7 +80,6 @@ def test_get_item_price_missing_item(repo):
         repo.get_item_price("baked_good", 999)
 
 
-
 def test_get_promotion_found(repo, db):
     promo = create_promo(db)
     result = repo.get_promotion(promo.id)
