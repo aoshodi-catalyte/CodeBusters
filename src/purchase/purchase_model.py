@@ -83,6 +83,13 @@ class PurchaseItemResponse(DecimalSerializerModel):
 
     @field_validator("item_type")
     def normalize_item_type(cls, v):
+        """
+        Normalize the incoming item_type string into one of the two allowed
+        canonical values: "baked good" or "drink".
+
+        Raises:
+            ValueError: If item_type is not a recognized baked good or drink type.
+        """
         normalized = v.strip().lower().replace(" ", "_")
 
         baked_good_aliases = {"baked_good", "bakedgood"}

@@ -37,7 +37,7 @@ class PurchaseRepository:
         normalized = item_type.strip().lower().replace(" ", "_")
 
         baked_good_aliases = {
-            "baked_good", "bakedgood", "baked_good", "baked_good",
+            "baked_good", "bakedgood",
         }
 
         drink_aliases = {
