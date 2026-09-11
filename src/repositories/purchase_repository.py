@@ -18,6 +18,40 @@ class PurchaseRepository:
     """
     Repository responsible for interacting with purchase-related tables.
     """
+    def _normalize_item_type(self, item_type: str) -> str:
+        """
+        Normalize user-provided item_type strings into canonical values.
+
+        Accepted baked good variants:
+            baked good, baked_good, Baked Good, Baked good, BakedGood
+
+        Accepted drink recipe variants:
+            drink, drink recipe, Drink, Drink Recipe, Drink recipe
+
+        Returns:
+            "baked_good" or "drink_recipe"
+
+        Raises:
+            ValueError if the type cannot be normalized.
+        """
+        normalized = item_type.strip().lower().replace(" ", "_")
+
+        baked_good_aliases = {
+            "baked_good", "bakedgood", "baked_good", "baked_good",
+        }
+
+        drink_aliases = {
+            "drink", "drink_recipe", "drinkrecipe",
+        }
+
+        if normalized in baked_good_aliases:
+            return "baked_good"
+
+        if normalized in drink_aliases:
+            return "drink_recipe"
+
+        raise ValueError(f"Unknown item_type '{item_type}'")
+
 
     def __init__(self, db: Session):
         """
@@ -27,6 +61,7 @@ class PurchaseRepository:
             db (Session): SQLAlchemy database session.
         """
         self.db = db
+
 
     def get_item_price(self, item_type: str, item_id: int) -> float:
         """
@@ -42,6 +77,8 @@ class PurchaseRepository:
         Raises:
             ValueError: If the item does not exist or type is unknown.
         """
+        item_type = self._normalize_item_type(item_type)
+
         if item_type == "baked_good":
             item = (
                 self.db.query(BakedGoodSchema)
@@ -62,7 +99,10 @@ class PurchaseRepository:
                 raise ValueError(f"Drink recipe with id {item_id} not found")
             return item.sale_price
 
+        # Should never reach here because normalization handles errors
         raise ValueError(f"Unknown item_type '{item_type}'")
+
+
 
     def get_promotion(self, promo_id: int) -> PromotionSchema | None:
         """
@@ -79,6 +119,7 @@ class PurchaseRepository:
             .filter(PromotionSchema.id == promo_id)
             .first()
         )
+
 
     def create_purchase(self, purchase_data: dict, items: list[dict]) -> PurchaseSchema:
         """
@@ -100,9 +141,11 @@ class PurchaseRepository:
         self.db.flush()  # ensures purchase.id is available
 
         for item in items:
+            normalized_type = self._normalize_item_type(item["item_type"])
+
             purchase_item = PurchaseItemSchema(
                 purchase_id=purchase.id,
-                item_type=item["item_type"],
+                item_type=normalized_type,
                 item_id=item["item_id"],
                 quantity=item["quantity"],
                 price_at_sale=item["price_at_sale"],
@@ -113,6 +156,7 @@ class PurchaseRepository:
         self.db.refresh(purchase)
 
         return purchase
+
 
     def get_purchase(self, purchase_id: int) -> PurchaseSchema | None:
         """
@@ -129,6 +173,7 @@ class PurchaseRepository:
             .filter(PurchaseSchema.id == purchase_id)
             .first()
         )
+
 
     def list_purchases(self) -> list[PurchaseSchema]:
         """
