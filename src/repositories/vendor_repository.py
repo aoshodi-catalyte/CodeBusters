@@ -169,7 +169,8 @@ class VendorRepository:
 
         return vendor
 
-    def deactivate_vendor(self, 
+    def deactivate_vendor(
+        self,
         vendor_id: int,
         acting_user: str,
         audit_repo: VendorAuditRepository
