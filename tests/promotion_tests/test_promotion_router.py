@@ -2,12 +2,13 @@ import pytest
 
 from fastapi import FastAPI
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker 
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from database import Base, get_db
 from routers.promotion_router import router as promotion_router
+from tests.factories.auth_factories import manager_token
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
@@ -26,6 +27,7 @@ TestingSessionLocal = sessionmaker(
 app = FastAPI()
 app.include_router(promotion_router)
 
+
 @pytest.fixture(scope="function")
 def client():
     """
@@ -33,7 +35,6 @@ def client():
     """
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
-    
 
     def override_get_db():
         db = TestingSessionLocal()
@@ -51,10 +52,12 @@ def client():
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=test_engine)
 
+
 def test_post_promotion(client):
     """
     Test that a valid promotion can be created successfully.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "SUMMER2026",
@@ -63,7 +66,8 @@ def test_post_promotion(client):
         "end_datetime": "06/30/2026 11:59 PM"
     }
 
-    response = client.post("/promotions/", json=promotion)
+    response = client.post("/promotions/", json=promotion,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
 
@@ -76,10 +80,12 @@ def test_post_promotion(client):
     assert data["start_datetime"] is not None
     assert data["end_datetime"] is not None
 
+
 def test_post_promotion_returns_created_id(client):
     """
     Test that a newly created promotion receives a database ID.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "ID2026",
@@ -88,15 +94,18 @@ def test_post_promotion_returns_created_id(client):
         "end_datetime": "06/30/2026 11:59 PM"
     }
 
-    response = client.post("/promotions/", json=promotion)
+    response = client.post("/promotions/", json=promotion,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
     assert response.json()["id"] == 1
+
 
 def test_post_inactive_promotion(client):
     """
     Test that an inactive promotion can be created successfully.
     """
+    token = manager_token()
     promotion = {
         "active": False,
         "promo_code": "INACTIVE2026",
@@ -105,15 +114,18 @@ def test_post_inactive_promotion(client):
         "end_datetime": "06/30/2026 11:59 PM"
     }
 
-    response = client.post("/promotions/", json=promotion)
+    response = client.post("/promotions/", json=promotion,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
     assert response.json()["active"] is False
+
 
 def test_post_promotion_rejects_lowercase_promo_code(client):
     """
     Test that a promo code containing lowercase letters is rejected.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "summer2026",
@@ -122,7 +134,8 @@ def test_post_promotion_rejects_lowercase_promo_code(client):
         "end_datetime": "06/30/2026 11:59 PM"
     }
 
-    response = client.post("/promotions/", json=promotion)
+    response = client.post("/promotions/", json=promotion,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
@@ -131,6 +144,7 @@ def test_post_promotion_requires_promo_code(client):
     """
     Test that promo_code is required.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "discount_percentage": 20.0,
@@ -138,11 +152,14 @@ def test_post_promotion_requires_promo_code(client):
         "end_datetime": "06/30/2026 11:59 PM"
     }
 
-    response = client.post("/promotions/", json=promotion)
+    response = client.post("/promotions/", json=promotion,
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
+
 def test_post_promotion_duplicate_promo_code(client):
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "SUMMER2026",
@@ -151,21 +168,25 @@ def test_post_promotion_duplicate_promo_code(client):
         "end_datetime": "08/31/2026 11:59 PM"
     }
 
-    first_response = client.post("/promotions/", json=promotion)
+    first_response = client.post(
+        "/promotions/", json=promotion, headers={"Authorization": f"Bearer {token}"})
 
     assert first_response.status_code == 201
 
-    second_response = client.post("/promotions/", json=promotion)
+    second_response = client.post(
+        "/promotions/", json=promotion, headers={"Authorization": f"Bearer {token}"})
 
     assert second_response.status_code == 409
     assert second_response.json() == {
         "detail": "Promotion with promo code 'SUMMER2026' already exists."
     }
 
+
 def test_get_all_promotions(client):
     """
     Test that all promotions are returned successfully.
     """
+    token = manager_token()
     promotion_1 = {
         "active": True,
         "promo_code": "SAVE10",
@@ -182,8 +203,10 @@ def test_get_all_promotions(client):
         "end_datetime": "08/25/2026 10:00 PM"
     }
 
-    client.post("/promotions/", json=promotion_1)
-    client.post("/promotions/", json=promotion_2)
+    client.post("/promotions/", json=promotion_1,
+                headers={"Authorization": f"Bearer {token}"})
+    client.post("/promotions/", json=promotion_2,
+                headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/promotions/")
 
@@ -205,6 +228,7 @@ def test_get_all_promotions_empty(client):
     assert response.status_code == 200
     assert response.json() == []
 
+
 def test_get_promotion_by_id(client):
     """
     Tests that the GET promotion by ID endpoint returns the
@@ -221,6 +245,7 @@ def test_get_promotion_by_id(client):
         None
     """
 
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "SUMMER20",
@@ -231,7 +256,8 @@ def test_get_promotion_by_id(client):
 
     promotion_response = client.post(
         "/promotions/",
-        json=promotion
+        json=promotion,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert promotion_response.status_code == 201
@@ -248,6 +274,7 @@ def test_get_promotion_by_id(client):
     assert data["active"] is True
     assert data["promo_code"] == "SUMMER20"
     assert data["discount_percentage"] == 20.0
+
 
 def test_get_promotion_by_id_invalid_id(client):
     """
@@ -268,13 +295,255 @@ def test_get_promotion_by_id_invalid_id(client):
 
     assert response.status_code == 404
 
-    assert response.json()["detail"] == "Invalid Promotion ID"
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
+
+
+def test_update_promotion(client):
+    """
+    Test that a promotion can be updated through the API and the
+    updated entity is returned.
+    """
+    token = manager_token()
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "BEFORE2026",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    update_payload = {
+        "active": False,
+        "promo_code": "AFTER2026",
+        "discount_percentage": 45.0,
+        "start_datetime": "07/01/2026 09:00 AM",
+        "end_datetime": "07/31/2026 11:59 PM",
+    }
+
+    response = client.put(
+        f"/promotions/{promotion_id}", json=update_payload, headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == promotion_id
+    assert data["active"] is False
+    assert data["promo_code"] == "AFTER2026"
+    assert data["discount_percentage"] == 45.0
+
+
+def test_update_promotion_persists_change(client):
+    """
+    Test that an update is reflected on a subsequent GET request.
+    """
+    token = manager_token()
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "PATCH1",
+            "discount_percentage": 5.0,
+            "start_datetime": "08/01/2026 09:00 AM",
+            "end_datetime": "08/31/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "PATCH2",
+            "discount_percentage": 15.0,
+            "start_datetime": "08/01/2026 09:00 AM",
+            "end_datetime": "08/31/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    get_response = client.get(f"/promotions/{promotion_id}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["promo_code"] == "PATCH2"
+    assert get_response.json()["discount_percentage"] == 15.0
+
+
+def test_update_promotion_with_invalid_id(client):
+    """
+    Test that updating a promotion with an ID that does not exist
+    returns HTTP 404.
+    """
+    token = manager_token()
+    update_payload = {
+        "active": True,
+        "promo_code": "NOTFOUND2026",
+        "discount_percentage": 10.0,
+        "start_datetime": "06/01/2026 09:00 AM",
+        "end_datetime": "06/30/2026 11:59 PM",
+    }
+
+    response = client.put("/promotions/9999", json=update_payload,
+                          headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
+
+
+def test_update_promotion_rejects_lowercase_promo_code(client):
+    """
+    Test that the API rejects an update payload with a lowercase
+    promo code.
+    """
+    token = manager_token()
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "VALIDCODE",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "lowercase",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_promotion_rejects_discount_over_100(client):
+    """
+    Test that the API rejects an update payload with a discount
+    percentage above 100.
+    """
+    token = manager_token()
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "OVERLIMIT",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "OVERLIMIT",
+            "discount_percentage": 150.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_promotion_rejects_end_before_start(client):
+    """
+    Test that the API rejects an update payload where the end
+    datetime is before the start datetime.
+    """
+    token = manager_token()
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "BADDATES",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "promo_code": "BADDATES",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/30/2026 11:59 PM",
+            "end_datetime": "06/01/2026 09:00 AM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_promotion_missing_required_field(client):
+    """
+    Test that the API rejects an update payload missing a required
+    field.
+    """
+    token = manager_token()
+    create_response = client.post(
+        "/promotions/",
+        json={
+            "active": True,
+            "promo_code": "MISSINGFIELD",
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    promotion_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/promotions/{promotion_id}",
+        json={
+            "active": True,
+            "discount_percentage": 10.0,
+            "start_datetime": "06/01/2026 09:00 AM",
+            "end_datetime": "06/30/2026 11:59 PM",
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 422
+
 
 def test_deactivate_promotion(client):
     """
     Test that a promotion can be deactivated (soft deleted) through
     the API and returns HTTP 204.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "DEACTIVATE1",
@@ -283,10 +552,12 @@ def test_deactivate_promotion(client):
         "end_datetime": "06/30/2026 11:59 PM"
     }
 
-    create_response = client.post("/promotions/", json=promotion)
+    create_response = client.post(
+        "/promotions/", json=promotion, headers={"Authorization": f"Bearer {token}"})
     promotion_id = create_response.json()["id"]
 
-    response = client.delete(f"/promotions/{promotion_id}")
+    response = client.delete(
+        f"/promotions/{promotion_id}", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 204
     assert response.content == b""
@@ -297,6 +568,7 @@ def test_deactivate_promotion_sets_active_false(client):
     Test that deactivating a promotion sets active to False and the
     change is reflected on a subsequent GET request.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "DEACTIVATE2",
@@ -305,10 +577,12 @@ def test_deactivate_promotion_sets_active_false(client):
         "end_datetime": "07/31/2026 11:59 PM"
     }
 
-    create_response = client.post("/promotions/", json=promotion)
+    create_response = client.post(
+        "/promotions/", json=promotion, headers={"Authorization": f"Bearer {token}"})
     promotion_id = create_response.json()["id"]
 
-    client.delete(f"/promotions/{promotion_id}")
+    client.delete(f"/promotions/{promotion_id}",
+                  headers={"Authorization": f"Bearer {token}"})
 
     get_response = client.get(f"/promotions/{promotion_id}")
 
@@ -321,10 +595,12 @@ def test_deactivate_promotion_with_invalid_id(client):
     Test that deactivating a promotion with an ID that does not exist
     returns HTTP 404.
     """
-    response = client.delete("/promotions/9999")
+    token = manager_token()
+    response = client.delete(
+        "/promotions/9999", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Invalid Promotion ID"
+    assert response.json()["detail"] == "Promotion with ID 9999 was not found."
 
 
 def test_deactivate_promotion_preserves_record(client):
@@ -332,6 +608,7 @@ def test_deactivate_promotion_preserves_record(client):
     Test that deactivating a promotion preserves the historical
     record rather than deleting it.
     """
+    token = manager_token()
     promotion = {
         "active": True,
         "promo_code": "PRESERVE2026",
@@ -340,10 +617,12 @@ def test_deactivate_promotion_preserves_record(client):
         "end_datetime": "08/31/2026 11:59 PM"
     }
 
-    create_response = client.post("/promotions/", json=promotion)
+    create_response = client.post(
+        "/promotions/", json=promotion, headers={"Authorization": f"Bearer {token}"})
     promotion_id = create_response.json()["id"]
 
-    client.delete(f"/promotions/{promotion_id}")
+    client.delete(f"/promotions/{promotion_id}",
+                  headers={"Authorization": f"Bearer {token}"})
 
     get_response = client.get(f"/promotions/{promotion_id}")
 

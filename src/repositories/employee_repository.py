@@ -3,12 +3,15 @@ Repository layer for employee-related database operations, including creation,
 retrieval, and role mapping logic.
 """
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
+from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
@@ -95,5 +98,89 @@ class EmployeeRepository:
 
         if employee is None:
             raise EmployeeNotFoundError(employee_id)
+
+        return employee
+
+    def _ensure_email_unique(self, email: str, exclude_id: int | None = None):
+        """
+        Ensure no other employee has the given email.
+        """
+        query = (
+            self.db.query(EmployeeSchema)
+            .filter(EmployeeSchema.email == email)
+        )
+
+        if exclude_id is not None:
+            query = query.filter(EmployeeSchema.id != exclude_id)
+
+        if query.first():
+            raise EmployeeEmailAlreadyExistsError(email)
+
+    def update_employee(self, employee_id: int, employee_data: Employee) -> EmployeeSchema:
+        """
+        Update an existing employee with validated replacement data.
+
+        Steps:
+            - Fetch the employee; raise EmployeeNotFoundError if missing.
+            - Ensure the updated email is unique (excluding this employee).
+            - Map the EmployeeRole enum to its role_id foreign key.
+            - Apply all updated fields to the ORM instance.
+            - Commit and refresh the record.
+
+        Args:
+            employee_id: ID of the employee to update.
+            employee_data: Validated Pydantic Employee model containing new values.
+
+        Returns:
+            The updated EmployeeSchema instance.
+
+        Raises:
+            EmployeeNotFoundError: No employee exists with the given ID.
+            EmployeeEmailAlreadyExistsError: Updated email conflicts with another employee.
+        """
+
+        db_employee = self.get_employee_by_id(employee_id)
+        if db_employee is None:
+            raise EmployeeNotFoundError(employee_id)
+
+        self._ensure_email_unique(employee_data.email, exclude_id=employee_id)
+
+        role_id = map_role_enum_to_fk(employee_data.role, self.db)
+
+        db_employee.active = employee_data.active
+        db_employee.first_name = employee_data.first_name
+        db_employee.last_name = employee_data.last_name
+        db_employee.email = employee_data.email
+        db_employee.role_id = role_id
+        db_employee.hourly_rate = employee_data.hourly_rate
+        db_employee.hire_date = employee_data.hire_date
+        db_employee.term_date = employee_data.term_date
+
+        try:
+            self.db.commit()
+            self.db.refresh(db_employee)
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise EmployeeEmailAlreadyExistsError(employee_data.email) from exc
+
+        return db_employee
+
+    def deactivate_employee(self, employee_id:int):
+        """
+        Deactivate an employee by setting active to False.
+
+        The employee record is preserved for historical purposes.
+        """
+        employee = self.get_employee_by_id(employee_id)
+
+        if employee is None:
+            raise EmployeeNotFoundError(employee_id)
+
+        if employee.active is False:
+            raise EmployeeAlreadyDeactivatedError(employee_id)
+
+        employee.active = False
+        self.db.commit()
+        self.db.refresh(employee)
 
         return employee

@@ -167,3 +167,32 @@ class VendorRepository:
             self._raise_duplicate_error(exc, update_data)
 
         return vendor
+
+    def deactivate_vendor(self, vendor_id: int) -> VendorSchema:
+        """Deactivate a vendor by setting active to False (soft delete).
+
+        The vendor record is preserved for historical purposes; only
+        its active status is updated.
+
+        Args:
+            vendor_id: The unique identifier of the vendor to
+                deactivate.
+
+        Returns:
+            The deactivated vendor.
+
+        Raises:
+            VendorNotFoundException:
+                If the vendor does not exist.
+        """
+        vendor = self.get_vendor_by_id(vendor_id)
+
+        if vendor is None:
+            raise VendorNotFoundException(vendor_id)
+
+        vendor.active = False
+
+        self.db.commit()
+        self.db.refresh(vendor)
+
+        return vendor

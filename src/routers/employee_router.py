@@ -10,13 +10,17 @@ from sqlalchemy.orm import Session
 from database import get_db
 from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
+from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 from repositories.employee_repository import EmployeeRepository
+from security.secure_manager_login import check_role
 
 router = APIRouter()
 
 
-@router.post("/employees", response_model=EmployeeResponse, status_code=201)
+@router.post("/employees", dependencies=[Depends(check_role(["manager"]))],
+             response_model=EmployeeResponse, status_code=201)
 async def post_new_employee(employee_data: Employee, db: Session = Depends(get_db)):
     """
     Create a new employee record and return the newly created employee.
@@ -90,6 +94,25 @@ async def get_all_employees(db: Session = Depends(get_db)):
     return repo.get_all_employees()
 
 
+def _handle_repo_errors(exc: Exception) -> None:
+    """
+    Convert repository exceptions into HTTPExceptions.
+    """
+    if isinstance(exc, EmployeeNotFoundError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    if isinstance(exc, EmployeeEmailAlreadyExistsError):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    raise exc
+
+
 @router.get(
     "/employees/{employee_id}",
     response_model=EmployeeResponse,
@@ -119,5 +142,80 @@ def get_single_employee_by_id(
     except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.put(
+    "/employees/{employee_id}",
+    dependencies=[Depends(check_role(["manager"]))],
+    response_model=EmployeeResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_employee(
+    employee_id: int,
+    employee: Employee,
+    db: Session = Depends(get_db),
+):
+    """
+    Update an existing employee's properties.
+
+    Raises:
+        HTTPException 404:
+            If no employee exists with the provided ID.
+        HTTPException 409:
+            If the updated email or phone number belongs to another
+            employee, or the record violates another database
+            constraint.
+    """
+    repo = EmployeeRepository(db)
+
+    try:
+        return repo.update_employee(employee_id, employee)
+
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except EmployeeEmailAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+@router.delete(
+    "/employees/{employee_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_employee(
+    employee_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+        Deactivate an employee by setting their active status to False.
+
+        The employee record is preserved in the database for historical purposes.
+
+        Returns:
+            A 204 No Content response when the employee is successfully deactivated.
+
+        Raises:
+            HTTPException: 404 Not Found if the employee does not exist.
+            HTTPException: 409 Conflict if the employee is already deactivated.
+    """
+    repo = EmployeeRepository(db)
+
+    try:
+        repo.deactivate_employee(employee_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except EmployeeAlreadyDeactivatedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc

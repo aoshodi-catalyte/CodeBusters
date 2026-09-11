@@ -505,3 +505,86 @@ def test_update_vendor_duplicate_name_raises_correct_field(
 
     assert exc_info.value.field == "name"
     assert exc_info.value.value == "Existing Vendor"
+
+def test_deactivate_vendor(db_session):
+    """Test that deactivate_vendor sets active to False."""
+    vendor = Vendor(
+        active=True,
+        name="Vendor One",
+        contact_name="John Doe",
+        contact_role="Manager",
+        email="john@vendorone.com",
+        phone="5551111111",
+    )
+
+    db_session.add(vendor)
+    db_session.commit()
+    db_session.refresh(vendor)
+
+    repo = VendorRepository(db_session)
+
+    deactivated_vendor = repo.deactivate_vendor(vendor.id)
+
+    assert deactivated_vendor.active is False
+
+
+def test_deactivate_vendor_persists_to_database(db_session):
+    """Test that deactivation is persisted in the database."""
+    vendor = Vendor(
+        active=True,
+        name="Vendor Two",
+        contact_name="Jane Doe",
+        contact_role="Owner",
+        email="jane@vendortwo.com",
+        phone="5552222222",
+    )
+
+    db_session.add(vendor)
+    db_session.commit()
+    db_session.refresh(vendor)
+
+    repo = VendorRepository(db_session)
+
+    repo.deactivate_vendor(vendor.id)
+
+    stored_vendor = (
+        db_session.query(Vendor)
+        .filter(Vendor.id == vendor.id)
+        .first()
+    )
+
+    assert stored_vendor.active is False
+
+
+def test_deactivate_vendor_raises_not_found_exception(db_session):
+    """Test that deactivating a nonexistent vendor raises VendorNotFoundException."""
+    repo = VendorRepository(db_session)
+
+    with pytest.raises(VendorNotFoundException) as exc_info:
+        repo.deactivate_vendor(999)
+
+    assert exc_info.value.vendor_id == 999
+
+
+def test_deactivate_vendor_preserves_other_fields(db_session):
+    """Test that deactivating a vendor does not alter its other fields."""
+    vendor = Vendor(
+        active=True,
+        name="Vendor Three",
+        contact_name="Alex Kim",
+        contact_role="Director",
+        email="alex@vendorthree.com",
+        phone="5553333333",
+    )
+
+    db_session.add(vendor)
+    db_session.commit()
+    db_session.refresh(vendor)
+
+    repo = VendorRepository(db_session)
+
+    result = repo.deactivate_vendor(vendor.id)
+
+    assert result.name == "Vendor Three"
+    assert result.contact_name == "Alex Kim"
+    assert result.email == "alex@vendorthree.com"
