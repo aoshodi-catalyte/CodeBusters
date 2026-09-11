@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Float, Boolean, Date
+from sqlalchemy import Integer, String, Numeric, Boolean, Date
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from secure_login.secure_login_schema import EmployeeAuth
@@ -31,7 +31,7 @@ def test_employee_column_types():
     assert isinstance(columns["last_name"].type, String)
     assert isinstance(columns["email"].type, String)
     assert isinstance(columns["role_id"].type, Integer)
-    assert isinstance(columns["hourly_rate"].type, Float)
+    assert isinstance(columns["hourly_rate"].type, Numeric)
     assert isinstance(columns["hire_date"].type, Date)
     assert isinstance(columns["term_date"].type, Date)
 

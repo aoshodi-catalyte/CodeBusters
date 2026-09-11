@@ -6,7 +6,10 @@ in API responses. These models shape the JSON responses returned to clients
 and include all relevant recipe information and associated ingredient details.
 """
 
-from pydantic import BaseModel
+from decimal import Decimal
+
+from pydantic import BaseModel, Field
+
 from constants.drink_types import DrinkType
 
 
@@ -15,7 +18,7 @@ class IngredientRef(BaseModel):
     Lightweight representation of an ingredient as it appears in a drink
     recipe API response.
 
-    This model provides recipe‑specific ingredient usage details without
+    This model provides recipe-specific ingredient usage details without
     exposing the full ingredient record. It is used inside
     DrinkRecipeResponse to show which ingredients a recipe uses and in
     what quantities.
@@ -25,7 +28,7 @@ class IngredientRef(BaseModel):
             The unique identifier of the ingredient.
 
         name (str):
-            The human‑readable name of the ingredient.
+            The human-readable name of the ingredient.
 
         quantity_used (float):
             The amount of the ingredient used in the recipe, expressed in
@@ -49,8 +52,7 @@ class DrinkRecipeResponse(BaseModel):
 
     This model defines the structure of drink recipe data returned to
     clients. It includes descriptive information, ingredient usage,
-    pricing details, and drink classification. All values are fully
-    validated and rounded before being sent in the response.
+    pricing details, and drink classification.
 
     Fields:
         id (int):
@@ -60,31 +62,27 @@ class DrinkRecipeResponse(BaseModel):
             The name of the drink recipe.
 
         description (str):
-            A human‑readable description of the drink, such as flavor notes
-            or preparation details.
+            A human-readable description of the drink.
 
         active (bool):
             Indicates whether the recipe is currently available or in use.
 
         type (DrinkType):
-            The drink category (e.g., "coffee", "tea", "latte"). This is
-            derived from the DrinkType enum.
+            The drink category.
 
         ingredients (list[IngredientRef]):
-            A list of ingredient usage entries showing which ingredients
-            the recipe uses and in what quantities.
+            A list of ingredient usage entries.
 
-        production_cost (float):
-            The calculated cost required to produce the drink, rounded to
-            two decimal places.
+        production_cost (Decimal):
+            The calculated cost required to produce the drink, represented
+            with exactly two decimal places.
 
         markup_percentage (float):
-            The percentage markup applied to the production cost when
-            determining the final sale price.
+            The percentage markup applied to the production cost.
 
-        sale_price (float):
-            The final price of the drink after markup is applied, rounded
-            to two decimal places.
+        sale_price (Decimal):
+            The final price of the drink after markup is applied, represented
+            with exactly two decimal places.
     """
 
     id: int
@@ -93,6 +91,8 @@ class DrinkRecipeResponse(BaseModel):
     active: bool
     type: DrinkType
     ingredients: list[IngredientRef]
-    production_cost: float
+
+    production_cost: Decimal = Field(decimal_places=2)
     markup_percentage: float
-    sale_price: float
+    sale_price: Decimal = Field(decimal_places=2)
+    

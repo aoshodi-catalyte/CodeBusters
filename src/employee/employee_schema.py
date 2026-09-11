@@ -3,9 +3,8 @@ SQLAlchemy ORM model representing the employee table and its relationship
 to employee roles.
 """
 
-from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
-
 
 from database import Base
 
@@ -28,7 +27,10 @@ class EmployeeSchema(Base):
 
     role_id = Column(Integer, ForeignKey("employee_role.id"), nullable=False)
 
-    hourly_rate = Column(Float, index=True, nullable=False)
+    # Hourly rate is a monetary value and therefore uses fixed-point
+    # decimal precision instead of floating-point storage.
+    hourly_rate = Column(Numeric(10, 2), index=True, nullable=False)
+
     hire_date = Column(Date, index=True, nullable=False)
     term_date = Column(Date, index=True, nullable=True)
 

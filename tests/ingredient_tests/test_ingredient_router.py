@@ -14,6 +14,7 @@ from routers.ingredient_router import router as ingredient_router
 from routers.vendor_router import router as vendor_router
 from tests.factories.auth_factories import manager_token
 
+
 # Use an in-memory SQLite database for fast integration tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -72,7 +73,7 @@ def test_create_ingredient_success(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -87,13 +88,17 @@ def test_create_ingredient_success(client):
         "allergens": ["gluten"],
     }
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Flour"
     assert "id" in data
+    assert data["purchasing_cost"] == "2.50"
 
 
 def test_create_ingredient_vendor_not_found(client):
@@ -110,8 +115,11 @@ def test_create_ingredient_vendor_not_found(client):
         "allergens": [],
     }
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 404
     assert response.json()["detail"]["error"] == "vendor_not_found"
@@ -119,6 +127,7 @@ def test_create_ingredient_vendor_not_found(client):
 
 def test_create_ingredient_already_exists(client):
     """Test 3: Creating a duplicate ingredient name returns 409 Conflict."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -130,7 +139,7 @@ def test_create_ingredient_already_exists(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -145,11 +154,17 @@ def test_create_ingredient_already_exists(client):
         "allergens": [],
     }
 
-    client.post("/ingredients/", json=payload,
-                headers={"Authorization": f"Bearer {token}"})
+    client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 409
     assert response.json()["detail"]["error"] == "ingredient_already_exists"
@@ -169,7 +184,7 @@ def test_create_ingredient_invalid_data_type(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -184,8 +199,11 @@ def test_create_ingredient_invalid_data_type(client):
         "allergens": [],
     }
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 422
 
@@ -197,7 +215,7 @@ def test_create_ingredient_missing_required_field(client):
     response = client.post(
         "/ingredients/",
         json={"name": "Incomplete"},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 422
@@ -217,7 +235,7 @@ def test_read_all_ingredients_success(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -233,13 +251,17 @@ def test_read_all_ingredients_success(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     response = client.get("/ingredients/")
 
     assert response.status_code == 200
-    assert len(response.json()) == 1
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["purchasing_cost"] == "3.00"
 
 
 def test_read_all_ingredients_empty(client):
@@ -253,6 +275,7 @@ def test_read_all_ingredients_empty(client):
 
 def test_read_ingredient_by_id_success(client):
     """Test 8: Retrieving a valid ingredient ID returns 200."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -264,10 +287,11 @@ def test_read_ingredient_by_id_success(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
+
     create_res = client.post(
         "/ingredients/",
         json={
@@ -279,15 +303,20 @@ def test_read_ingredient_by_id_success(client):
             "vendor_id": vendor_id,
             "allergens": ["Milk"],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
+
     ingredient_id = create_res.json()["id"]
 
     response = client.get(f"/ingredients/{ingredient_id}")
 
     assert response.status_code == 200
-    assert response.json()["id"] == ingredient_id
-    assert response.json()["name"] == "Milk"
+
+    data = response.json()
+
+    assert data["id"] == ingredient_id
+    assert data["name"] == "Milk"
+    assert data["purchasing_cost"] == "2.00"
 
 
 def test_read_ingredient_by_id_not_found(client):
@@ -301,6 +330,7 @@ def test_read_ingredient_by_id_not_found(client):
 
 def test_update_ingredient_success(client):
     """Test 10: Successfully updating an ingredient returns 200."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -312,10 +342,11 @@ def test_update_ingredient_success(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
+
     create_res = client.post(
         "/ingredients/",
         json={
@@ -327,8 +358,9 @@ def test_update_ingredient_success(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
+
     ingredient_id = create_res.json()["id"]
 
     update_payload = {
@@ -344,12 +376,16 @@ def test_update_ingredient_success(client):
     response = client.put(
         f"/ingredients/{ingredient_id}",
         json=update_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
-    assert response.json()["name"] == "Olive Oil"
-    assert response.json()["active"] is False
+
+    data = response.json()
+
+    assert data["name"] == "Olive Oil"
+    assert data["active"] is False
+    assert data["purchasing_cost"] == "7.50"
 
 
 def test_update_ingredient_not_found(client):
@@ -366,7 +402,7 @@ def test_update_ingredient_not_found(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -384,7 +420,7 @@ def test_update_ingredient_not_found(client):
     response = client.put(
         "/ingredients/999",
         json=payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 404
@@ -393,6 +429,7 @@ def test_update_ingredient_not_found(client):
 
 def test_update_ingredient_vendor_not_found(client):
     """Test 12: Updating with a non-existent vendor returns 404."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -404,10 +441,11 @@ def test_update_ingredient_vendor_not_found(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
+
     create_res = client.post(
         "/ingredients/",
         json={
@@ -419,8 +457,9 @@ def test_update_ingredient_vendor_not_found(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
+
     ingredient_id = create_res.json()["id"]
 
     update_payload = {
@@ -436,7 +475,7 @@ def test_update_ingredient_vendor_not_found(client):
     response = client.put(
         f"/ingredients/{ingredient_id}",
         json=update_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 404
@@ -457,10 +496,11 @@ def test_update_ingredient_already_exists(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
+
     client.post(
         "/ingredients/",
         json={
@@ -472,8 +512,9 @@ def test_update_ingredient_already_exists(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
+
     item2 = client.post(
         "/ingredients/",
         json={
@@ -485,7 +526,7 @@ def test_update_ingredient_already_exists(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     ).json()
 
     update_payload = {
@@ -501,7 +542,7 @@ def test_update_ingredient_already_exists(client):
     response = client.put(
         f"/ingredients/{item2['id']}",
         json=update_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 409
@@ -510,11 +551,13 @@ def test_update_ingredient_already_exists(client):
 
 def test_update_ingredient_invalid_schema(client):
     """Test 14: Invalid update payload returns 422."""
+
     token = manager_token()
+
     response = client.put(
         "/ingredients/1",
         json={"invalid_field": True},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 422
@@ -522,6 +565,7 @@ def test_update_ingredient_invalid_schema(client):
 
 def test_get_all_ingredients_multiple(client):
     """Test 15: Retrieving multiple ingredients returns correct count."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -533,7 +577,7 @@ def test_get_all_ingredients_multiple(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -550,7 +594,7 @@ def test_get_all_ingredients_multiple(client):
                 "vendor_id": vendor_id,
                 "allergens": [],
             },
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
     response = client.get("/ingredients/")
@@ -561,6 +605,7 @@ def test_get_all_ingredients_multiple(client):
 
 def test_soft_delete_ingredient_success(client):
     """Test 16: Successfully soft deleting an ingredient returns 204."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -572,7 +617,7 @@ def test_soft_delete_ingredient_success(client):
             "email": "softdelete@test.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -588,13 +633,15 @@ def test_soft_delete_ingredient_success(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     ingredient_id = create_res.json()["id"]
 
     response = client.delete(
-        f"/ingredients/{ingredient_id}", headers={"Authorization": f"Bearer {token}"})
+        f"/ingredients/{ingredient_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 204
     assert response.content == b""
@@ -602,9 +649,13 @@ def test_soft_delete_ingredient_success(client):
 
 def test_soft_delete_ingredient_not_found(client):
     """Test 17: Soft deleting a non-existent ingredient returns 404."""
+
     token = manager_token()
+
     response = client.delete(
-        "/ingredients/9999", headers={"Authorization": f"Bearer {token}"})
+        "/ingredients/9999",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 404
     assert response.json()["detail"]["error"] == "ingredient_not_found"
@@ -612,6 +663,7 @@ def test_soft_delete_ingredient_not_found(client):
 
 def test_soft_delete_ingredient_is_persisted(client):
     """Test 18: Soft deleting an ingredient persists active=False."""
+
     token = manager_token()
     vendor_res = client.post(
         "/vendors/",
@@ -623,7 +675,7 @@ def test_soft_delete_ingredient_is_persisted(client):
             "email": "persistdelete@test.com",
             "phone": "1234567897",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     vendor_id = vendor_res.json()["id"]
@@ -639,13 +691,15 @@ def test_soft_delete_ingredient_is_persisted(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     ingredient_id = create_res.json()["id"]
 
     delete_response = client.delete(
-        f"/ingredients/{ingredient_id}", headers={"Authorization": f"Bearer {token}"})
+        f"/ingredients/{ingredient_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert delete_response.status_code == 204
 
@@ -653,5 +707,9 @@ def test_soft_delete_ingredient_is_persisted(client):
     get_response = client.get(f"/ingredients/{ingredient_id}")
 
     assert get_response.status_code == 200
-    assert get_response.json()["id"] == ingredient_id
-    assert get_response.json()["active"] is False
+
+    data = get_response.json()
+
+    assert data["id"] == ingredient_id
+    assert data["active"] is False
+    assert data["purchasing_cost"] == "3.00"
