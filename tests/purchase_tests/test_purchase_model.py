@@ -66,7 +66,7 @@ def test_purchase_item_response_valid():
     )
 
     assert item.id == 1
-    assert item.item_type == "baked_good"
+    assert item.item_type == "baked good"
     assert item.item_id == 2
     assert item.quantity == 3
     assert item.price_at_sale == Decimal("4.50")
@@ -83,7 +83,7 @@ def test_purchase_item_response_from_attributes():
     item = PurchaseItemResponse.model_validate(FakeItem(), from_attributes=True)
 
     assert item.id == 99
-    assert item.item_type == "drink_recipe"
+    assert item.item_type == "drink"
     assert item.item_id == 7
     assert item.quantity == 1
     assert item.price_at_sale == Decimal("2.75")
@@ -152,4 +152,4 @@ def test_purchase_response_from_attributes():
 
     assert response.id == 42
     assert response.total == Decimal("21.40")
-    assert response.items[0].item_type == "drink_recipe"
+    assert response.items[0].item_type == "drink"
