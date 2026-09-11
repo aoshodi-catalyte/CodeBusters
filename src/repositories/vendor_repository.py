@@ -169,7 +169,11 @@ class VendorRepository:
 
         return vendor
 
-    def deactivate_vendor(self, vendor_id: int, acting_user: str, audit_repo: VendorAuditRepository) -> VendorSchema:
+    def deactivate_vendor(self, 
+        vendor_id: int,
+        acting_user: str,
+        audit_repo: VendorAuditRepository
+    ) -> VendorSchema:
         """Deactivate a vendor by setting active to False (soft delete).
 
         The vendor record is preserved for historical purposes; only
@@ -202,10 +206,25 @@ class VendorRepository:
 
 
 class VendorAuditRepository:
+    """
+    Handles audit logging for vendor-related actions, including
+    recording vendor deactivation events.
+    """
     def __init__(self, audit_db: Session):
         self.audit_db = audit_db
 
     def record_vendor_deactivation(self, vendor_id: int, user: str):
+        """
+        Create and persist an audit record documenting that a vendor
+        was deactivated by a specific user.
+
+        Args:
+            vendor_id: ID of the vendor being deactivated.
+            user: Username of the actor performing the deactivation.
+
+        Returns:
+            The persisted VendorDeactivationRecord.
+        """
         record = VendorDeactivationRecord(
             vendor_id=vendor_id,
             deactivated_by=user
