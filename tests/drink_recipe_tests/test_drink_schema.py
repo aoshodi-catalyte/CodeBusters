@@ -1,7 +1,8 @@
-from sqlalchemy import Boolean, Float, Integer, String
+import models
+
+from sqlalchemy import Boolean, Integer, Numeric, String
 
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
-import models
 
 
 def test_table_name():
@@ -17,6 +18,7 @@ def test_columns_exist():
     assert "active" in columns
     assert "type_id" in columns
     assert "production_cost" in columns
+    assert "sale_price" in columns
 
 
 def test_column_types():
@@ -27,11 +29,17 @@ def test_column_types():
     assert isinstance(columns["description"].type, String)
     assert isinstance(columns["active"].type, Boolean)
     assert isinstance(columns["type_id"].type, Integer)
-    assert isinstance(columns["production_cost"].type, Float)
+
+    assert isinstance(columns["production_cost"].type, Numeric)
+    assert isinstance(columns["sale_price"].type, Numeric)
+
+    assert columns["production_cost"].type.scale == 2
+    assert columns["sale_price"].type.scale == 2
 
 
 def test_primary_key():
     pk = DrinkRecipeSchema.__table__.primary_key.columns
+
     assert "id" in pk
 
 
@@ -44,15 +52,11 @@ def test_nullable_constraints():
 
 
 def test_relationship_exists():
-    # SQLAlchemy stores relationships in __mapper__.relationships
     relationships = DrinkRecipeSchema.__mapper__.relationships
 
     assert "recipe_ingredients" in relationships
 
     rel = relationships["recipe_ingredients"]
 
-    # Relationship points to IngredientSchema
     assert rel.mapper.class_.__name__ == "DrinkRecipeIngredientSchema"
-
-    # Relationship is configured with back_populates
     assert rel.back_populates == "drink_recipe"

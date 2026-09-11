@@ -30,8 +30,10 @@ router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
 
 
 @router.post(
-    "/", dependencies=[Depends(check_role(["manager"]))],
-    status_code=status.HTTP_201_CREATED, response_model=BakedGoodResponseModel
+    "/",
+    dependencies=[Depends(check_role(["manager"]))],
+    status_code=status.HTTP_201_CREATED,
+    response_model=BakedGoodResponseModel,
 )
 def post_baked_good(
     baked_good: BakedGood, db: Session = Depends(get_db)
@@ -47,19 +49,25 @@ def post_baked_good(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)) from exc
+            detail=str(exc),
+        ) from exc
 
     except DuplicateBakedGoodError as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc)) from exc
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(
-    "/", status_code=status.HTTP_200_OK, response_model=List[BakedGoodResponseModel]
+    "/",
+    status_code=status.HTTP_200_OK,
+    response_model=List[BakedGoodResponseModel],
 )
-def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponseModel]:
+def get_all_baked_goods(
+    db: Session = Depends(get_db),
+) -> List[BakedGoodResponseModel]:
     """
     Retrieves all baked goods from the database.
 
@@ -71,7 +79,6 @@ def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponse
         A list of BakedGoodResponseModel objects representing all
         baked goods stored in the database.
     """
-
     repo = BakedGoodRepository(db)
     baked_goods = repo.get_all_baked_goods()
 
@@ -81,7 +88,7 @@ def get_all_baked_goods(db: Session = Depends(get_db)) -> List[BakedGoodResponse
 @router.get(
     "/{baked_good_id}",
     status_code=status.HTTP_200_OK,
-    response_model=BakedGoodResponseModel
+    response_model=BakedGoodResponseModel,
 )
 def get_baked_good_by_id(
     baked_good_id: int, db: Session = Depends(get_db)
@@ -104,8 +111,10 @@ def get_baked_good_by_id(
 
     if baked_good is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Baked Good ID"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid Baked Good ID",
         )
+
     return baked_good
 
 
@@ -143,6 +152,7 @@ def put_baked_good(
         return repo.update_baked_good(baked_good_id, baked_good)
 
     except BakedGoodNotFoundError as exc:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
@@ -163,9 +173,14 @@ def put_baked_good(
         ) from exc
 
 
-@router.delete("/{baked_good_id}",
-               status_code=status.HTTP_204_NO_CONTENT)
-def deactivate_baked_good(baked_good_id: int, db: Session = Depends(get_db)):
+@router.delete(
+    "/{baked_good_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def deactivate_baked_good(
+    baked_good_id: int,
+    db: Session = Depends(get_db),
+):
     """
     Deactivates a baked good and returns a 204 No Content response.
 
