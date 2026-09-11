@@ -53,3 +53,21 @@ class PasswordResetService:
                 employee.phone_number,
                 code,
             )
+
+    def confirm_reset(
+        self,
+        db,
+        username: str,
+        code: str,
+        new_password: str,
+    ) -> None:
+        """
+        Verify a reset code and set the employee's new password.
+        """
+
+        self.repository.confirm_reset(
+            db,
+            username,
+            code,
+            new_password,
+        )

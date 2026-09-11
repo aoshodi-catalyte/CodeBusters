@@ -2,13 +2,14 @@
 FastAPI endpoints for password reset initiation.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
 from password_reset.password_reset_model import (
     PasswordResetInitiateRequest,
+    PasswordResetConfirmRequest,
 )
 from repositories.password_reset_repository import (
     PasswordResetRepository,
@@ -63,4 +64,31 @@ def initiate_password_reset(
             "verification method is available, "
             "a verification code has been sent."
         )
+    }
+
+
+@router.post("/confirm")
+def confirm_password_reset(
+    data: PasswordResetConfirmRequest,
+    db: Session = Depends(get_db),
+    service: PasswordResetService = Depends(
+        get_password_reset_service
+    ),
+):
+    try:
+        service.confirm_reset(
+            db,
+            data.username,
+            data.code,
+            data.new_password,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset request.",
+        ) from exc
+
+    return {
+        "message": "Password reset successfully"
     }
