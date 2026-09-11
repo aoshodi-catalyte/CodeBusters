@@ -8,6 +8,8 @@ Both models enforce that required fields are provided and that pricing
 and text fields meet the application's validation requirements.
 """
 
+from decimal import Decimal
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -32,8 +34,8 @@ class BakedGoodBase(BaseModel):
     active: bool
     name: str
     description: str
-    purchasing_cost: float = Field(gt=0)
-    retail_price: float = Field(gt=0)
+    purchasing_cost: Decimal = Field(gt=0, decimal_places=2)
+    retail_price: Decimal = Field(gt=0, decimal_places=2)
     vendor_id: int
 
     @field_validator("name")
