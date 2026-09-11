@@ -33,5 +33,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    SENDGRID_API_KEY: str | None = None
+    SENDGRID_FROM_EMAIL: str | None = None
+
+    TWILIO_ACCOUNT_SID: str | None = None
+    TWILIO_AUTH_TOKEN: str | None = None
+    TWILIO_FROM_PHONE: str | None = None
+
 
 settings = Settings()

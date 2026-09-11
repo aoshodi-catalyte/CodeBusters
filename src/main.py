@@ -23,6 +23,7 @@ from routers.promotion_router import router as promotion_router
 from routers.secure_login_router import router as secure_login_router
 from routers.secure_logout_router import router as secure_logout_router
 from routers.vendor_router import router as vendor_router
+from routers.password_reset_router import router as password_reset_router
 
 
 @asynccontextmanager
@@ -87,3 +88,4 @@ app.include_router(employee_router)
 app.include_router(promotion_router)
 app.include_router(secure_login_router)
 app.include_router(secure_logout_router)
+app.include_router(password_reset_router)
