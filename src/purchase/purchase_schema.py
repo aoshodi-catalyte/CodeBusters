@@ -48,6 +48,7 @@ class PurchaseSchema(Base):
     Fields:
         id (int): Primary key.
         customer_id (int | None): Optional customer reference.
+        employee_id (int): Employee processing the purchase.
         promo_id (int | None): Optional promotion reference.
         subtotal (float): Total before discounts and tax.
         discount_amount (float): Discount applied from promotion.
@@ -62,6 +63,7 @@ class PurchaseSchema(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     customer_id = Column(Integer, ForeignKey("customer.id"), nullable=True)
+    employee_id = Column(Integer, ForeignKey("employee.id"), nullable=False)
     promo_id = Column(Integer, ForeignKey("promotion.id"), nullable=True)
 
     subtotal = Column(Float, nullable=False)
@@ -77,6 +79,7 @@ class PurchaseSchema(Base):
         nullable=False
     )
 
+    employee = relationship("EmployeeSchema")
     customer = relationship("CustomerSchema")
     promotion = relationship("PromotionSchema")
     items = relationship("PurchaseItemSchema", back_populates="purchase")

@@ -137,16 +137,22 @@ class PurchaseService:
         self.db.add(customer)
 
 
-    def create_purchase(self, purchase_create):
+    def create_purchase(self, purchase_create, employee_id):
         """
         Create a purchase transaction.
 
         Args:
             purchase_create (PurchaseCreate): Incoming purchase payload.
+            employee_id (int): ID of the employee processing the purchase.
 
         Returns:
             PurchaseSchema: The persisted purchase record.
         """
+        if purchase_create.customer_id is not None:
+            self.customer_repo.get_customer_or_404(
+                purchase_create.customer_id
+            )
+
         line_items, subtotal = self._build_line_items_and_subtotal(purchase_create)
         discount = self._apply_promotion(purchase_create.promo_id, subtotal)
 
@@ -163,6 +169,7 @@ class PurchaseService:
             "total": total,
             "loyalty_points_awarded": loyalty_points,
             "customer_id": purchase_create.customer_id,
+            "employee_id": employee_id,
             "promo_id": purchase_create.promo_id,
         }
 

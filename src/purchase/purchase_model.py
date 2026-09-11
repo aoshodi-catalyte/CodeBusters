@@ -112,6 +112,7 @@ class PurchaseResponse(DecimalSerializerModel):
     Fields:
         id (int): Unique purchase identifier.
         customer_id (int | None): Customer associated with the purchase.
+        employee_id (int): Employee who processed the purchase.
         promo_id (int | None): Promotion applied to the purchase.
         subtotal (Decimal): Total before discounts and tax.
         discount_amount (Decimal): Discount applied from promotion.
@@ -123,6 +124,7 @@ class PurchaseResponse(DecimalSerializerModel):
     """
     id: int
     customer_id: int | None
+    employee_id: int
     promo_id: int | None
 
     subtotal: Decimal

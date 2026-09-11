@@ -9,8 +9,10 @@ handling and response formatting.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from starlette.status import HTTP_201_CREATED
 
 from database import get_db
+from repositories.customer_repository import CustomerRepository
 from purchase.purchase_model import PurchaseCreate, PurchaseResponse
 from purchase.purchase_service_logic import PurchaseService
 
@@ -22,28 +24,29 @@ router = APIRouter(prefix="/purchases", tags=["Purchases"])
     response_model=PurchaseResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db)):
+def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user),):
     """
     Create a new purchase.
 
     Args:
         payload (PurchaseCreate): Incoming purchase request body.
         db (Session): Database session dependency.
+        current_user (dict): Authenticated employee information from JWT.
 
     Returns:
         PurchaseResponse: The created purchase record.
     """
     service = PurchaseService(db)
+    employee_id = current_user["employee_id"]
 
     try:
-        return service.create_purchase(payload)
+        return service.create_purchase(payload, employee_id)
 
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         ) from e
-
 
 @router.get(
     "/{purchase_id}",
