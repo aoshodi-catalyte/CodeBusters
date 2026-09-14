@@ -1,63 +1,93 @@
 """
-Twilio SMS delivery service.
+Twilio Verify SMS service.
 """
-
-from base64 import b64encode
 
 import httpx
 
 
 class SmsService:
     """
-    Sends SMS messages through Twilio.
+    Sends and verifies SMS verification codes through Twilio Verify.
     """
+
+    TWILIO_VERIFY_URL = (
+        "https://verify.twilio.com/v2/Services"
+    )
 
     def __init__(
         self,
         account_sid: str,
         auth_token: str,
-        from_phone: str,
+        verify_service_sid: str,
     ):
         self.account_sid = account_sid
         self.auth_token = auth_token
-        self.from_phone = from_phone
+        self.verify_service_sid = verify_service_sid
 
-    def send_password_reset_code(
+    def send_verification(
         self,
         recipient_phone: str,
-        code: str,
     ) -> None:
         """
-        Send a password reset code through Twilio.
+        Start a Twilio Verify SMS verification.
+
+        The verification code is generated and sent by Twilio.
         """
 
         url = (
-            "https://api.twilio.com/2010-04-01/"
-            f"Accounts/{self.account_sid}/Messages.json"
+            f"{self.TWILIO_VERIFY_URL}/"
+            f"{self.verify_service_sid}/Verifications"
         )
-
-        body = {
-            "To": recipient_phone,
-            "From": self.from_phone,
-            "Body": (
-                "Your CodeBusters password reset code is "
-                f"{code}. This code expires in 10 minutes."
-            ),
-        }
-
-        auth_value = b64encode(
-            f"{self.account_sid}:{self.auth_token}".encode()
-        ).decode()
-
-        headers = {
-            "Authorization": f"Basic {auth_value}",
-        }
 
         response = httpx.post(
             url,
-            data=body,
-            headers=headers,
+            data={
+                "To": recipient_phone,
+                "Channel": "sms",
+            },
+            auth=(
+                self.account_sid,
+                self.auth_token,
+            ),
             timeout=10.0,
         )
 
         response.raise_for_status()
+
+    def check_verification(
+        self,
+        recipient_phone: str,
+        code: str,
+    ) -> bool:
+        """
+        Check a verification code through Twilio Verify.
+
+        Returns True when Twilio reports the verification as
+        approved and valid. Returns False for an invalid code.
+        """
+
+        url = (
+            f"{self.TWILIO_VERIFY_URL}/"
+            f"{self.verify_service_sid}/VerificationCheck"
+        )
+
+        response = httpx.post(
+            url,
+            data={
+                "To": recipient_phone,
+                "Code": code,
+            },
+            auth=(
+                self.account_sid,
+                self.auth_token,
+            ),
+            timeout=10.0,
+        )
+
+        response.raise_for_status()
+
+        result = response.json()
+
+        return (
+            result.get("status") == "approved"
+        )

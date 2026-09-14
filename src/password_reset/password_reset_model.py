@@ -44,6 +44,8 @@ class PasswordResetConfirmRequest(BaseModel):
         max_length=72,
     )
 
+    channel: PasswordResetChannel | None = None
+
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, value: str) -> str:

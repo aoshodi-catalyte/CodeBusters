@@ -12,7 +12,6 @@ class FakeEmailService:
         self.recipient = None
         self.code = None
 
-
     def send_password_reset_code(
         self,
         recipient_email,
@@ -25,15 +24,22 @@ class FakeEmailService:
 class FakeSmsService:
     def __init__(self):
         self.recipient = None
-        self.code = None
+        self.verification_started = False
+        self.verification_result = True
 
-    def send_password_reset_code(
+    def send_verification(
+        self,
+        recipient_phone,
+    ):
+        self.recipient = recipient_phone
+        self.verification_started = True
+
+    def check_verification(
         self,
         recipient_phone,
         code,
     ):
-        self.recipient = recipient_phone
-        self.code = code
+        return self.verification_result
 
 
 def create_reset_test_service():
@@ -105,6 +111,7 @@ def test_full_password_reset_flow_by_email(
                 "username": employee.auth.username,
                 "code": reset_code,
                 "new_password": "Permanent123!",
+                "channel": PasswordResetChannel.EMAIL.value,
             },
         )
 
@@ -160,14 +167,12 @@ def test_full_password_reset_flow_by_phone(
         )
 
         assert response.status_code == 200
-
         assert sms_service.recipient == "5551234567"
+        assert sms_service.verification_started is True
 
-        assert sms_service.code is not None
-        assert len(sms_service.code) == 6
-        assert sms_service.code.isdigit()
-
-        reset_code = sms_service.code
+        # Twilio Verify owns the actual SMS code.
+        # The application no longer generates the SMS code.
+        reset_code = "123456"
 
         response = client.post(
             "/password-reset/confirm",
@@ -175,6 +180,7 @@ def test_full_password_reset_flow_by_phone(
                 "username": employee.auth.username,
                 "code": reset_code,
                 "new_password": "Permanent456!",
+                "channel": PasswordResetChannel.PHONE.value,
             },
         )
 
@@ -194,6 +200,52 @@ def test_full_password_reset_flow_by_phone(
             login_response.json()["must_change_password"]
             is False
         )
+
+    finally:
+        client.app.dependency_overrides.pop(
+            password_reset_router.get_password_reset_service,
+            None,
+        )
+
+
+def test_password_reset_phone_verification_failure(
+    db,
+    client,
+):
+    service, _, sms_service = create_reset_test_service()
+
+    sms_service.verification_result = False
+
+    client.app.dependency_overrides[
+        password_reset_router.get_password_reset_service
+    ] = lambda: service
+
+    try:
+        employee = create_test_employee(db)
+
+        response = client.post(
+            "/password-reset/initiate",
+            json={
+                "username": employee.auth.username,
+                "channel": PasswordResetChannel.PHONE.value,
+            },
+        )
+
+        assert response.status_code == 200
+        assert sms_service.recipient == "5551234567"
+        assert sms_service.verification_started is True
+
+        response = client.post(
+            "/password-reset/confirm",
+            json={
+                "username": employee.auth.username,
+                "code": "123456",
+                "new_password": "Permanent789!",
+                "channel": PasswordResetChannel.PHONE.value,
+            },
+        )
+
+        assert response.status_code != 200
 
     finally:
         client.app.dependency_overrides.pop(
@@ -233,6 +285,7 @@ def test_password_reset_code_cannot_be_reused(
                 "username": employee.auth.username,
                 "code": reset_code,
                 "new_password": "Permanent789!",
+                "channel": PasswordResetChannel.EMAIL.value,
             },
         )
 
@@ -244,6 +297,7 @@ def test_password_reset_code_cannot_be_reused(
                 "username": employee.auth.username,
                 "code": reset_code,
                 "new_password": "AnotherPassword123!",
+                "channel": PasswordResetChannel.EMAIL.value,
             },
         )
 

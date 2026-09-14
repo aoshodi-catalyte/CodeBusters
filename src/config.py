@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     TWILIO_ACCOUNT_SID: str | None = None
     TWILIO_AUTH_TOKEN: str | None = None
-    TWILIO_FROM_PHONE: str | None = None
+    TWILIO_VERIFY_SERVICE_SID: str | None = None
 
 
 settings = Settings()

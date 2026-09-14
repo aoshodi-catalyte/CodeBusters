@@ -27,13 +27,12 @@ def test_password_reset_sends_code_by_email():
         captured["email"] = recipient_email
         captured["email_code"] = code
 
-    def send_sms(recipient_phone, code):
+    def send_verification(recipient_phone):
         captured["phone"] = recipient_phone
-        captured["phone_code"] = code
 
     repository.initiate_reset = initiate_reset
     email_service.send_password_reset_code = send_email
-    sms_service.send_password_reset_code = send_sms
+    sms_service.send_verification = send_verification
 
     service = PasswordResetService(
         repository=repository,
@@ -57,10 +56,9 @@ def test_password_reset_sends_code_by_email():
     assert captured["email_code"] == "482193"
 
     assert "phone" not in captured
-    assert "phone_code" not in captured
 
 
-def test_password_reset_sends_code_by_phone():
+def test_password_reset_starts_phone_verification():
     employee = SimpleNamespace(
         email="john@example.com",
         phone_number="5551234567",
@@ -83,13 +81,12 @@ def test_password_reset_sends_code_by_phone():
         captured["email"] = recipient_email
         captured["email_code"] = code
 
-    def send_sms(recipient_phone, code):
+    def send_verification(recipient_phone):
         captured["phone"] = recipient_phone
-        captured["phone_code"] = code
 
     repository.initiate_reset = initiate_reset
     email_service.send_password_reset_code = send_email
-    sms_service.send_password_reset_code = send_sms
+    sms_service.send_verification = send_verification
 
     service = PasswordResetService(
         repository=repository,
@@ -110,7 +107,6 @@ def test_password_reset_sends_code_by_phone():
     assert captured["channel"] == PasswordResetChannel.PHONE
 
     assert captured["phone"] == "5551234567"
-    assert captured["phone_code"] == "583214"
 
     assert "email" not in captured
     assert "email_code" not in captured
@@ -132,12 +128,12 @@ def test_password_reset_unknown_user_does_not_send_code():
     def send_email(recipient_email, code):
         captured["email_called"] = True
 
-    def send_sms(recipient_phone, code):
+    def send_verification(recipient_phone):
         captured["sms_called"] = True
 
     repository.initiate_reset = initiate_reset
     email_service.send_password_reset_code = send_email
-    sms_service.send_password_reset_code = send_sms
+    sms_service.send_verification = send_verification
 
     service = PasswordResetService(
         repository=repository,
@@ -153,4 +149,3 @@ def test_password_reset_unknown_user_does_not_send_code():
 
     assert captured["email_called"] is False
     assert captured["sms_called"] is False
-    

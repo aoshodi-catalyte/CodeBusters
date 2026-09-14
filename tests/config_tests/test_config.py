@@ -79,4 +79,4 @@ def test_external_service_settings_are_optional(monkeypatch):
     assert settings.SENDGRID_FROM_EMAIL is None
     assert settings.TWILIO_ACCOUNT_SID is None
     assert settings.TWILIO_AUTH_TOKEN is None
-    assert settings.TWILIO_FROM_PHONE is None
+    assert settings.TWILIO_VERIFY_SERVICE_SID is None

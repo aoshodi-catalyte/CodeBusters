@@ -35,7 +35,7 @@ def get_password_reset_service() -> PasswordResetService:
     sms_service = SmsService(
         account_sid=settings.TWILIO_ACCOUNT_SID or "",
         auth_token=settings.TWILIO_AUTH_TOKEN or "",
-        from_phone=settings.TWILIO_FROM_PHONE or "",
+        verify_service_sid=settings.TWILIO_VERIFY_SERVICE_SID or "",
     )
 
     return PasswordResetService(
