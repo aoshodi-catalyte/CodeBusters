@@ -6,8 +6,12 @@ Initializes the API, seeds required database values, and registers all routers.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import logging
+import time
 
+from fastapi import FastAPI, Request
+
+from utils.logging_config import configure_logging
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
 from database import SessionLocal, create_db
@@ -67,8 +71,47 @@ async def lifespan(_app: FastAPI):
     # e.g., close global resources, flush logs, etc.
 
 
+configure_logging()
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(lifespan=lifespan)
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+
+    except Exception:
+        duration_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        logger.exception(
+            "Unhandled exception during %s %s (%.2f ms)",
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+
+        raise
+
+    duration_ms = (
+        time.perf_counter() - start_time
+    ) * 1000
+
+    logger.info(
+        "%s %s -> %s (%.2f ms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+
+    return response
 
 @app.get("/")
 def root():

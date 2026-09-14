@@ -13,6 +13,7 @@ from secure_login.secure_login_model import (
     EmployeeAuthCreate,
     PasswordChangeRequest,
 )
+from utils.security_logging import log_security_event
 
 from exceptions.secure_login_exceptions import (
     UsernameNotFoundError,
@@ -60,12 +61,22 @@ def login(
         )
 
     except UsernameNotFoundError as exc:
+        log_security_event(
+            "login_failed",
+            f"Username not found: username={form_data.username}",
+        )
+
         raise HTTPException(
             status_code=401,
             detail=str(exc),
         ) from exc
 
     except IncorrectPasswordError as exc:
+        log_security_event(
+            "login_failed",
+            f"Incorrect password: username={form_data.username}",
+        )
+
         raise HTTPException(
             status_code=401,
             detail=str(exc),
@@ -113,12 +124,22 @@ def change_password(
             data.new_password,
         )
 
+    except TokenBlacklistedError as exc:
+        log_security_event(
+            "revoked_token_used",
+            "Password change attempted with a revoked token.",
+        )
+
+        raise HTTPException(
+            status_code=401,
+            detail=str(exc),
+        ) from exc
+
     except (
         TokenExpiredError,
         TokenInvalidSignatureError,
         TokenDecodeError,
         TokenMissingClaimError,
-        TokenBlacklistedError,
         EmployeeNotFoundError,
     ) as exc:
         raise HTTPException(
@@ -180,6 +201,11 @@ def get_current_employee(
         ) from exc
 
     except TokenBlacklistedError as exc:
+        log_security_event(
+            "revoked_token_used",
+            "Current employee requested with a revoked token.",
+        )
+
         raise HTTPException(
             status_code=401,
             detail=str(exc),

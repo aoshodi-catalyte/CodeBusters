@@ -17,6 +17,7 @@ from repositories.password_reset_repository import (
 from services.email_service import EmailService
 from services.password_reset_service import PasswordResetService
 from services.sms_service import SmsService
+from utils.security_logging import log_security_event
 
 
 router = APIRouter(
@@ -84,6 +85,14 @@ def confirm_password_reset(
         )
 
     except ValueError as exc:
+        log_security_event(
+            "password_reset_failed",
+            (
+                "Invalid or expired reset request: "
+                f"username={data.username}"
+            ),
+        )
+
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired password reset request.",
