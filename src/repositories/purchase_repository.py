@@ -21,6 +21,21 @@ class PurchaseRepository:
         self.db = db
 
     def _normalize_item_type(self, item_type: str) -> str:
+        """
+        Normalize an item type to the value used by the database.
+
+        Accepts common variations of baked good and drink recipe item types
+        and converts them to their standardized database values.
+
+        Args:
+            item_type: The item type provided by the caller.
+
+        Returns:
+            str: The normalized item type.
+
+        Raises:
+            ValueError: If the item type is not supported.
+        """
         normalized = item_type.strip().lower().replace(" ", "_")
 
         baked_good_aliases = {"baked_good", "bakedgood"}
@@ -32,7 +47,10 @@ class PurchaseRepository:
         if normalized in drink_aliases:
             return "drink_recipe"
 
-        raise ValueError(f"Invalid item_type '{item_type}'. Allowed types: Baked good or drink.")
+        raise ValueError(
+            f"Invalid item_type '{item_type}'. "
+            "Allowed types: Baked good or drink."
+        )
 
     @staticmethod
     def _as_decimal(value) -> Decimal:
@@ -78,24 +96,62 @@ class PurchaseRepository:
                 raise ValueError(f"Drink recipe with id {item_id} not found")
             return self._as_decimal(item.sale_price)
 
-        raise ValueError(f"Invalid item_type '{item_type}'. Allowed types: Baked good or drink.")
+        raise ValueError(
+            f"Invalid item_type '{item_type}'. "
+            "Allowed types: Baked good or drink."
+        )
 
     def get_promotion(self, promo_id: int) -> PromotionSchema | None:
+        """
+        Retrieve a promotion by its ID.
+
+        Args:
+            promo_id: The ID of the promotion to retrieve.
+
+        Returns:
+            PromotionSchema | None: The matching promotion if found,
+            otherwise None.
+        """
         return (
             self.db.query(PromotionSchema)
             .filter(PromotionSchema.id == promo_id)
             .first()
         )
 
-    def create_purchase(self, purchase_data: dict, items: list[dict]) -> PurchaseSchema:
+    def create_purchase(
+        self,
+        purchase_data: dict,
+        items: list[dict],
+    ) -> PurchaseSchema:
+        """
+        Create and persist a purchase and its associated items.
+
+        The purchase record is created first so its generated ID can be
+        assigned to each purchase item. Each item's price is retrieved from
+        the corresponding baked good or drink recipe and stored as the
+        price at the time of sale.
+
+        Args:
+            purchase_data: Purchase-level data used to create the purchase.
+            items: List of item data included in the purchase.
+
+        Returns:
+            PurchaseSchema: The newly created purchase with its items.
+
+        Raises:
+            ValueError: If an item type is invalid or an item cannot be found.
+        """
         purchase = PurchaseSchema(**purchase_data)
 
         self.db.add(purchase)
-        self.db.flush()  # ensures purchase.id is available
+        self.db.flush()
 
         for item in items:
             normalized_type = self._normalize_item_type(item["item_type"])
-            price = self.get_item_price(normalized_type, item["item_id"])
+            price = self.get_item_price(
+                normalized_type,
+                item["item_id"],
+            )
 
             purchase_item = PurchaseItemSchema(
                 purchase_id=purchase.id,
@@ -112,6 +168,16 @@ class PurchaseRepository:
         return purchase
 
     def get_purchase(self, purchase_id: int) -> PurchaseSchema | None:
+        """
+        Retrieve a purchase by its ID.
+
+        Args:
+            purchase_id: The ID of the purchase to retrieve.
+
+        Returns:
+            PurchaseSchema | None: The matching purchase if found,
+            otherwise None.
+        """
         return (
             self.db.query(PurchaseSchema)
             .filter(PurchaseSchema.id == purchase_id)
@@ -119,4 +185,10 @@ class PurchaseRepository:
         )
 
     def list_purchases(self) -> list[PurchaseSchema]:
+        """
+        Retrieve all purchases from the database.
+
+        Returns:
+            list[PurchaseSchema]: A list containing all purchase records.
+        """
         return self.db.query(PurchaseSchema).all()
