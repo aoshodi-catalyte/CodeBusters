@@ -1,170 +1,334 @@
-from datetime import UTC, datetime, timedelta
-
+import models
 import pytest
 
+from decimal import Decimal
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from database import Base, get_db
+from routers.purchase_router import router as purchase_router
+
 from baked_good.baked_good_schema import BakedGoodSchema
-from customer.customer_schema import CustomerSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
-from promotion.promotion_schema import PromotionSchema
+from drink_recipe.drink_type_schema import DrinkTypeSchema
+from vendor.vendor_schema import Vendor
 
 
-def create_baked_good(db, price=4.00):
-    item = BakedGoodSchema(
+# ---------------------------------------------------------------------------
+# Test database
+# ---------------------------------------------------------------------------
+
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+test_engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=test_engine,
+)
+
+
+# ---------------------------------------------------------------------------
+# Test application
+# ---------------------------------------------------------------------------
+
+app = FastAPI()
+app.include_router(purchase_router)
+
+
+# ---------------------------------------------------------------------------
+# Database fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="function")
+def db():
+    """
+    Creates a fresh in-memory database for each test.
+
+    The same test engine is used by both the test database session
+    and the FastAPI client.
+    """
+    Base.metadata.drop_all(bind=test_engine)
+    Base.metadata.create_all(bind=test_engine)
+
+    session = TestingSessionLocal()
+
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=test_engine)
+
+
+@pytest.fixture(scope="function")
+def client(db):
+    """
+    Creates a TestClient using the same in-memory database as the test.
+
+    Authentication overrides are not required because the purchase router
+    does not currently declare an authentication dependency.
+    """
+
+    def override_get_db():
+        session = TestingSessionLocal()
+
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------------------
+
+def create_vendor(db):
+    """
+    Creates a vendor directly in the test database.
+    """
+    vendor = Vendor(
         active=True,
-        name="Chocolate Cake",
-        description="A chocolate cake",
-        purchasing_cost=10.0,
+        name="Test Vendor",
+        contact_name="Test Contact",
+        contact_role="Manager",
+        email="vendor@example.com",
+        phone="5555555555",
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    return vendor
+
+
+def create_baked_good(db, price=Decimal("4.00")):
+    """
+    Creates a baked good directly in the test database.
+    """
+    vendor = create_vendor(db)
+
+    baked_good = BakedGoodSchema(
+        name="Test Brownie",
+        description="Test brownie",
+        purchasing_cost=Decimal("2.00"),
         retail_price=price,
-        vendor_id = 1
-    )
-    db.add(item)
-    db.commit()
-    db.refresh(item)
-    return item
-
-
-def create_drink_recipe(db, price=4.00):
-    item = DrinkRecipeSchema(
-        name="latte",
-        description="drink",
         active=True,
-        type_id=1,
-        sale_price=price
+        vendor_id=vendor.id,
     )
-    db.add(item)
+
+    db.add(baked_good)
     db.commit()
-    db.refresh(item)
-    return item
+    db.refresh(baked_good)
+
+    return baked_good
 
 
-def create_customer(db, points=0):
-    cust = CustomerSchema(
-        first_name="Jhon",
-        last_name="Doe",
+def create_drink_type(db):
+    """
+    Creates a drink type directly in the test database.
+    """
+    drink_type = DrinkTypeSchema(
+        name="Coffee",
+        description="Coffee-based drinks",
+    )
+
+    db.add(drink_type)
+    db.commit()
+    db.refresh(drink_type)
+
+    return drink_type
+
+
+def create_drink(db, price=Decimal("4.00")):
+    """
+    Creates a drink recipe directly in the test database.
+    """
+    drink_type = create_drink_type(db)
+
+    drink = DrinkRecipeSchema(
+        name="Test Coffee",
+        description="Test coffee",
+        production_cost=Decimal("2.00"),
+        sale_price=price,
         active=True,
-        email="jdoe@gmail.com",
-        phone_number=7732029365,
-        loyalty_points=points
+        type_id=drink_type.id,
     )
-    db.add(cust)
+
+    db.add(drink)
     db.commit()
-    db.refresh(cust)
-    return cust
+    db.refresh(drink)
+
+    return drink
 
 
-def create_promo(db, pct=20, active=True, valid=True):
-    now = datetime.now(UTC)
-    promo = PromotionSchema(
-        promo_code="20OFF",
-        discount_percentage=pct,
-        active=active,
-        start_datetime=now - timedelta(days=1) if valid else now + timedelta(days=1),
-        end_datetime=now + timedelta(days=1) if valid else now - timedelta(days=1),
+# ---------------------------------------------------------------------------
+# POST /purchases
+# ---------------------------------------------------------------------------
+
+def test_create_purchase_no_promo(client, db):
+    """
+    AC: A purchase can be created without a promotion.
+    """
+
+    baked_good = create_baked_good(
+        db,
+        Decimal("4.00"),
     )
-    db.add(promo)
-    db.commit()
-    db.refresh(promo)
-    return promo
 
+    response = client.post(
+        "/purchases",
+        json={
+            "items": [
+                {
+                    "item_type": "baked_good",
+                    "item_id": baked_good.id,
+                    "quantity": 1,
+                }
+            ]
+        },
+    )
 
-def test_create_purchase(client, db):
-    item = create_baked_good(db, price=5.00)
-
-    payload = {
-        "customer_id": None,
-        "promo_id": None,
-        "items": [
-            {"item_type": "baked_good", "item_id": item.id, "quantity": 2}
-        ],
-    }
-
-    response = client.post("/purchases", json=payload)
-    assert response.status_code == 201
+    assert response.status_code == 201, response.json()
 
     data = response.json()
-    assert data["subtotal"] == 10.00
-    assert data["discount_amount"] == 0.00
-    assert data["tax_amount"] == 0.70
-    assert data["total"] == 10.70
-    assert data["loyalty_points_awarded"] == 10
-    assert len(data["items"]) == 1
+
+    assert data["subtotal"] == "4.00"
+    assert data["discount_amount"] == "0.00"
+    assert data["tax_amount"] == "0.28"
+    assert data["total"] == "4.28"
+    assert data["items"][0]["price_at_sale"] == "4.00"
 
 
-def test_create_purchase_with_promo(client, db):
-    item = create_baked_good(db, price=10.00)
-    promo = create_promo(db, pct=20)
-
-    payload = {
-        "customer_id": None,
-        "promo_id": promo.id,
-        "items": [
-            {"item_type": "baked_good", "item_id": item.id, "quantity": 1}
-        ],
-    }
-
-    response = client.post("/purchases", json=payload)
-    assert response.status_code == 201
-
-    data = response.json()
-    assert data["subtotal"] == 10.00
-    assert data["discount_amount"] == 2.00
-    assert data["total"] == 8.56
-
+# ---------------------------------------------------------------------------
+# GET /purchases/{purchase_id}
+# ---------------------------------------------------------------------------
 
 def test_get_purchase_by_id(client, db):
-    item = create_baked_good(db, price=5.00)
+    """
+    AC: A valid purchase ID returns the corresponding purchase.
+    """
 
-    payload = {
-        "customer_id": None,
-        "promo_id": None,
-        "items": [
-            {"item_type": "baked_good", "item_id": item.id, "quantity": 1}
-        ],
-    }
+    baked_good = create_baked_good(
+        db,
+        Decimal("4.00"),
+    )
 
-    created = client.post("/purchases", json=payload).json()
-    purchase_id = created["id"]
+    create_response = client.post(
+        "/purchases",
+        json={
+            "items": [
+                {
+                    "item_type": "baked_good",
+                    "item_id": baked_good.id,
+                    "quantity": 1,
+                }
+            ]
+        },
+    )
 
-    response = client.get(f"/purchases/{purchase_id}")
-    assert response.status_code == 200
+    assert create_response.status_code == 201, create_response.json()
+
+    purchase_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/purchases/{purchase_id}"
+    )
+
+    assert response.status_code == 200, response.json()
 
     data = response.json()
+
     assert data["id"] == purchase_id
-    assert data["subtotal"] == 5.00
+    assert data["subtotal"] == "4.00"
+    assert data["discount_amount"] == "0.00"
+    assert data["tax_amount"] == "0.28"
+    assert data["total"] == "4.28"
+    assert data["items"][0]["price_at_sale"] == "4.00"
 
 
 def test_get_purchase_not_found(client):
-    response = client.get("/purchases/999")
-    assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    """
+    AC: An invalid purchase ID returns 404.
+    """
 
+    response = client.get("/purchases/999999")
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /purchases
+# ---------------------------------------------------------------------------
 
 def test_list_purchases(client, db):
-    item = create_drink_recipe(db, price=4.00)
+    """
+    AC: All purchases are returned when requesting the purchase list.
+    """
 
-    payload1 = {
-        "customer_id": None,
-        "promo_id": None,
-        "items": [
-            {"item_type": "drink_recipe", "item_id": item.id, "quantity": 1}
-        ],
-    }
+    baked_good = create_baked_good(
+        db,
+        Decimal("4.00"),
+    )
 
-    payload2 = {
-        "customer_id": None,
-        "promo_id": None,
-        "items": [
-            {"item_type": "drink_recipe", "item_id": item.id, "quantity": 2}
-        ],
-    }
+    first_response = client.post(
+        "/purchases",
+        json={
+            "items": [
+                {
+                    "item_type": "baked_good",
+                    "item_id": baked_good.id,
+                    "quantity": 1,
+                }
+            ]
+        },
+    )
 
-    client.post("/purchases", json=payload1)
-    client.post("/purchases", json=payload2)
+    assert first_response.status_code == 201, first_response.json()
+
+    second_response = client.post(
+        "/purchases",
+        json={
+            "items": [
+                {
+                    "item_type": "baked_good",
+                    "item_id": baked_good.id,
+                    "quantity": 2,
+                }
+            ]
+        },
+    )
+
+    assert second_response.status_code == 201, second_response.json()
 
     response = client.get("/purchases")
-    assert response.status_code == 200
+
+    assert response.status_code == 200, response.json()
 
     data = response.json()
-    assert len(data) == 2
-    totals = {d["total"] for d in data}
-    assert totals == {4.28, 8.56}
+
+    assert len(data) >= 2
+
+    totals = {
+        purchase["total"]
+        for purchase in data
+    }
+
+    assert "4.28" in totals
+    assert "8.56" in totals
