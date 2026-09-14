@@ -10,22 +10,18 @@ exceptions on failure.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from customer.customer_model import CustomerCreate, CustomerResponse, CustomerUpdate
+from database import get_audit_db, get_db
 from exceptions.customer_exceptions import (
     CustomerConstraintError,
     CustomerEmailAlreadyExistsError,
     CustomerNotFoundError,
     CustomerPhoneAlreadyExistsError,
 )
-from customer.customer_model import (
-    CustomerCreate,
-    CustomerResponse,
-    CustomerUpdate,
-)
-from database import get_db, get_audit_db
-from repositories.deactivate_audit_repository import AuditRepository
 from repositories.customer_repository import CustomerRepository
+from repositories.deactivate_audit_repository import AuditRepository
 from security.secure_manager_login import check_role
-from utils.get_acting_user import get_acting_user
+from utils.auth import get_acting_user
 
 
 router = APIRouter()
@@ -171,7 +167,7 @@ def get_customer(
 )
 def deactivate_customer(
     customer_id: int,
-    token_payload: dict = Depends(check_role(["manager"])),
+    acting_user = Depends(get_acting_user),
     db: Session = Depends(get_db),
     audit_db: Session = Depends(get_audit_db),
 ):
@@ -184,7 +180,6 @@ def deactivate_customer(
         HTTPException 404:
             If no customer exists with the provided ID.
     """
-    acting_user = get_acting_user(token_payload, db)
 
     repo = CustomerRepository(db)
     audit_repo = AuditRepository(audit_db)

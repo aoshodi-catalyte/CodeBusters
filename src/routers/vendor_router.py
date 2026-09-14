@@ -14,11 +14,13 @@ from exceptions.vendor_exceptions import (
 from repositories.deactivate_audit_repository import AuditRepository
 from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
-from utils.get_acting_user import get_acting_user
+from utils.auth import get_acting_user
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 
-router = APIRouter()
+router = APIRouter(
+    tags=["vendors"]
+)
 
 
 @router.post("/vendors", dependencies=[Depends(check_role(["manager"]))],
@@ -161,7 +163,7 @@ def update_vendor(
 )
 def deactivate_vendor(
     vendor_id: int,
-    token_payload: dict = Depends(check_role(["manager"])),
+    acting_user = Depends(get_acting_user),
     db: Session = Depends(get_db),
     audit_db: Session = Depends(get_audit_db),
 ):
@@ -183,8 +185,6 @@ def deactivate_vendor(
         HTTPException: If the acting employee does not exist or the vendor
             cannot be found.
     """
-    acting_user = get_acting_user(token_payload, db)
-
     repo = VendorRepository(db)
     audit_repo = AuditRepository(audit_db)
 
