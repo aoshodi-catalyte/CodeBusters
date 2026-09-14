@@ -1,50 +1,5 @@
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from database import Base, get_db
 import models
-from routers.vendor_router import router
 from tests.factories.auth_factories import manager_token
-
-
-# @pytest.fixture
-# def client():
-#     """Create a FastAPI test client with an in-memory database."""
-#     engine = create_engine(
-#         "sqlite:///:memory:",
-#         connect_args={"check_same_thread": False},
-#         poolclass=StaticPool,
-#     )
-
-#     Base.metadata.create_all(bind=engine)
-
-#     testing_session_local = sessionmaker(
-#         autocommit=False,
-#         autoflush=False,
-#         bind=engine,
-#     )
-
-#     def override_get_db():
-#         db = testing_session_local()
-
-#         try:
-#             yield db
-#         finally:
-#             db.close()
-
-#     test_app = FastAPI()
-#     test_app.include_router(router)
-#     test_app.dependency_overrides[get_db] = override_get_db
-
-#     with TestClient(test_app) as test_client:
-#         yield test_client
-
-#     Base.metadata.drop_all(bind=engine)
-
 
 def test_post_new_vendor(client):
     """Test creating a new vendor."""

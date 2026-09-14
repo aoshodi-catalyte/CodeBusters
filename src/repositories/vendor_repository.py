@@ -7,12 +7,12 @@ including handling duplicate unique-field conflicts and missing vendors.
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from constants.entity_types import EntityType
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
 from repositories.deactivate_audit_repository import AuditRepository
-from constants.entity_types import EntityType
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
 

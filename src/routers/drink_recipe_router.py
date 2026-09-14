@@ -31,7 +31,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_audit_db, get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
 from exceptions.drink_recipe_exceptions import (
@@ -42,7 +42,10 @@ from exceptions.drink_recipe_exceptions import (
     IngredientNotFoundError,
     UnitConversionError,
 )
+from exceptions.employee_exceptions import EmployeeNotFoundError
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.drink_recipe_repository import DrinkRecipeRepository
+from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
 from utils.response import to_response
 
@@ -253,7 +256,12 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
 
 
 @router.delete("/{recipe_id}", dependencies=[Depends(check_role(["manager"]))], status_code=204)
-def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+def deactivate_drink_recipe(
+    recipe_id: int,
+    token_payload: dict = Depends(check_role(["manager"])),
+    db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db)
+    ):
     """
     Deactivate a drink recipe by its ID.
 
@@ -267,10 +275,21 @@ def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
     Returns:
         None: A successful deactivation returns an empty response with status 204.
     """
+    employee_repo = EmployeeRepository(db)
+    user_id = token_payload.get("employee_id")
     repo = DrinkRecipeRepository(db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
-        repo.deactivate_drink_recipe_by_id(recipe_id)
+        acting_user = employee_repo.get_employee_by_id(user_id)
+    except EmployeeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        repo.deactivate_drink_recipe_by_id(recipe_id, acting_user.email, audit_repo)
         return
     except DrinkRecipeNotFoundError as e:
         db.rollback()
