@@ -499,3 +499,33 @@ def test_me_rejects_blacklisted_token(client, monkeypatch):
     )
 
     assert response.status_code == 401
+
+
+def test_change_password_rejects_blacklisted_token(
+    client,
+    monkeypatch,
+):
+    def reject(_token, _db):
+        raise TokenBlacklistedError()
+
+    monkeypatch.setattr(
+        secure_login_router.auth_repo,
+        "get_current_employee",
+        reject,
+    )
+
+    response = client.post(
+        "/auth/password/change",
+        headers={
+            "Authorization": "Bearer revoked-token",
+        },
+        json={
+            "current_password": "TemporaryPassword12",
+            "new_password": "PermanentPassword12",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == (
+        "Token has been revoked and is no longer valid."
+    )
