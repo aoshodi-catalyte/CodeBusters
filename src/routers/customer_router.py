@@ -24,7 +24,6 @@ from customer.customer_model import (
 from database import get_db, get_audit_db
 from repositories.deactivate_audit_repository import AuditRepository
 from repositories.customer_repository import CustomerRepository
-from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
 from utils.get_acting_user import get_acting_user
 
