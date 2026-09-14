@@ -6,12 +6,12 @@ and deactivating promotions. It uses the PromotionRepository to interact
 with the database and translates typed repository exceptions into the
 appropriate HTTP responses.
 """
-import stat
+
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, status
 
 from database import get_audit_db, get_db
 from exceptions.promotion_exceptions import (
@@ -20,10 +20,10 @@ from exceptions.promotion_exceptions import (
     PromotionConstraintError,
     PromotionNotFoundError,
 )
+from promotion.promotion_model import Promotion
+from promotion.promotion_response_model import PromotionResponseModel
 from repositories.deactivate_audit_repository import AuditRepository
 from repositories.promotion_repository import PromotionRepository
-from promotion.promotion_response_model import PromotionResponseModel
-from promotion.promotion_model import Promotion
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
 router = APIRouter(
@@ -224,4 +224,4 @@ def deactivate_promotion(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occured while deactivating the promotion."
-        )
+        ) from exc
