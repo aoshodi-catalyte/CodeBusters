@@ -12,9 +12,14 @@ from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
 
 from database import get_db
+from dependencies.auth_dependencies import get_current_employee_id
+from exceptions.baked_good_exceptions import BakedGoodNotFoundError
+from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
+from exceptions.customer_exceptions import CustomerNotFoundError
 from repositories.customer_repository import CustomerRepository
 from purchase.purchase_model import PurchaseCreate, PurchaseResponse
 from purchase.purchase_service_logic import PurchaseService
+from routers.secure_login_router import get_current_employee
 
 router = APIRouter(prefix="/purchases", tags=["Purchases"])
 
@@ -24,7 +29,7 @@ router = APIRouter(prefix="/purchases", tags=["Purchases"])
     response_model=PurchaseResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user),):
+def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db), current_employee: dict = Depends(get_current_employee)):
     """
     Create a new purchase.
 
@@ -37,14 +42,15 @@ def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db), curr
         PurchaseResponse: The created purchase record.
     """
     service = PurchaseService(db)
-    employee_id = current_user["employee_id"]
+    current_employee = Depends(get_current_employee)
+    employee_id = current_employee.id
 
     try:
         return service.create_purchase(payload, employee_id)
 
-    except ValueError as e:
+    except (BakedGoodNotFoundError, DrinkRecipeNotFoundError, CustomerNotFoundError,) as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         ) from e
 

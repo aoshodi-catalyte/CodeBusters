@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from baked_good.baked_good_schema import BakedGoodSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+from exceptions.baked_good_exceptions import BakedGoodNotFoundError
+from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
 from promotion.promotion_schema import PromotionSchema
 from purchase.purchase_schema import PurchaseItemSchema, PurchaseSchema
 
@@ -75,7 +77,9 @@ class PurchaseRepository:
             float: The price of the item at time of sale.
 
         Raises:
-            ValueError: If the item does not exist or type is unknown.
+            BakedGoodNotFoundError: If the baked good does not exist.
+            DrinkRecipeNotFoundError: If the drink recipe does not exist.
+            ValueError: If the item type is unknown.
         """
         item_type = self._normalize_item_type(item_type)
 
@@ -86,7 +90,7 @@ class PurchaseRepository:
                 .first()
             )
             if item is None:
-                raise ValueError(f"Baked good with id {item_id} not found")
+                raise BakedGoodNotFoundError
             return item.retail_price
 
         if item_type == "drink_recipe":
@@ -96,7 +100,7 @@ class PurchaseRepository:
                 .first()
             )
             if item is None:
-                raise ValueError(f"Drink recipe with id {item_id} not found")
+                raise DrinkRecipeNotFoundError
             return item.sale_price
 
         # Should never reach here because normalization handles errors
@@ -127,39 +131,42 @@ class PurchaseRepository:
 
         Args:
             purchase_data (dict): Dictionary containing subtotal, discount,
-                                  tax, total, loyalty points, customer_id,
-                                  and promo_id.
+                                tax, total, loyalty points, customer_id,
+                                employee_id, and promo_id.
             items (list[dict]): List of item dictionaries containing
                                 item_type, item_id, quantity, price_at_sale.
 
         Returns:
             PurchaseSchema: The persisted purchase record.
         """
-        purchase = PurchaseSchema(**purchase_data)
+        try:   
+            purchase = PurchaseSchema(**purchase_data)
 
-        self.db.add(purchase)
-        self.db.flush()  # ensures purchase.id is available
+            self.db.add(purchase)
+            self.db.flush()  # ensures purchase.id is available
 
-        for item in items:
-            normalized_type = self._normalize_item_type(item["item_type"])
+            for item in items:
+                normalized_type = self._normalize_item_type(item["item_type"])
 
-            price = self.get_item_price(normalized_type, item["item_id"])
+                price = self.get_item_price(normalized_type, item["item_id"])
 
-            purchase_item = PurchaseItemSchema(
-                purchase_id=purchase.id,
-                item_type=normalized_type,
-                item_id=item["item_id"],
-                quantity=item["quantity"],
-                price_at_sale=price,
-            )
+                purchase_item = PurchaseItemSchema(
+                    purchase_id=purchase.id,
+                    item_type=normalized_type,
+                    item_id=item["item_id"],
+                    quantity=item["quantity"],
+                    price_at_sale=price,
+                )
 
-            self.db.add(purchase_item)
+                self.db.add(purchase_item)
 
-        self.db.commit()
-        self.db.refresh(purchase)
+            self.db.commit()
+            self.db.refresh(purchase)
 
-        return purchase
-
+            return purchase
+        except Exception:
+            self.db.rollback()
+            raise
 
     def get_purchase(self, purchase_id: int) -> PurchaseSchema | None:
         """
