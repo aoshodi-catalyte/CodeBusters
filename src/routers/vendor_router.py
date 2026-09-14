@@ -15,6 +15,7 @@ from repositories.deactivate_audit_repository import AuditRepository
 from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
+from utils.get_acting_user import get_acting_user
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 
