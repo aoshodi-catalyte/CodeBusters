@@ -13,9 +13,9 @@ from exceptions.vendor_exceptions import (
     VendorNotFoundException,
 )
 from repositories.deactivate_audit_repository import AuditRepository
-from repositories.employee_repository import EmployeeRepository
 from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
+from utils.get_acting_user import get_acting_user
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 
@@ -184,16 +184,7 @@ def deactivate_vendor(
         HTTPException: If the acting employee does not exist or the vendor
             cannot be found.
     """
-    employee_repo = EmployeeRepository(db)
-    user_id = token_payload.get("employee_id")
-
-    try:
-        acting_user = employee_repo.get_employee_by_id(user_id)
-    except EmployeeNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-        ) from exc
+    acting_user = get_acting_user(token_payload, db)
 
     repo = VendorRepository(db)
     audit_repo = AuditRepository(audit_db)
