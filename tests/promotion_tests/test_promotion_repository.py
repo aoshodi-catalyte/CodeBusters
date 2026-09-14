@@ -1,10 +1,7 @@
-import pytest
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from sqlalchemy import create_engine
 from datetime import datetime
 
-from database import Base
+import pytest
+
 from exceptions.promotion_exceptions import (
     PromotionCodeAlreadyExistsError,
     PromotionConstraintError,
@@ -12,33 +9,9 @@ from exceptions.promotion_exceptions import (
 )
 from promotion.promotion_model import Promotion
 from promotion.promotion_schema import PromotionSchema
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.promotion_repository import PromotionRepository
 
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
-)
-
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=test_engine
-)
-
-@pytest.fixture
-def db():
-    """Creates a fresh database session for each test."""
-    Base.metadata.create_all(bind=test_engine)
-    session = TestingSessionLocal()
-
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=test_engine)
 
 def test_create_promotion(db):
     """
@@ -311,6 +284,7 @@ def test_deactivate_promotion(db):
     existing promotion.
     """
     repo = PromotionRepository(db)
+    audit_repo = AuditRepository(db)
 
     promotion = Promotion(
         active=True,
@@ -322,7 +296,7 @@ def test_deactivate_promotion(db):
 
     created = repo.create_promotion(promotion)
 
-    result = repo.deactivate_promotion(created.id)
+    result = repo.deactivate_promotion(created.id, "test_user", audit_repo)
 
     assert result is not None
     assert result.active is False
@@ -333,6 +307,7 @@ def test_deactivate_promotion_persists_to_database(db):
     Test that deactivation is actually persisted in the database.
     """
     repo = PromotionRepository(db)
+    audit_repo = AuditRepository(db)
 
     promotion = Promotion(
         active=True,
@@ -344,7 +319,7 @@ def test_deactivate_promotion_persists_to_database(db):
 
     created = repo.create_promotion(promotion)
 
-    repo.deactivate_promotion(created.id)
+    repo.deactivate_promotion(created.id, "test_user", audit_repo)
 
     stored_promotion = (
         db.query(PromotionSchema)
@@ -361,9 +336,10 @@ def test_deactivate_promotion_raises_not_found_error(db):
     nonexistent ID.
     """
     repo = PromotionRepository(db)
+    audit_repo = AuditRepository(db)
 
     with pytest.raises(PromotionNotFoundError) as exc_info:
-        repo.deactivate_promotion(999)
+        repo.deactivate_promotion(999, "test_user", audit_repo)
 
     assert exc_info.value.promotion_id == 999
 
@@ -373,6 +349,7 @@ def test_deactivate_promotion_preserves_other_fields(db):
     Test that deactivating a promotion does not alter its other fields.
     """
     repo = PromotionRepository(db)
+    audit_repo = AuditRepository(db)
 
     promotion = Promotion(
         active=True,
@@ -384,7 +361,7 @@ def test_deactivate_promotion_preserves_other_fields(db):
 
     created = repo.create_promotion(promotion)
 
-    result = repo.deactivate_promotion(created.id)
+    result = repo.deactivate_promotion(created.id, "test_user", audit_repo)
 
     assert result.promo_code == "WINTER2026"
     assert result.discount_percentage == 30.0

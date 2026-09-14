@@ -36,3 +36,8 @@ class PromotionConstraintError(Exception):
         super().__init__(
             "The promotion record violates a database constraint."
         )
+
+class PromotionCodeAlreadyDeactivatedError(Exception):
+    """Raised when a promo code with a false active status is attempted to be deactivated."""
+    def __init__(self, promo_id: int):
+        super().__init__(f"Promo Code with ID {promo_id} already deactivated.")
