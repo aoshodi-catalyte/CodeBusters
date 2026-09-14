@@ -186,10 +186,10 @@ def deactivate_customer(
     """
     employee_repo = EmployeeRepository(db)
 
-    user_id = token_payload.get("customer_id")
+    user_id = token_payload.get("employee_id")
 
     try:
-        acting_user = employee_repo.get_customer_by_id(user_id)
+        acting_user = employee_repo.get_employee_by_id(user_id)
     except CustomerNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
