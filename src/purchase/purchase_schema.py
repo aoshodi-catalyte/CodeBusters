@@ -79,7 +79,7 @@ class PurchaseSchema(Base):
         nullable=False
     )
 
-    employee = relationship("EmployeeSchema")
     customer = relationship("CustomerSchema")
+    employee = relationship("EmployeeSchema")
     promotion = relationship("PromotionSchema")
     items = relationship("PurchaseItemSchema", back_populates="purchase")

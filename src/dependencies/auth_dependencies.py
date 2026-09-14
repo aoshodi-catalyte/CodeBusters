@@ -1,19 +1,11 @@
 # dependencies/auth_dependencies.py
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.secure_login_repository import SecureLoginRepository
-from exceptions.secure_login_exceptions import (
-    EmployeeNotFoundError,
-    TokenDecodeError,
-    TokenExpiredError,
-    TokenInvalidSignatureError,
-    TokenMissingClaimError,
-)
-from employee.employee_schema import EmployeeSchema
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
