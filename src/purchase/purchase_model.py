@@ -49,6 +49,26 @@ class PurchaseItemCreate(BaseModel):
     item_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
 
+    @field_validator("item_type")
+    @classmethod
+    def normalize_item_type(cls, v):
+        """
+        Normalize and validate the purchase item type.
+        """
+        normalized = v.strip().lower().replace(" ", "_")
+
+        baked_good_aliases = {"baked_good", "bakedgood"}
+        drink_aliases = {"drink", "drink_recipe", "drinkrecipe"}
+
+        if normalized in baked_good_aliases:
+            return "baked good"
+
+        if normalized in drink_aliases:
+            return "drink"
+
+        raise ValueError(
+            f"Invalid item_type '{v}'. Allowed types: baked good or drink."
+        )
 
 class PurchaseCreate(BaseModel):
     """
