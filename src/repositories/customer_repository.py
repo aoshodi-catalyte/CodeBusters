@@ -221,7 +221,7 @@ class CustomerRepository:
         self.db.refresh(db_customer)
 
         audit_repo.record_deactivation(
-            customer_id, db_customer.first_name, acting_user, EntityType.CUSTOMER)
+            customer_id, f"{db_customer.first_name} {db_customer.last_name}", acting_user, EntityType.CUSTOMER)
 
     def get_customers(self) -> list[CustomerSchema]:
         """
