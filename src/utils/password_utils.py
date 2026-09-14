@@ -1,7 +1,7 @@
 """
 Password hashing and verification utilities.
 """
-
+import re
 from passlib.context import CryptContext
 
 
@@ -31,3 +31,36 @@ def verify_password(
         password,
         password_hash,
     )
+
+def validate_password_strength(password: str) -> str:
+    """
+    Validate password strength requirements.
+
+    Requirements:
+        - At least 12 characters.
+        - At least one uppercase letter.
+        - At least one lowercase letter.
+        - At least one number.
+    """
+
+    if len(password) < 12:
+        raise ValueError(
+            "Password must be at least 12 characters long."
+        )
+
+    if not re.search(r"[A-Z]", password):
+        raise ValueError(
+            "Password must contain at least one uppercase letter."
+        )
+
+    if not re.search(r"[a-z]", password):
+        raise ValueError(
+            "Password must contain at least one lowercase letter."
+        )
+
+    if not re.search(r"\d", password):
+        raise ValueError(
+            "Password must contain at least one number."
+        )
+
+    return password

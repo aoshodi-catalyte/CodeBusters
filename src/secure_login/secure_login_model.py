@@ -1,14 +1,13 @@
 """
-Pydantic model used when creating new authentication credentials
-for an existing employee.
+Pydantic models used by the employee authentication endpoints.
 
-This schema is consumed by the `/auth/register` endpoint and ensures:
-- The employee ID is provided
-- The username is provided
-- The password meets length constraints (bcrypt max 72 chars)
+These schemas validate credential creation and password changes before
+the requests reach the repository layer.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from utils.password_utils import validate_password_strength
 
 
 class EmployeeAuthCreate(BaseModel):
@@ -16,14 +15,31 @@ class EmployeeAuthCreate(BaseModel):
     Schema for creating employee authentication credentials.
 
     Attributes:
-        employee_id (int): The ID of the employee receiving login credentials.
-        username (str): The desired username for authentication.
-        password (str): Plaintext password, limited to 72 characters due to bcrypt constraints.
+        employee_id (int):
+            The ID of the employee receiving login credentials.
+        username (str):
+            The desired username for authentication.
+        password (str):
+            The password used when creating credentials.
     """
 
     employee_id: int
     username: str
-    password: str = Field(max_length=72)
+
+    password: str = Field(
+        min_length=12,
+        max_length=72,
+    )
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        """
+        Validate the password against the application's password policy.
+        """
+
+        return validate_password_strength(value)
+
 
 class PasswordChangeRequest(BaseModel):
     """
@@ -38,6 +54,15 @@ class PasswordChangeRequest(BaseModel):
     )
 
     new_password: str = Field(
-        min_length=8,
+        min_length=12,
         max_length=72,
     )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        """
+        Validate the new password against the application's password policy.
+        """
+
+        return validate_password_strength(value)

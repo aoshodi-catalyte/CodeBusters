@@ -8,6 +8,7 @@ from main import app
 from routers import secure_login_router
 
 from exceptions.secure_login_exceptions import (
+    TokenBlacklistedError,
     UsernameNotFoundError,
     IncorrectPasswordError,
     TokenExpiredError,
@@ -277,6 +278,7 @@ def test_me_rejects_missing_employee(client, monkeypatch):
     )
 
 
+
 def test_register_returns_success_message(client, monkeypatch):
     captured = {}
 
@@ -294,7 +296,7 @@ def test_register_returns_success_message(client, monkeypatch):
         json={
             "employee_id": 7,
             "username": "jane",
-            "password": "secret",
+            "password": "ValidPassword12",
         },
     )
 
@@ -302,7 +304,10 @@ def test_register_returns_success_message(client, monkeypatch):
     assert response.json() == {
         "message": "Login credentials created successfully"
     }
+
     assert captured["data"].employee_id == 7
+    assert captured["data"].username == "jane"
+    assert captured["data"].password == "ValidPassword12"
 
 
 def test_register_translates_validation_error(client, monkeypatch):
@@ -320,7 +325,7 @@ def test_register_translates_validation_error(client, monkeypatch):
         json={
             "employee_id": 7,
             "username": "jane",
-            "password": "secret",
+            "password": "ValidPassword12",
         },
     )
 
@@ -475,3 +480,22 @@ def test_change_password_rejects_short_new_password(client):
     )
 
     assert response.status_code == 422
+    
+def test_me_rejects_blacklisted_token(client, monkeypatch):
+    def reject(_token, _db):
+        raise TokenBlacklistedError()
+
+    monkeypatch.setattr(
+        secure_login_router.auth_repo,
+        "get_current_employee",
+        reject,
+    )
+
+    response = client.get(
+        "/auth/me",
+        headers={
+            "Authorization": "Bearer revoked-token",
+        },
+    )
+
+    assert response.status_code == 401

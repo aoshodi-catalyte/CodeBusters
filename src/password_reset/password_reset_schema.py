@@ -26,4 +26,6 @@ class PasswordResetToken(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used_at = Column(DateTime(timezone=True), nullable=True)
     channel = Column(String,nullable=False)
+    attempt_count = Column(Integer, nullable=False, default=0)
+
     employee = relationship("EmployeeSchema",back_populates="password_reset_tokens")

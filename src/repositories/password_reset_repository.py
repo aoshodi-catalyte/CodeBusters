@@ -19,6 +19,7 @@ class PasswordResetRepository:
     """
 
     RESET_CODE_EXPIRATION_MINUTES = 10
+    MAX_RESET_ATTEMPTS = 5
 
     def generate_reset_code(self) -> str:
         """
@@ -43,6 +44,7 @@ class PasswordResetRepository:
 
         return value.astimezone(timezone.utc)
 
+
     def initiate_reset(
         self,
         db: Session,
@@ -51,6 +53,9 @@ class PasswordResetRepository:
     ):
         """
         Create a password reset request.
+
+        Any previously unused reset tokens for the employee are
+        invalidated before the new reset token is created.
 
         Returns:
             A tuple containing the employee and plaintext reset code.
@@ -80,13 +85,29 @@ class PasswordResetRepository:
             if not employee.phone_number:
                 return None, None
 
+        now = datetime.now(timezone.utc)
+
+        # Invalidate any previous unused reset tokens.
+        existing_tokens = (
+            db.query(PasswordResetToken)
+            .filter(
+                PasswordResetToken.employee_id == employee.id,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .all()
+        )
+
+        for token in existing_tokens:
+            token.used_at = now
+
+        # Generate a new reset code.
         code = self.generate_reset_code()
 
         reset_record = PasswordResetToken(
             employee_id=employee.id,
             token_hash=hash_password(code),
             expires_at=(
-                datetime.now(timezone.utc)
+                now
                 + timedelta(
                     minutes=self.RESET_CODE_EXPIRATION_MINUTES
                 )
@@ -99,6 +120,7 @@ class PasswordResetRepository:
         db.refresh(reset_record)
 
         return employee, code
+
 
     def confirm_reset(
         self,
@@ -163,10 +185,19 @@ class PasswordResetRepository:
                 "Invalid or expired password reset request."
             )
 
+        if reset_record.attempt_count >= self.MAX_RESET_ATTEMPTS:
+            raise ValueError(
+                "Invalid or expired password reset request."
+            )
+
         if not verify_password(
             code,
             reset_record.token_hash,
         ):
+            reset_record.attempt_count += 1
+
+            db.commit()
+
             raise ValueError(
                 "Invalid or expired password reset request."
             )
