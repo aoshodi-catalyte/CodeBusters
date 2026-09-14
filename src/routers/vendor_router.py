@@ -7,13 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_audit_db, get_db
-from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
 from repositories.deactivate_audit_repository import AuditRepository
-from repositories.employee_repository import EmployeeRepository
 from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
