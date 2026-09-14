@@ -90,7 +90,7 @@ class PurchaseRepository:
                 .first()
             )
             if item is None:
-                raise BakedGoodNotFoundError
+                raise BakedGoodNotFoundError(item_id)
             return item.retail_price
 
         if item_type == "drink_recipe":
@@ -100,7 +100,7 @@ class PurchaseRepository:
                 .first()
             )
             if item is None:
-                raise DrinkRecipeNotFoundError
+                raise DrinkRecipeNotFoundError(item_id)
             return item.sale_price
 
         # Should never reach here because normalization handles errors
