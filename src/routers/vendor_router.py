@@ -7,19 +7,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_audit_db, get_db
-from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorNotFoundException,
 )
 from repositories.deactivate_audit_repository import AuditRepository
-from repositories.employee_repository import EmployeeRepository
 from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
+from utils.auth import get_acting_user
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 
-router = APIRouter()
+router = APIRouter(
+    tags=["vendors"]
+)
 
 
 @router.post("/vendors", dependencies=[Depends(check_role(["manager"]))],
@@ -162,7 +163,7 @@ def update_vendor(
 )
 def deactivate_vendor(
     vendor_id: int,
-    token_payload: dict = Depends(check_role(["manager"])),
+    acting_user = Depends(get_acting_user),
     db: Session = Depends(get_db),
     audit_db: Session = Depends(get_audit_db),
 ):
@@ -184,17 +185,6 @@ def deactivate_vendor(
         HTTPException: If the acting employee does not exist or the vendor
             cannot be found.
     """
-    employee_repo = EmployeeRepository(db)
-    user_id = token_payload.get("employee_id")
-
-    try:
-        acting_user = employee_repo.get_employee_by_id(user_id)
-    except EmployeeNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-        ) from exc
-
     repo = VendorRepository(db)
     audit_repo = AuditRepository(audit_db)
 
