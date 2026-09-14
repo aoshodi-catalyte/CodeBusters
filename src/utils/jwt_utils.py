@@ -8,7 +8,9 @@ required claims such as the JTI (JWT ID). These utilities ensure consistent
 error handling and validation behavior across repositories and routers.
 """
 
-from jose import JWTError, ExpiredSignatureError, jwt
+from fastapi import HTTPException, Request, status
+from jose import ExpiredSignatureError, JWTError, jwt
+
 from config import settings
 from exceptions.secure_login_exceptions import (
     TokenDecodeError,
@@ -56,3 +58,33 @@ def extract_jti(payload: dict) -> str:
     if jti is None:
         raise TokenMissingClaimError("jti")
     return jti
+
+
+def get_token_from_header(request: Request) -> str:
+    """
+    Extract the raw JWT token from the Authorization header.
+
+    The header must follow the format: `Bearer <token>`. If the header is
+    missing or malformed, a 401 Unauthorized error is raised.
+
+    Args:
+        request: The incoming FastAPI request containing headers.
+
+    Returns:
+        str: The extracted JWT token.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header",
+        )
+
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format",
+        )
+
+    return parts[1]
