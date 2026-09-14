@@ -1,3 +1,8 @@
+"""
+Repository responsible for writing deactivation audit records to the
+audit database. This module provides a simple interface for persisting
+audit entries whenever an entity in the main system is deactivated.
+"""
 
 from sqlalchemy.orm import Session
 

@@ -1,3 +1,9 @@
+"""
+Defines the EntityType enumeration used throughout the system to
+represent the different entity categories. These integer values map
+directly to the seeded entity_type table in the audit database.
+"""
+
 from enum import IntEnum
 
 from utils.enum_handler import enum_missing_handler
@@ -18,6 +24,11 @@ class EntityType(IntEnum):
 
 
     def label(self) -> str:
+        """
+        Returns the human‑readable string label associated with this
+        entity type. Used when seeding the entity_type table and when
+        displaying audit records.
+        """
         return {
             EntityType.VENDOR: "vendor",
             EntityType.INGREDIENT: "ingredient",
@@ -32,4 +43,8 @@ class EntityType(IntEnum):
 
     @classmethod
     def _missing_(cls, value: object):
+        """
+        Handles invalid enum lookups by delegating to the shared
+        enum_missing_handler utility.
+        """
         return enum_missing_handler(cls, value)
