@@ -411,10 +411,13 @@ def test_deactivate_employee_success(client):
     assert delete_response.status_code == 204
 
 
-def test_deactivate_employee_not_found(client):
-    token = manager_token()
+def test_deactivate_employee_not_found(client, manager_token):
+    token = manager_token
+
     response = client.delete(
-        "/employees/999", headers={"Authorization": f"Bearer {token}"})
+        "/employees/999",
+        headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 404
     assert "does not exist" in response.json()["detail"].lower()

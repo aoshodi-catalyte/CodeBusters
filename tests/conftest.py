@@ -85,3 +85,16 @@ def client(db):
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def acting_user():
+    return "test_user@example.com"
+
+
+@pytest.fixture
+def fake_audit_repo():
+    class FakeAuditRepo:
+        def record_deactivation(self, item_id, item_name, acting_user, entity_type):
+            pass
+    return FakeAuditRepo()
