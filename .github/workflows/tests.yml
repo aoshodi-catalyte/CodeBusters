@@ -26,6 +26,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://neondb_owner:${{ secrets.POSTGRES_PASSWORD }}@ep-lingering-river-axz68uzz-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      AUDIT_DATABASE_URL: postgresql://admin:${{ secrets.AUDIT_DB_PASSWORD }}@ep-lingering-river-axz68uzz.c-4.us-east-2.aws.neon.tech/deactivation_records?sslmode=require&channel_binding=require
       JWT_SECRET_KEY: "test-secret"
     steps:
       - name: Check out code
