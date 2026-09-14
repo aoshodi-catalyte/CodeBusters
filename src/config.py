@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     """
 
     model_config = ConfigDict(env_file=".env")
+    LOG_LEVEL: str | None = "INFO"
     DATABASE_URL: str
     JWT_SECRET_KEY: str 
     JWT_ALGORITHM: str = "HS256"

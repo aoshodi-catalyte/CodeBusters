@@ -8,7 +8,6 @@ HTTP exceptions, belongs in the router layer — this module raises typed
 domain exceptions instead.
 """
 
-
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -40,6 +39,32 @@ class CustomerRepository:
                 database operations.
         """
         self.db = db
+
+
+    def get_customer_or_404(self, customer_id: int) -> CustomerSchema:
+        """
+        Retrieve a customer or raise an HTTP 404 error.
+
+        Args:
+            customer_id (int): ID of the customer to retrieve.
+
+        Returns:
+            CustomerSchema: The matching customer record.
+
+        Raises:
+            HTTPException: If the customer does not exist.
+        """
+        customer = (
+            self.db.query(CustomerSchema)
+            .filter(CustomerSchema.id == customer_id)
+            .first()
+        )
+
+        if customer is None:
+            raise CustomerNotFoundError(customer_id)
+
+        return customer
+
 
     def create_customer(
         self,
@@ -221,14 +246,7 @@ class CustomerRepository:
             CustomerNotFoundError:
                 If no customer exists with the given ID.
         """
-        customer = (
-            self.db.query(CustomerSchema)
-            .filter(CustomerSchema.id == customer_id)
-            .first()
-        )
-
-        if customer is None:
-            raise CustomerNotFoundError(customer_id)
+        customer = self.get_customer_or_404(customer_id)
 
         return customer
 
