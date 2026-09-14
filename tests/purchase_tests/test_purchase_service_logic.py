@@ -6,6 +6,9 @@ from fastapi import HTTPException
 from baked_good.baked_good_schema import BakedGoodSchema
 from customer.customer_schema import CustomerSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+from exceptions.baked_good_exceptions import BakedGoodNotFoundError
+from exceptions.customer_exceptions import CustomerNotFoundError
+from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
 from promotion.promotion_schema import PromotionSchema
 from purchase.purchase_model import PurchaseCreate, PurchaseItemCreate
 from purchase.purchase_schema import PurchaseItemSchema, PurchaseSchema
@@ -75,13 +78,15 @@ def test_purchase_service_basic_purchase(db):
     item = create_baked_good(db)
     payload = PurchaseCreate(
         customer_id=None,
+        employee_id=3,
         promo_id=None,
         items=[PurchaseItemCreate(item_type="baked_good", item_id=item.id, quantity=2)],
     )
 
     service = PurchaseService(db)
-    purchase = service.create_purchase(payload)
+    purchase = service.create_purchase(payload, employee_id=3)
 
+    assert purchase.employee_id == 3
     assert purchase.subtotal == 30.00
     assert purchase.discount_amount == 0.00
     assert purchase.tax_amount == 2.1
@@ -96,13 +101,15 @@ def test_purchase_service_with_promotion(db):
 
     payload = PurchaseCreate(
         customer_id=None,
+        employee_id=3,
         promo_id=promo.id,
         items=[PurchaseItemCreate(item_type="baked_good", item_id=item.id, quantity=1)],
     )
 
     service = PurchaseService(db)
-    purchase = service.create_purchase(payload)
+    purchase = service.create_purchase(payload, employee_id=3)
 
+    assert purchase.employee_id == 3
     assert purchase.subtotal == 15.00
     assert purchase.discount_amount == 3.00
     assert purchase.tax_amount == 0.84
@@ -116,6 +123,7 @@ def test_purchase_service_invalid_promo_id(db):
 
     payload = PurchaseCreate(
         customer_id=None,
+        employee_id=3,
         promo_id=999,
         items=[PurchaseItemCreate(item_type="baked_good", item_id=item.id, quantity=1)],
     )
@@ -123,7 +131,7 @@ def test_purchase_service_invalid_promo_id(db):
     service = PurchaseService(db)
 
     with pytest.raises(HTTPException) as exc:
-        service.create_purchase(payload)
+        service.create_purchase(payload, employee_id=3)
 
     assert exc.value.status_code == 404
 
@@ -135,6 +143,7 @@ def test_purchase_service_inactive_promo(db):
 
     payload = PurchaseCreate(
         customer_id=None,
+        employee_id=3,
         promo_id=promo.id,
         items=[PurchaseItemCreate(item_type="baked_good", item_id=item.id, quantity=1)],
     )
@@ -142,7 +151,7 @@ def test_purchase_service_inactive_promo(db):
     service = PurchaseService(db)
 
     with pytest.raises(HTTPException) as exc:
-        service.create_purchase(payload)
+        service.create_purchase(payload, employee_id=3)
 
     assert exc.value.status_code == 400
     assert "not active" in exc.value.detail.lower()
@@ -155,6 +164,7 @@ def test_purchase_service_expired_promo(db):
 
     payload = PurchaseCreate(
         customer_id=None,
+        employee_id=3,
         promo_id=promo.id,
         items=[PurchaseItemCreate(item_type="baked_good", item_id=item.id, quantity=1)],
     )
@@ -162,7 +172,7 @@ def test_purchase_service_expired_promo(db):
     service = PurchaseService(db)
 
     with pytest.raises(HTTPException) as exc:
-        service.create_purchase(payload)
+        service.create_purchase(payload, employee_id=3)
 
     assert exc.value.status_code == 400
     assert "valid date range" in exc.value.detail.lower()
@@ -175,15 +185,17 @@ def test_purchase_service_customer_loyalty_update(db):
 
     payload = PurchaseCreate(
         customer_id=customer.id,
+        employee_id=3,
         promo_id=None,
         items=[PurchaseItemCreate(item_type="baked_good", item_id=item.id, quantity=2)],
     )
 
     service = PurchaseService(db)
-    purchase = service.create_purchase(payload)
+    purchase = service.create_purchase(payload, employee_id=3)
 
     db.refresh(customer)
 
+    assert purchase.employee_id == 3
     assert purchase.total == 32.1
     assert customer.loyalty_points == 42
 
@@ -194,14 +206,124 @@ def test_purchase_service_creates_line_items(db):
 
     payload = PurchaseCreate(
         customer_id=None,
+        employee_id=3,
         promo_id=None,
         items=[PurchaseItemCreate(item_type="drink_recipe", item_id=item.id, quantity=3)],
     )
 
     service = PurchaseService(db)
-    purchase = service.create_purchase(payload)
+    purchase = service.create_purchase(payload, employee_id=3)
 
+    assert purchase.employee_id == 3
     assert len(purchase.items) == 1
     assert purchase.items[0].item_type == "drink_recipe"
+    assert purchase.items[0].item_id == item.id
     assert purchase.items[0].quantity == 3
     assert purchase.items[0].price_at_sale == 4.00
+
+def test_purchase_service_records_employee_id(db):
+    """Purchase should record the employee ID provided by the authenticated user."""
+    item = create_baked_good(db)
+
+    payload = PurchaseCreate(
+        customer_id=None,
+        employee_id=7,
+        promo_id=None,
+        items=[
+            PurchaseItemCreate(
+                item_type="baked_good",
+                item_id=item.id,
+                quantity=1
+            )
+        ],
+    )
+
+    service = PurchaseService(db)
+    purchase = service.create_purchase(payload, employee_id=7)
+
+    assert purchase.employee_id == 7
+
+def test_purchase_service_guest_checkout(db):
+    """Purchase should be created without a customer ID."""
+    item = create_baked_good(db)
+
+    payload = PurchaseCreate(
+        customer_id=None,
+        employee_id=3,
+        promo_id=None,
+        items=[
+            PurchaseItemCreate(
+                item_type="baked_good",
+                item_id=item.id,
+                quantity=1
+            )
+        ],
+    )
+
+    service = PurchaseService(db)
+    purchase = service.create_purchase(payload, employee_id=3)
+
+    assert purchase.customer_id is None
+    assert purchase.employee_id == 3
+
+def test_purchase_service_invalid_customer_id(db):
+    """Invalid customer ID should raise CustomerNotFoundError."""
+    item = create_baked_good(db)
+
+    payload = PurchaseCreate(
+        customer_id=999,
+        employee_id=3,
+        promo_id=None,
+        items=[
+            PurchaseItemCreate(
+                item_type="baked_good",
+                item_id=item.id,
+                quantity=1
+            )
+        ],
+    )
+
+    service = PurchaseService(db)
+
+    with pytest.raises(CustomerNotFoundError):
+        service.create_purchase(payload, employee_id=3)
+
+def test_purchase_service_missing_baked_good(db):
+    """Missing baked good should raise BakedGoodNotFoundError."""
+    payload = PurchaseCreate(
+        customer_id=None,
+        employee_id=3,
+        promo_id=None,
+        items=[
+            PurchaseItemCreate(
+                item_type="baked_good",
+                item_id=999,
+                quantity=1
+            )
+        ],
+    )
+
+    service = PurchaseService(db)
+
+    with pytest.raises(BakedGoodNotFoundError):
+        service.create_purchase(payload, employee_id=3)
+
+def test_purchase_service_missing_drink_recipe(db):
+    """Missing drink recipe should raise DrinkRecipeNotFoundError."""
+    payload = PurchaseCreate(
+        customer_id=None,
+        employee_id=3,
+        promo_id=None,
+        items=[
+            PurchaseItemCreate(
+                item_type="drink_recipe",
+                item_id=999,
+                quantity=1
+            )
+        ],
+    )
+
+    service = PurchaseService(db)
+
+    with pytest.raises(DrinkRecipeNotFoundError):
+        service.create_purchase(payload, employee_id=3)
