@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 
 from deactivation_log.deactivation_schema import DeactivationRecord
+from constants.entity_types import EntityType
 
 class AuditRepository:
     """
@@ -10,7 +11,7 @@ class AuditRepository:
     def __init__(self, audit_db: Session):
         self.audit_db = audit_db
 
-    def record_deactivation(self, entity_id: int, user: str):
+    def record_deactivation(self, item_id: int, item_name: str, user: str, item_type: EntityType):
         """
         Create and persist an audit record documenting that an entity
         was deactivated by a specific user.
@@ -23,8 +24,10 @@ class AuditRepository:
             The persisted DeactivationRecord.
         """
         record = DeactivationRecord(
-            entity_id=entity_id,
-            deactivated_by=user
+            item_id=item_id,
+            item_name=item_name,
+            deactivated_by=user,
+            entity_type_id=item_type.value
         )
         self.audit_db.add(record)
         self.audit_db.commit()

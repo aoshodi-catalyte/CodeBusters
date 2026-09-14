@@ -59,11 +59,15 @@ async def lifespan(_app: FastAPI):
                 db.add(EmployeeRoleSchema(role=role.value))
 
         for entity in EntityType:
-            existing = audit_db.query(EntityTypeSchema).filter_by(
-                name=entity.value).first()
+            existing = audit_db.query(EntityTypeSchema).filter_by(id=entity.value).first()
 
             if not existing:
-                audit_db.add(EntityTypeSchema(name=entity.value))
+                audit_db.add(
+                    EntityTypeSchema(
+                        id=entity.value,
+                        name=entity.label()
+                    )
+                )
 
         db.commit()
         audit_db.commit()

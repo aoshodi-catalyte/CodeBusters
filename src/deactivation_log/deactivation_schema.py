@@ -22,7 +22,8 @@ class DeactivationRecord(AuditBase):
     __tablename__ = "deactivation_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    entity_id = Column(Integer, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    item_name = Column(String, nullable=False)
     deactivated_at = Column(DateTime, default=datetime.now(UTC))
     deactivated_by = Column(String, nullable=False)
     entity_type_id = Column(Integer, ForeignKey("entity_type.id"), nullable=False)
