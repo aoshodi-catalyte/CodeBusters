@@ -26,6 +26,7 @@ from repositories.deactivate_audit_repository import AuditRepository
 from repositories.customer_repository import CustomerRepository
 from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
+from utils.get_acting_user import get_acting_user
 
 
 router = APIRouter()
@@ -184,17 +185,7 @@ def deactivate_customer(
         HTTPException 404:
             If no customer exists with the provided ID.
     """
-    employee_repo = EmployeeRepository(db)
-
-    user_id = token_payload.get("employee_id")
-
-    try:
-        acting_user = employee_repo.get_employee_by_id(user_id)
-    except CustomerNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-        ) from exc
+    acting_user = get_acting_user(token_payload, db)
 
     repo = CustomerRepository(db)
     audit_repo = AuditRepository(audit_db)

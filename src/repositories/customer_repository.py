@@ -199,7 +199,8 @@ class CustomerRepository:
 
         return db_customer
 
-    def deactivate_customer(self, customer_id: int, acting_user: str, audit_repo: AuditRepository) -> CustomerSchema:
+    def deactivate_customer(self, customer_id: int, acting_user: str,
+                            audit_repo: AuditRepository) -> CustomerSchema:
         """
         Deactivate a customer by setting active to False (soft delete).
 
@@ -221,7 +222,8 @@ class CustomerRepository:
         self.db.refresh(db_customer)
 
         audit_repo.record_deactivation(
-            customer_id, f"{db_customer.first_name} {db_customer.last_name}", acting_user, EntityType.CUSTOMER)
+            customer_id, f"{db_customer.first_name} {db_customer.last_name}",
+            acting_user, EntityType.CUSTOMER)
 
     def get_customers(self) -> list[CustomerSchema]:
         """
