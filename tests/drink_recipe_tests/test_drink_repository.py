@@ -13,15 +13,8 @@ from exceptions.drink_recipe_exceptions import (
     UnitConversionError,
 )
 from ingredient.ingredient_schema import IngredientSchema
-<<<<<<< HEAD
 from repositories.deactivate_audit_repository import AuditRepository
 from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
-=======
-from repositories.drink_recipe_repository import (
-    DrinkRecipeRepository,
-    map_enum_to_fk,
-)
->>>>>>> 6d8a7130232fba16a5d131b715c6d80b93e13440
 from tests.factories.drink_recipe_factories import (
     drink_types,
     ingredient_factory,
@@ -454,11 +447,7 @@ def test_deactivate_drink_recipe_success(
     """Repository should deactivate an active drink recipe."""
 
     repo = DrinkRecipeRepository(db)
-<<<<<<< HEAD
     audit_db = AuditRepository(db)
-=======
-
->>>>>>> 6d8a7130232fba16a5d131b715c6d80b93e13440
     recipe = recipe_model_factory(
         name="Latte",
         description="desc",
@@ -470,14 +459,7 @@ def test_deactivate_drink_recipe_success(
     created = repo.create_drink_recipe(recipe)
 
     db.commit()
-<<<<<<< HEAD
     updated = repo.deactivate_drink_recipe_by_id(created.id, "test_user", audit_db)
-=======
-
-    updated = repo.deactivate_drink_recipe_by_id(
-        created.id,
-    )
->>>>>>> 6d8a7130232fba16a5d131b715c6d80b93e13440
 
     assert updated.active is False
     assert updated.id == created.id
@@ -502,11 +484,7 @@ def test_deactivate_drink_recipe_already_inactive(
     """Repository should raise DrinkRecipeAlreadyDeactivatedError when already inactive."""
 
     repo = DrinkRecipeRepository(db)
-<<<<<<< HEAD
     audit_repo = AuditRepository(db)
-=======
-
->>>>>>> 6d8a7130232fba16a5d131b715c6d80b93e13440
     recipe = recipe_model_factory(
         name="Mocha",
         description="desc",
@@ -517,11 +495,5 @@ def test_deactivate_drink_recipe_already_inactive(
 
     created = repo.create_drink_recipe(recipe)
 
-<<<<<<< HEAD
-=======
-    db.commit()
-
-=========
->>>>>>>>> Temporary merge branch 2
     with pytest.raises(DrinkRecipeAlreadyDeactivatedError):
         repo.deactivate_drink_recipe_by_id(created.id, "test_user", audit_repo)

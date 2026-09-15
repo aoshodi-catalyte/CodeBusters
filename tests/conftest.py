@@ -6,11 +6,12 @@ Ensures both main and audit tables are created in the in‑memory SQLite DB.
 from datetime import date
 
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from database import Base, AuditBase, get_audit_db, get_db
+from database import AuditBase, Base, get_audit_db, get_db
 from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_schema import EmployeeSchema
 from main import app

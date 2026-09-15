@@ -217,4 +217,4 @@ def deactivate_baked_good(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while deactivating the baked good."
-        ) from e
+        ) from exc
