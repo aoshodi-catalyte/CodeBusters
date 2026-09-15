@@ -1,4 +1,5 @@
 from decimal import Decimal
+import token
 
 import pytest
 
@@ -120,9 +121,10 @@ def test_create_purchase_no_promo(client, db):
 def test_create_purchase(client, db):
     item = create_baked_good(db, price=5.00)
     token = manager_token()
+
     payload = {
         "customer_id": None,
-        "employee_id": 3,
+        "employee_id": 1,
         "promo_id": None,
         "items": [
             {"item_type": "baked_good", "item_id": item.id, "quantity": 2}
@@ -138,7 +140,7 @@ def test_create_purchase(client, db):
     assert data["tax_amount"] == 0.70
     assert data["total"] == 10.70
     assert data["loyalty_points_awarded"] == 10
-    assert data["employee_id"] == 3
+    assert data["employee_id"] == 1
     assert len(data["items"]) == 1
 
 
@@ -155,6 +157,7 @@ def test_get_purchase_by_id(client, db):
         db,
         Decimal("4.00"),
     )
+    token = manager_token()
 
     create_response = client.post(
         "/purchases",
@@ -167,6 +170,7 @@ def test_get_purchase_by_id(client, db):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert create_response.status_code == 201, create_response.json()
@@ -182,11 +186,11 @@ def test_get_purchase_by_id(client, db):
     data = response.json()
 
     assert data["id"] == purchase_id
-    assert data["subtotal"] == "4.00"
-    assert data["discount_amount"] == "0.00"
-    assert data["tax_amount"] == "0.28"
-    assert data["total"] == "4.28"
-    assert data["items"][0]["price_at_sale"] == "4.00"
+    assert data["subtotal"] == 4.00
+    assert data["discount_amount"] == 0.00
+    assert data["tax_amount"] == 0.28
+    assert data["total"] == 4.28
+    assert data["items"][0]["price_at_sale"] == 4.00
 
 
 def test_get_purchase_not_found(client):
@@ -212,6 +216,7 @@ def test_list_purchases(client, db):
         db,
         Decimal("4.00"),
     )
+    token = manager_token()
 
     first_response = client.post(
         "/purchases",
@@ -224,6 +229,7 @@ def test_list_purchases(client, db):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201, first_response.json()
@@ -239,6 +245,7 @@ def test_list_purchases(client, db):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_response.status_code == 201, second_response.json()
@@ -254,7 +261,7 @@ def test_list_purchases(client, db):
 
 def test_create_purchase_uses_employee_id_from_jwt(client, db):
     item = create_baked_good(db, price=5.00)
-
+    token = manager_token()
     payload = {
         "customer_id": None,
         "promo_id": None,
@@ -268,17 +275,18 @@ def test_create_purchase_uses_employee_id_from_jwt(client, db):
         ],
     }
 
-    response = client.post("/purchases", json=payload)
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
 
     data = response.json()
 
-    assert data["employee_id"] == 3
+    assert data["employee_id"] == 1
     assert data["employee_id"] != 999
 
 def test_create_purchase_customer_not_found(client, db):
     item = create_baked_good(db, price=5.00)
+    token = manager_token()
 
     payload = {
         "customer_id": 999,
@@ -292,12 +300,13 @@ def test_create_purchase_customer_not_found(client, db):
         ],
     }
 
-    response = client.post("/purchases", json=payload)
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
     assert "customer" in response.json()["detail"].lower()
 
 def test_create_purchase_baked_good_not_found(client):
+    token = manager_token()
     payload = {
         "customer_id": None,
         "promo_id": None,
@@ -310,12 +319,13 @@ def test_create_purchase_baked_good_not_found(client):
         ],
     }
 
-    response = client.post("/purchases", json=payload)
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
     assert "baked good" in response.json()["detail"].lower()
 
 def test_create_purchase_drink_recipe_not_found(client):
+    token = manager_token()
     payload = {
         "customer_id": None,
         "promo_id": None,
@@ -328,25 +338,26 @@ def test_create_purchase_drink_recipe_not_found(client):
         ],
     }
 
-    response = client.post("/purchases", json=payload)
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 404
     assert "drink recipe" in response.json()["detail"].lower()
 
 def test_create_purchase_requires_at_least_one_item(client):
+    token = manager_token()
     payload = {
         "customer_id": None,
         "promo_id": None,
         "items": [],
     }
 
-    response = client.post("/purchases", json=payload)
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
 
 def test_create_purchase_rejects_invalid_quantity(client, db):
     item = create_baked_good(db)
-
+    token = manager_token()
     payload = {
         "customer_id": None,
         "promo_id": None,
@@ -359,6 +370,6 @@ def test_create_purchase_rejects_invalid_quantity(client, db):
         ],
     }
 
-    response = client.post("/purchases", json=payload)
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422

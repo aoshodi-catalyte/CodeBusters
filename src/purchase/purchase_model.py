@@ -36,7 +36,7 @@ class DecimalSerializerModel(BaseModel):
                 otherwise the original value.
         """
         if isinstance(value, Decimal):
-            return f"{value:.2f}"
+            return float(value)
         return value
 
 
