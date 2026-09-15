@@ -28,7 +28,10 @@ router = APIRouter(prefix="/purchases", tags=["Purchases"])
     response_model=PurchaseResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db), employee_id: int = Depends(get_current_employee_id)):
+def create_purchase(payload: PurchaseCreate,
+db: Session = Depends(get_db),
+employee_id: int = Depends
+(get_current_employee_id)):
     """
     Create a new purchase.
 

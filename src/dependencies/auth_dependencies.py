@@ -1,3 +1,10 @@
+"""
+Authentication dependencies for FastAPI routes.
+
+This module provides reusable dependencies for retrieving the authenticated
+employee's identity from a JWT access token and accessing the database.
+"""
+
 # dependencies/auth_dependencies.py
 
 from fastapi import Depends

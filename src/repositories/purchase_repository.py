@@ -146,7 +146,7 @@ class PurchaseRepository:
         Raises:
             ValueError: If an item type is invalid or an item cannot be found.
         """
-        try:   
+        try:
             purchase = PurchaseSchema(**purchase_data)
 
             self.db.add(purchase)
