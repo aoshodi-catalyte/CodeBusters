@@ -26,6 +26,11 @@ def test_settings_load_jwt_secret(monkeypatch):
     )
 
     monkeypatch.setenv(
+        "AUDIT_DATABASE_URL",
+        "sqlite:///:memory:",
+    )
+
+    monkeypatch.setenv(
         "JWT_SECRET_KEY",
         "test-secret-key",
     )
@@ -40,6 +45,11 @@ def test_settings_load_jwt_secret(monkeypatch):
 def test_external_service_settings_are_optional(monkeypatch):
     monkeypatch.setenv(
         "DATABASE_URL",
+        "sqlite:///:memory:",
+    )
+
+    monkeypatch.setenv(
+        "AUDIT_DATABASE_URL",
         "sqlite:///:memory:",
     )
 

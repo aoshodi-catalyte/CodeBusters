@@ -82,6 +82,12 @@ app = FastAPI(lifespan=lifespan)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    """
+    Log each HTTP request with its method, path, status code, and duration.
+
+    Unhandled exceptions are logged with their traceback before being
+    re-raised so FastAPI can handle them normally.
+    """
     start_time = time.perf_counter()
 
     try:
