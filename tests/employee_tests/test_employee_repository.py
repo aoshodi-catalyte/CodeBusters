@@ -390,7 +390,8 @@ def test_repo_update_email_conflict(repo, db):
     with pytest.raises(EmployeeEmailAlreadyExistsError):
         repo.update_employee(emp2.id, update_model)
 
-def test_deactivate_employee_success():
+
+def test_deactivate_employee_success(acting_user, fake_audit_repo):
     db, repo, role = run_db()
 
     employee_model = Employee(
@@ -405,7 +406,12 @@ def test_deactivate_employee_success():
     )
 
     created = repo.create_new_employee(employee_model)
-    result = repo.deactivate_employee(created.id)
+
+    result = repo.deactivate_employee(
+        created.id,
+        acting_user=acting_user,
+        audit_repo=fake_audit_repo
+    )
 
     assert isinstance(result, EmployeeSchema)
     assert result.id == created.id
@@ -418,15 +424,21 @@ def test_deactivate_employee_success():
 
     db.close()
 
-def test_deactivate_employee_not_found():
+
+def test_deactivate_employee_not_found(acting_user, fake_audit_repo):
     db, repo, role = run_db()
 
     with pytest.raises(EmployeeNotFoundError):
-        repo.deactivate_employee(9999)
+        repo.deactivate_employee(
+            9999,
+            acting_user=acting_user,
+            audit_repo=fake_audit_repo
+        )
 
     db.close()
 
-def test_deactivate_employee_already_deactivated():
+
+def test_deactivate_employee_already_deactivated(acting_user, fake_audit_repo):
     db, repo, role = run_db()
 
     employee_model = Employee(
@@ -443,6 +455,10 @@ def test_deactivate_employee_already_deactivated():
     created = repo.create_new_employee(employee_model)
 
     with pytest.raises(EmployeeAlreadyDeactivatedError):
-        repo.deactivate_employee(created.id)
+        repo.deactivate_employee(
+            created.id,
+            acting_user=acting_user,
+            audit_repo=fake_audit_repo
+        )
 
     db.close()
