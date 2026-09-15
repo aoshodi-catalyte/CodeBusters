@@ -7,14 +7,14 @@ from constants.entity_types import EntityType
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientConstraintError,
-    VendorNotFoundError,
     IngredientNotFoundError,
+    VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
-from ingredient.ingredient_schema import AllergenSchema, IngredientSchema, ingredient_allergen
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from repositories.deactivate_audit_repository import AuditRepository
-from vendor.vendor_schema import Vendor
 from repositories.deactivation_log_repository import DeactivationLogRepository
+from vendor.vendor_schema import Vendor
 
 def get_or_create_allergen(
     db: Session,
@@ -253,7 +253,7 @@ class IngredientRepository:
             self.db.commit()
             self.db.refresh(ingredient)
 
-            audit_repo.record_deactivation(ingredient_id, ingredient.name, acting_user, EntityType.INGREDIENT)
+            audit_repo.record_deactivation(ingredient_id, ingredient.name, acting_user, EntityType.INGREDIENT) # pylint: disable=line-too-long
 
             return ingredient
 
