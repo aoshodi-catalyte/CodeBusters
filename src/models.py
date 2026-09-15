@@ -7,5 +7,9 @@ from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from secure_login.secure_login_schema import EmployeeAuth
+<<<<<<< HEAD
 from deactivation_log.deactivation_schema import DeactivationRecord
 from deactivation_log.entity_type_schema import EntityTypeSchema
+=======
+from purchase.purchase_schema import PurchaseSchema
+>>>>>>> 6d8a7130232fba16a5d131b715c6d80b93e13440

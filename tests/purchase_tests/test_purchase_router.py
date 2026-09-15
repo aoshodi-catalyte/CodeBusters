@@ -1,102 +1,15 @@
-import models
-import pytest
-
 from decimal import Decimal
+import token
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from database import Base, get_db
-from routers.purchase_router import router as purchase_router
+import pytest
 
 from baked_good.baked_good_schema import BakedGoodSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
+import models
+from tests.factories.auth_factories import manager_token
 from vendor.vendor_schema import Vendor
 
-
-# ---------------------------------------------------------------------------
-# Test database
-# ---------------------------------------------------------------------------
-
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=test_engine,
-)
-
-
-# ---------------------------------------------------------------------------
-# Test application
-# ---------------------------------------------------------------------------
-
-app = FastAPI()
-app.include_router(purchase_router)
-
-
-# ---------------------------------------------------------------------------
-# Database fixtures
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="function")
-def db():
-    """
-    Creates a fresh in-memory database for each test.
-
-    The same test engine is used by both the test database session
-    and the FastAPI client.
-    """
-    Base.metadata.drop_all(bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
-
-    session = TestingSessionLocal()
-
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=test_engine)
-
-
-@pytest.fixture(scope="function")
-def client(db):
-    """
-    Creates a TestClient using the same in-memory database as the test.
-
-    Authentication overrides are not required because the purchase router
-    does not currently declare an authentication dependency.
-    """
-
-    def override_get_db():
-        session = TestingSessionLocal()
-
-        try:
-            yield session
-        finally:
-            session.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
-
-
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
 
 def create_vendor(db):
     """
@@ -205,15 +118,30 @@ def test_create_purchase_no_promo(client, db):
         },
     )
 
-    assert response.status_code == 201, response.json()
+def test_create_purchase(client, db):
+    item = create_baked_good(db, price=5.00)
+    token = manager_token()
+
+    payload = {
+        "customer_id": None,
+        "employee_id": 1,
+        "promo_id": None,
+        "items": [
+            {"item_type": "baked_good", "item_id": item.id, "quantity": 2}
+        ],
+    }
+
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 201
 
     data = response.json()
-
-    assert data["subtotal"] == "4.00"
-    assert data["discount_amount"] == "0.00"
-    assert data["tax_amount"] == "0.28"
-    assert data["total"] == "4.28"
-    assert data["items"][0]["price_at_sale"] == "4.00"
+    assert data["subtotal"] == 10.00
+    assert data["discount_amount"] == 0.00
+    assert data["tax_amount"] == 0.70
+    assert data["total"] == 10.70
+    assert data["loyalty_points_awarded"] == 10
+    assert data["employee_id"] == 1
+    assert len(data["items"]) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +157,7 @@ def test_get_purchase_by_id(client, db):
         db,
         Decimal("4.00"),
     )
+    token = manager_token()
 
     create_response = client.post(
         "/purchases",
@@ -241,6 +170,7 @@ def test_get_purchase_by_id(client, db):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert create_response.status_code == 201, create_response.json()
@@ -256,11 +186,11 @@ def test_get_purchase_by_id(client, db):
     data = response.json()
 
     assert data["id"] == purchase_id
-    assert data["subtotal"] == "4.00"
-    assert data["discount_amount"] == "0.00"
-    assert data["tax_amount"] == "0.28"
-    assert data["total"] == "4.28"
-    assert data["items"][0]["price_at_sale"] == "4.00"
+    assert data["subtotal"] == 4.00
+    assert data["discount_amount"] == 0.00
+    assert data["tax_amount"] == 0.28
+    assert data["total"] == 4.28
+    assert data["items"][0]["price_at_sale"] == 4.00
 
 
 def test_get_purchase_not_found(client):
@@ -286,6 +216,7 @@ def test_list_purchases(client, db):
         db,
         Decimal("4.00"),
     )
+    token = manager_token()
 
     first_response = client.post(
         "/purchases",
@@ -298,6 +229,7 @@ def test_list_purchases(client, db):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201, first_response.json()
@@ -313,6 +245,7 @@ def test_list_purchases(client, db):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_response.status_code == 201, second_response.json()
@@ -322,13 +255,121 @@ def test_list_purchases(client, db):
     assert response.status_code == 200, response.json()
 
     data = response.json()
+    assert len(data) == 2
+    totals = {d["total"] for d in data}
+    assert totals == {4.28, 8.56}
 
-    assert len(data) >= 2
-
-    totals = {
-        purchase["total"]
-        for purchase in data
+def test_create_purchase_uses_employee_id_from_jwt(client, db):
+    item = create_baked_good(db, price=5.00)
+    token = manager_token()
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "employee_id": 999,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": item.id,
+                "quantity": 1,
+            }
+        ],
     }
 
-    assert "4.28" in totals
-    assert "8.56" in totals
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["employee_id"] == 1
+    assert data["employee_id"] != 999
+
+def test_create_purchase_customer_not_found(client, db):
+    item = create_baked_good(db, price=5.00)
+    token = manager_token()
+
+    payload = {
+        "customer_id": 999,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": item.id,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 404
+    assert "customer" in response.json()["detail"].lower()
+
+def test_create_purchase_baked_good_not_found(client):
+    token = manager_token()
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": 999,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 404
+    assert "baked good" in response.json()["detail"].lower()
+
+def test_create_purchase_drink_recipe_not_found(client):
+    token = manager_token()
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "drink_recipe",
+                "item_id": 999,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 404
+    assert "drink recipe" in response.json()["detail"].lower()
+
+def test_create_purchase_requires_at_least_one_item(client):
+    token = manager_token()
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [],
+    }
+
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 422
+
+def test_create_purchase_rejects_invalid_quantity(client, db):
+    item = create_baked_good(db)
+    token = manager_token()
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": item.id,
+                "quantity": 0,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 422

@@ -17,12 +17,12 @@ def test_purchase_item_create_valid():
         quantity=2
     )
 
-    assert item.item_type == "baked_good"
+    assert item.item_type == "baked good"
     assert item.item_id == 1
     assert item.quantity == 2
 
 
-def test_purchase_item_create_invalid_item_type():
+def test_purchase_item_create_empty_item_type():
     with pytest.raises(ValueError):
         PurchaseItemCreate(item_type="", item_id=1, quantity=1)
 
@@ -95,6 +95,7 @@ def test_purchase_response_valid():
     response = PurchaseResponse(
         id=1,
         customer_id=10,
+        employee_id= 3,
         promo_id=5,
         subtotal=Decimal("10.00"),
         discount_amount=Decimal("2.00"),
@@ -115,6 +116,7 @@ def test_purchase_response_valid():
 
     assert response.id == 1
     assert response.customer_id == 10
+    assert response.employee_id == 3
     assert response.promo_id == 5
     assert response.subtotal == Decimal("10.00")
     assert response.discount_amount == Decimal("2.00")
@@ -131,6 +133,7 @@ def test_purchase_response_from_attributes():
     class FakePurchase:
         id = 42
         customer_id = None
+        employee_id = 7
         promo_id = None
         subtotal = Decimal("20.00")
         discount_amount = Decimal("0.00")
@@ -151,5 +154,46 @@ def test_purchase_response_from_attributes():
     response = PurchaseResponse.model_validate(FakePurchase(), from_attributes=True)
 
     assert response.id == 42
+    assert response.employee_id == 7
     assert response.total == Decimal("21.40")
     assert response.items[0].item_type == "drink"
+
+def test_purchase_create_guest_checkout():
+    """Test that a purchase can be created without a customer."""
+    payload = PurchaseCreate(
+        items=[
+            PurchaseItemCreate(
+                item_type="drink_recipe",
+                item_id=1,
+                quantity=1
+            )
+        ]
+    )
+
+    assert payload.customer_id is None
+    assert payload.promo_id is None
+    assert len(payload.items) == 1
+
+def test_purchase_create_accepts_at_least_one_item():
+    """Test that a purchase accepts at least one drink or baked good."""
+    payload = PurchaseCreate(
+        items=[
+            PurchaseItemCreate(
+                item_type="drink_recipe",
+                item_id=1,
+                quantity=1
+            )
+        ]
+    )
+
+    assert len(payload.items) == 1
+    assert payload.items[0].item_type == "drink"
+
+def test_purchase_item_create_invalid_item_type():
+    """Test that purchase items only allow drinks or baked goods."""
+    with pytest.raises(ValueError):
+        PurchaseItemCreate(
+            item_type="pizza",
+            item_id=1,
+            quantity=1
+        )
