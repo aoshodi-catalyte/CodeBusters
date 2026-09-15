@@ -1,65 +1,12 @@
 """Tests for the ingredient API router."""
 
-import models
 import pytest
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from database import Base, get_db
-from routers.ingredient_router import router as ingredient_router
-from routers.vendor_router import router as vendor_router
+import models
 from tests.factories.auth_factories import manager_token
 
 
-# Use an in-memory SQLite database for fast integration tests
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
-
-app = FastAPI()
-app.include_router(ingredient_router)
-app.include_router(vendor_router)
-
-
-@pytest.fixture
-def client():
-    """
-    Creates a test client using a temporary in-memory database.
-    """
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
-
-
-def test_create_ingredient_success(client):
+def test_create_ingredient_success(client, db):
     """Test 1: Successfully creating an ingredient returns 201 Created."""
 
     token = manager_token()

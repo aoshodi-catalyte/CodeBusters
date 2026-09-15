@@ -13,6 +13,7 @@ from exceptions.ingredient_exceptions import (
     IngredientNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.ingredient_repository import (
     IngredientRepository,
     get_or_create_allergen,
@@ -534,6 +535,7 @@ def test_soft_delete_ingredient_success(db):
     db.refresh(vendor)
 
     repo = IngredientRepository(db)
+    audit_db = AuditRepository(db)
     ingredient = repo.create_ingredient(
         make_ingredient(
             name="Vanilla Extract",
@@ -543,6 +545,8 @@ def test_soft_delete_ingredient_success(db):
 
     result = repo.soft_delete_ingredient(
         ingredient_id=ingredient.id,
+        acting_user="test_user",
+        audit_repo=audit_db
     )
 
     assert result is not None
@@ -553,9 +557,12 @@ def test_soft_delete_ingredient_success(db):
 def test_soft_delete_ingredient_not_found(db):
     """Test that soft deleting a nonexistent ingredient returns None."""
     repo = IngredientRepository(db)
+    audit_db = AuditRepository(db)
 
     result = repo.soft_delete_ingredient(
-        ingredient_id=99999,
+        99999,
+        "test_user",
+        audit_db
     )
 
     assert result is None
@@ -568,10 +575,9 @@ def test_soft_delete_ingredient_sqlalchemy_error():
     db.query.side_effect = SQLAlchemyError("Unexpected database failure")
 
     repo = IngredientRepository(db)
+    audit_db = AuditRepository(db)
 
     with pytest.raises(SQLAlchemyError):
-        repo.soft_delete_ingredient(
-            ingredient_id=1,
-        )
+        repo.soft_delete_ingredient(1, "test_user", audit_db)
 
     db.rollback.assert_called_once()

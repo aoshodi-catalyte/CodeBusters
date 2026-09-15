@@ -7,14 +7,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_audit_db, get_db
 from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
 from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
+from utils.auth import get_acting_user
 
 router = APIRouter()
 
@@ -185,13 +187,17 @@ def update_employee(
             detail=str(exc),
         ) from exc
 
+
 @router.delete(
     "/employees/{employee_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_employee(
     employee_id: int,
+    acting_user=Depends(get_acting_user),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db),
 ):
     """
         Deactivate an employee by setting their active status to False.
@@ -206,9 +212,10 @@ def deactivate_employee(
             HTTPException: 409 Conflict if the employee is already deactivated.
     """
     repo = EmployeeRepository(db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
-        repo.deactivate_employee(employee_id)
+        repo.deactivate_employee(employee_id, acting_user.email, audit_repo)
     except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

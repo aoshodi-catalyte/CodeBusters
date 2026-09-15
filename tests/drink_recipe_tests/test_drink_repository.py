@@ -13,10 +13,8 @@ from exceptions.drink_recipe_exceptions import (
     UnitConversionError,
 )
 from ingredient.ingredient_schema import IngredientSchema
-from repositories.drink_recipe_repository import (
-    DrinkRecipeRepository,
-    map_enum_to_fk,
-)
+from repositories.deactivate_audit_repository import AuditRepository
+from repositories.drink_recipe_repository import DrinkRecipeRepository, map_enum_to_fk
 from tests.factories.drink_recipe_factories import (
     drink_types,
     ingredient_factory,
@@ -449,7 +447,7 @@ def test_deactivate_drink_recipe_success(
     """Repository should deactivate an active drink recipe."""
 
     repo = DrinkRecipeRepository(db)
-
+    audit_db = AuditRepository(db)
     recipe = recipe_model_factory(
         name="Latte",
         description="desc",
@@ -461,10 +459,7 @@ def test_deactivate_drink_recipe_success(
     created = repo.create_drink_recipe(recipe)
 
     db.commit()
-
-    updated = repo.deactivate_drink_recipe_by_id(
-        created.id,
-    )
+    updated = repo.deactivate_drink_recipe_by_id(created.id, "test_user", audit_db)
 
     assert updated.active is False
     assert updated.id == created.id
@@ -475,8 +470,10 @@ def test_deactivate_drink_recipe_not_found(db):
 
     repo = DrinkRecipeRepository(db)
 
+    audit_repo = AuditRepository(db)
+
     with pytest.raises(DrinkRecipeNotFoundError):
-        repo.deactivate_drink_recipe_by_id(999)
+        repo.deactivate_drink_recipe_by_id(999, "test_user", audit_repo)
 
 
 def test_deactivate_drink_recipe_already_inactive(
@@ -487,7 +484,7 @@ def test_deactivate_drink_recipe_already_inactive(
     """Repository should raise DrinkRecipeAlreadyDeactivatedError when already inactive."""
 
     repo = DrinkRecipeRepository(db)
-
+    audit_repo = AuditRepository(db)
     recipe = recipe_model_factory(
         name="Mocha",
         description="desc",
@@ -498,7 +495,5 @@ def test_deactivate_drink_recipe_already_inactive(
 
     created = repo.create_drink_recipe(recipe)
 
-    db.commit()
-
     with pytest.raises(DrinkRecipeAlreadyDeactivatedError):
-        repo.deactivate_drink_recipe_by_id(created.id)
+        repo.deactivate_drink_recipe_by_id(created.id, "test_user", audit_repo)
