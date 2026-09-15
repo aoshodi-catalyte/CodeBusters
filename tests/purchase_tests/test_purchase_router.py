@@ -72,6 +72,7 @@ def test_create_purchase(client, db):
 
     payload = {
         "customer_id": None,
+        "employee_id": 3,
         "promo_id": None,
         "items": [
             {"item_type": "baked_good", "item_id": item.id, "quantity": 2}
@@ -87,6 +88,7 @@ def test_create_purchase(client, db):
     assert data["tax_amount"] == 0.70
     assert data["total"] == 10.70
     assert data["loyalty_points_awarded"] == 10
+    assert data["employee_id"] == 3
     assert len(data["items"]) == 1
 
 
@@ -168,3 +170,114 @@ def test_list_purchases(client, db):
     assert len(data) == 2
     totals = {d["total"] for d in data}
     assert totals == {4.28, 8.56}
+
+def test_create_purchase_uses_employee_id_from_jwt(client, db):
+    item = create_baked_good(db, price=5.00)
+
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "employee_id": 999,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": item.id,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload)
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["employee_id"] == 3
+    assert data["employee_id"] != 999
+
+def test_create_purchase_customer_not_found(client, db):
+    item = create_baked_good(db, price=5.00)
+
+    payload = {
+        "customer_id": 999,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": item.id,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload)
+
+    assert response.status_code == 404
+    assert "customer" in response.json()["detail"].lower()
+
+def test_create_purchase_baked_good_not_found(client):
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": 999,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload)
+
+    assert response.status_code == 404
+    assert "baked good" in response.json()["detail"].lower()
+
+def test_create_purchase_drink_recipe_not_found(client):
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "drink_recipe",
+                "item_id": 999,
+                "quantity": 1,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload)
+
+    assert response.status_code == 404
+    assert "drink recipe" in response.json()["detail"].lower()
+
+def test_create_purchase_requires_at_least_one_item(client):
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [],
+    }
+
+    response = client.post("/purchases", json=payload)
+
+    assert response.status_code == 422
+
+def test_create_purchase_rejects_invalid_quantity(client, db):
+    item = create_baked_good(db)
+
+    payload = {
+        "customer_id": None,
+        "promo_id": None,
+        "items": [
+            {
+                "item_type": "baked_good",
+                "item_id": item.id,
+                "quantity": 0,
+            }
+        ],
+    }
+
+    response = client.post("/purchases", json=payload)
+
+    assert response.status_code == 422
