@@ -13,13 +13,16 @@ from typing import List
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from constants.entity_types import EntityType
 from exceptions.promotion_exceptions import (
+    PromotionCodeAlreadyDeactivatedError,
     PromotionCodeAlreadyExistsError,
     PromotionConstraintError,
     PromotionNotFoundError,
 )
 from promotion.promotion_model import Promotion
 from promotion.promotion_schema import PromotionSchema
+from repositories.deactivate_audit_repository import AuditRepository
 
 
 class PromotionRepository:
@@ -180,7 +183,12 @@ class PromotionRepository:
 
         return db_promotion
 
-    def deactivate_promotion(self, promotion_id: int) -> PromotionSchema:
+    def deactivate_promotion(
+        self,
+        promotion_id: int,
+        acting_user: str,
+        audit_repo: AuditRepository
+        ) -> PromotionSchema:
         """
         Deactivate a promotion by setting active to False (soft delete).
 
@@ -199,10 +207,19 @@ class PromotionRepository:
                 If no promotion exists with the given ID.
         """
         promotion = self.get_promotion_by_id(promotion_id)
+        if promotion.active is False:
+            raise PromotionCodeAlreadyDeactivatedError(promotion_id)
 
         promotion.active = False
 
         self.session.commit()
         self.session.refresh(promotion)
+
+        audit_repo.record_deactivation(
+            promotion_id,
+            promotion.promo_code,
+            acting_user,
+            EntityType.PROMOTION
+        )
 
         return promotion

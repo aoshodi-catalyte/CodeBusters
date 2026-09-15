@@ -51,6 +51,11 @@ def repository(db):
     return CustomerRepository(db)
 
 
+class FakeAuditRepo:
+    def record_deactivation(self, item_id, item_name, acting_user, entity_type):
+        return None
+
+
 def test_create_customer(repository):
     """Repository should create and persist a customer."""
 
@@ -482,7 +487,13 @@ def test_deactivate_customer(repository):
 
     created_customer = repository.create_customer(customer)
 
-    repository.deactivate_customer(created_customer.id)
+    fake_audit = FakeAuditRepo()
+
+    repository.deactivate_customer(
+        created_customer.id,
+        acting_user="test_user@example.com",
+        audit_repo=fake_audit
+    )
 
     deactivated_customer = repository.get_customer_by_id(created_customer.id)
 
@@ -501,7 +512,13 @@ def test_deactivate_customer_persists_to_database(repository, db):
 
     created_customer = repository.create_customer(customer)
 
-    repository.deactivate_customer(created_customer.id)
+    fake_audit = FakeAuditRepo()
+
+    repository.deactivate_customer(
+        created_customer.id,
+        acting_user="test_user@example.com",
+        audit_repo=fake_audit
+    )
 
     stored_customer = (
         db.query(CustomerSchema)
@@ -515,8 +532,14 @@ def test_deactivate_customer_persists_to_database(repository, db):
 def test_deactivate_customer_raises_when_id_not_found(repository):
     """Repository should raise CustomerNotFoundError for a nonexistent ID."""
 
+    fake_audit = FakeAuditRepo()
+
     with pytest.raises(CustomerNotFoundError):
-        repository.deactivate_customer(999)
+        repository.deactivate_customer(
+            999,
+            acting_user="test_user@example.com",
+            audit_repo=fake_audit
+        )
 
 
 def test_deactivate_customer_preserves_other_fields(repository):
@@ -532,7 +555,13 @@ def test_deactivate_customer_preserves_other_fields(repository):
 
     created_customer = repository.create_customer(customer)
 
-    repository.deactivate_customer(created_customer.id)
+    fake_audit = FakeAuditRepo()
+
+    repository.deactivate_customer(
+        created_customer.id,
+        acting_user="test_user@example.com",
+        audit_repo=fake_audit
+    )
 
     result = repository.get_customer_by_id(created_customer.id)
 
@@ -540,4 +569,3 @@ def test_deactivate_customer_preserves_other_fields(repository):
     assert result.last_name == "Smith"
     assert result.email == "john@example.com"
     assert result.loyalty_points == 100
-    

@@ -175,6 +175,7 @@ def put_baked_good(
 
 @router.delete(
     "/{baked_good_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_baked_good(
