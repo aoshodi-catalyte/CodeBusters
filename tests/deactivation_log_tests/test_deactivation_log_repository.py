@@ -244,11 +244,11 @@ def test_soft_delete_ingredient_creates_deactivation_log(db):
     db.refresh(recipe_ingredient)
 
     # Deactivate the ingredient.
-    # employee_id is required so the deactivation can identify
+    # employee_email is required so the deactivation can identify
     # the user who performed the action.
     result = ingredient_repo.soft_delete_ingredient(
         ingredient_id=ingredient.id,
-        employee_id=123,
+        employee_email="manager@test.com",
     )
 
     # Verify the ingredient was deactivated.

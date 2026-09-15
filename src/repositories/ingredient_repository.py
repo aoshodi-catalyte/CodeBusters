@@ -236,7 +236,7 @@ class IngredientRepository:
     def soft_delete_ingredient(
         self,
         ingredient_id: int,
-        employee_id: int,
+        employee_email: str,
     ) -> IngredientSchema | None:
         """
         Deactivate an ingredient and record the deactivation event.
@@ -247,7 +247,7 @@ class IngredientRepository:
 
         The audit record is written using the existing audit repository,
         which automatically records the deactivation timestamp and the
-        user performing the action.
+        email of the user performing the action.
         """
         try:
             ingredient = self.get_ingredient_by_id(ingredient_id)
@@ -298,7 +298,7 @@ class IngredientRepository:
                 audit_repo.record_deactivation(
                     item_id=ingredient.id,
                     item_name=ingredient.name,
-                    user=str(employee_id),
+                    user=employee_email,
                     item_type=EntityType.INGREDIENT,
                 )
 

@@ -564,7 +564,7 @@ def test_soft_delete_ingredient_success(db):
             audit_db=audit_db,
         ).soft_delete_ingredient(
             ingredient_id=ingredient.id,
-            employee_id=123,
+            employee_email="manager@test.com",
         )
 
         assert result is not None
@@ -574,7 +574,7 @@ def test_soft_delete_ingredient_success(db):
         audit_repo.record_deactivation.assert_called_once_with(
             item_id=ingredient.id,
             item_name=ingredient.name,
-            user="123",
+            user="manager@test.com",
             item_type=EntityType.INGREDIENT,
         )
 
@@ -585,7 +585,7 @@ def test_soft_delete_ingredient_not_found(db):
 
     result = repo.soft_delete_ingredient(
         ingredient_id=99999,
-        employee_id=123,
+        employee_email="manager@test.com",
     )
 
     assert result is None
@@ -624,7 +624,7 @@ def test_soft_delete_already_inactive_ingredient(db):
     with pytest.raises(IngredientAlreadyInactiveError):
         repo.soft_delete_ingredient(
             ingredient_id=ingredient.id,
-            employee_id=123,
+            employee_email="manager@test.com",
         )
 
 
@@ -690,7 +690,7 @@ def test_soft_delete_ingredient_sqlalchemy_error():
     with pytest.raises(SQLAlchemyError):
         repo.soft_delete_ingredient(
             ingredient_id=1,
-            employee_id=123,
+            employee_email="manager@test.com",
         )
 
     db.rollback.assert_called_once()

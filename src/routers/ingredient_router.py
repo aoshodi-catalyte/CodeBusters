@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from constants.entity_types import EntityType
 from database import get_audit_db, get_db
 from deactivation_log.deactivation_schema import DeactivationRecord
+from employee.employee_schema import EmployeeSchema
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
     IngredientAlreadyInactiveError,
@@ -350,8 +351,9 @@ def delete_ingredient_endpoint(
     """
     Soft delete an ingredient by its ID.
 
-    The authenticated manager's employee ID is passed to the repository
-    so that the deactivation is recorded in the audit database.
+    The authenticated manager's employee ID is read from the token and
+    used to look up their email, which is passed to the repository so
+    that the deactivation is recorded in the audit database.
     """
     logger.debug(
         "DELETE /ingredients/%s called — deleting ingredient",
@@ -374,6 +376,27 @@ def delete_ingredient_endpoint(
             },
         )
 
+    employee = (
+        db.query(EmployeeSchema)
+        .filter(EmployeeSchema.id == employee_id)
+        .first()
+    )
+
+    if employee is None:
+        logger.error(
+            "Authenticated employee %s not found in employee table",
+            employee_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "employee_not_identified",
+                "message": (
+                    "The authenticated employee could not be identified."
+                ),
+            },
+        )
+
     repo = IngredientRepository(
         db=db,
         audit_db=audit_db,
@@ -382,7 +405,7 @@ def delete_ingredient_endpoint(
     try:
         ingredient = repo.soft_delete_ingredient(
             ingredient_id=ingredient_id,
-            employee_id=employee_id,
+            employee_email=employee.email,
         )
 
         if ingredient is None:

@@ -1,5 +1,7 @@
 """Tests for the ingredient API router."""
 
+from datetime import date
+
 import models
 import pytest
 
@@ -10,6 +12,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import AuditBase, Base, get_audit_db, get_db
+from employee.employee_schema import EmployeeSchema
+from employee.employee_role_schema import EmployeeRoleSchema
 from routers.ingredient_router import router as ingredient_router
 from routers.vendor_router import router as vendor_router
 from tests.factories.auth_factories import manager_token
@@ -93,6 +97,56 @@ def create_vendor(client):
 
     assert response.status_code == 201
     return response.json()["id"]
+
+
+def create_manager_employee():
+    """
+    Seed an employee row matching the employee_id encoded in
+    manager_token(), so the ingredient router's email lookup on
+    delete succeeds.
+    """
+    session = TestingSessionLocal()
+
+    try:
+        existing = (
+            session.query(EmployeeSchema)
+            .filter(EmployeeSchema.id == 1)
+            .first()
+        )
+
+        if existing is not None:
+            return existing
+
+        role = (
+            session.query(EmployeeRoleSchema)
+            .filter(EmployeeRoleSchema.role == "manager")
+            .first()
+        )
+
+        if role is None:
+            role = EmployeeRoleSchema(role="manager")
+            session.add(role)
+            session.commit()
+            session.refresh(role)
+
+        employee = EmployeeSchema(
+            id=1,
+            active=True,
+            first_name="Test",
+            last_name="Manager",
+            email="manager@test.com",
+            role_id=role.id,
+            hourly_rate=25.0,
+            hire_date=date(2020, 1, 1),
+        )
+
+        session.add(employee)
+        session.commit()
+        session.refresh(employee)
+
+        return employee
+    finally:
+        session.close()
 
 
 def test_create_ingredient_success(client):
@@ -502,6 +556,7 @@ def test_get_all_ingredients_multiple(client):
 def test_soft_delete_ingredient_success(client):
     """Test 16: Successfully soft deleting returns 204."""
     token = manager_token()
+    create_manager_employee()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -532,6 +587,7 @@ def test_soft_delete_ingredient_success(client):
 def test_soft_delete_ingredient_not_found(client):
     """Test 17: Soft deleting a nonexistent ingredient returns 404."""
     token = manager_token()
+    create_manager_employee()
 
     response = client.delete(
         "/ingredients/9999",
@@ -547,6 +603,7 @@ def test_soft_delete_ingredient_not_found(client):
 def test_soft_delete_ingredient_is_persisted(client):
     """Test 18: Soft deletion persists active=False."""
     token = manager_token()
+    create_manager_employee()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -584,6 +641,7 @@ def test_soft_delete_ingredient_is_persisted(client):
 def test_get_deactivated_ingredients(client):
     """Test 19: Managers can view deactivated ingredients."""
     token = manager_token()
+    create_manager_employee()
     vendor_id = create_vendor(client)
 
     active_response = client.post(
