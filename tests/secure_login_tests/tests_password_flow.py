@@ -4,8 +4,8 @@ Integration tests for the temporary-to-permanent password lifecycle.
 
 # pylint: disable=duplicate-code
 
-from employee.employee_model import Employee
 from constants.employee_roles import EmployeeRole
+from employee.employee_model import Employee
 from repositories.employee_repository import EmployeeRepository
 from secure_login.secure_login_schema import EmployeeAuth
 from utils.password_utils import verify_password
@@ -13,14 +13,13 @@ from utils.password_utils import verify_password
 
 def _login(client, username, password):
     """Log in and return the JSON response."""
-    response = client.post(
+    return client.post(
         "/auth/login",
         data={
             "username": username,
             "password": password,
         },
     )
-    return response
 
 
 def test_temporary_password_to_permanent_password_flow(

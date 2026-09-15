@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from employee.employee_schema import EmployeeSchema
+from utils.password_reset_helpers import get_auth_by_username
 from repositories.employee_repository import EmployeeRepository
 from exceptions.secure_login_exceptions import (
     CredentialsAlreadyExistError,
@@ -26,6 +27,7 @@ from secure_login.secure_login_schema import EmployeeAuth
 from secure_logout.secure_logout_schema import TokenBlacklist
 from utils.jwt_utils import decode_token, extract_jti
 from utils.password_utils import hash_password, verify_password
+
 
 SECRET_KEY = settings.JWT_SECRET_KEY
 ALGORITHM = settings.JWT_ALGORITHM
@@ -69,12 +71,9 @@ class SecureLoginRepository:
         Authenticate a user by validating their username and password.
         """
 
-        auth = (
-            db.query(EmployeeAuth)
-            .filter(
-                EmployeeAuth.username == username
-            )
-            .first()
+        auth = get_auth_by_username(
+            db,
+            username,
         )
 
         if auth is None:
@@ -88,7 +87,10 @@ class SecureLoginRepository:
 
         return auth
 
-    def create_access_token(self, data: dict) -> str:
+    def create_access_token(
+        self,
+        data: dict,
+    ) -> str:
         """
         Create a signed JWT access token containing the provided payload.
         """
@@ -259,3 +261,4 @@ class SecureLoginRepository:
 
         db.commit()
         db.refresh(auth)
+    

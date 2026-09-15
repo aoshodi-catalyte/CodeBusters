@@ -69,7 +69,6 @@ class FakeQuery:
         return [self._result]
 
 
-
 class FakeDB:
     def __init__(
         self,
@@ -243,7 +242,7 @@ def test_confirm_reset_success(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "repositories.password_reset_repository.hash_password",
+        "utils.password_reset_helpers.hash_password",
         lambda password: f"hashed-{password}",
     )
 
@@ -652,7 +651,7 @@ def test_confirm_reset_allows_valid_code_before_max_attempts(
     )
 
     monkeypatch.setattr(
-        "repositories.password_reset_repository.hash_password",
+        "utils.password_reset_helpers.hash_password",
         lambda password: f"hashed-{password}",
     )
 

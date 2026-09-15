@@ -10,6 +10,12 @@ from sqlalchemy.orm import Session
 from password_reset.password_reset_model import PasswordResetChannel
 from password_reset.password_reset_schema import PasswordResetToken
 from secure_login.secure_login_schema import EmployeeAuth
+from utils.password_reset_helpers import (
+    INVALID_RESET_MESSAGE,
+    apply_password_reset,
+    get_active_reset_record,
+    get_auth_by_username,
+)
 from utils.password_utils import hash_password, verify_password
 
 
@@ -22,9 +28,7 @@ class PasswordResetRepository:
     MAX_RESET_ATTEMPTS = 5
 
     def generate_reset_code(self) -> str:
-        """
-        Generate a secure six-digit password reset code.
-        """
+        """Generate a secure six-digit password reset code."""
 
         return str(
             secrets.randbelow(900000) + 100000
@@ -43,7 +47,6 @@ class PasswordResetRepository:
             return value.replace(tzinfo=timezone.utc)
 
         return value.astimezone(timezone.utc)
-
 
     def initiate_reset(
         self,
@@ -64,12 +67,9 @@ class PasswordResetRepository:
         Only its hash is persisted.
         """
 
-        auth = (
-            db.query(EmployeeAuth)
-            .filter(
-                EmployeeAuth.username == username
-            )
-            .first()
+        auth = get_auth_by_username(
+            db,
+            username,
         )
 
         if auth is None:
@@ -121,7 +121,6 @@ class PasswordResetRepository:
 
         return employee, code
 
-
     def confirm_reset(
         self,
         db: Session,
@@ -144,35 +143,21 @@ class PasswordResetRepository:
             - marks the reset token as used
         """
 
-        auth = (
-            db.query(EmployeeAuth)
-            .filter(
-                EmployeeAuth.username == username
-            )
-            .first()
+        auth = get_auth_by_username(
+            db,
+            username,
         )
 
         if auth is None:
-            raise ValueError(
-                "Invalid or expired password reset request."
-            )
+            raise ValueError(INVALID_RESET_MESSAGE)
 
-        reset_record = (
-            db.query(PasswordResetToken)
-            .filter(
-                PasswordResetToken.employee_id == auth.employee_id,
-                PasswordResetToken.used_at.is_(None),
-            )
-            .order_by(
-                PasswordResetToken.id.desc()
-            )
-            .first()
+        reset_record = get_active_reset_record(
+            db,
+            auth.employee_id,
         )
 
         if reset_record is None:
-            raise ValueError(
-                "Invalid or expired password reset request."
-            )
+            raise ValueError(INVALID_RESET_MESSAGE)
 
         now = datetime.now(timezone.utc)
 
@@ -181,14 +166,10 @@ class PasswordResetRepository:
         )
 
         if expires_at <= now:
-            raise ValueError(
-                "Invalid or expired password reset request."
-            )
+            raise ValueError(INVALID_RESET_MESSAGE)
 
         if reset_record.attempt_count >= self.MAX_RESET_ATTEMPTS:
-            raise ValueError(
-                "Invalid or expired password reset request."
-            )
+            raise ValueError(INVALID_RESET_MESSAGE)
 
         if not verify_password(
             code,
@@ -198,18 +179,16 @@ class PasswordResetRepository:
 
             db.commit()
 
-            raise ValueError(
-                "Invalid or expired password reset request."
-            )
+            raise ValueError(INVALID_RESET_MESSAGE)
 
-        auth.password_hash = hash_password(
-            new_password
+        apply_password_reset(
+            auth,
+            reset_record,
+            new_password,
+            now,
         )
-
-        auth.is_temporary_password = False
-
-        reset_record.used_at = now
 
         db.commit()
         db.refresh(auth)
         db.refresh(reset_record)
+    
