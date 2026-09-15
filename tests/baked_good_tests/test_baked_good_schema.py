@@ -1,7 +1,6 @@
 import models
 
-from sqlalchemy import inspect
-
+from sqlalchemy import Numeric, inspect
 
 from baked_good.baked_good_schema import BakedGoodSchema
 
@@ -9,15 +8,6 @@ from baked_good.baked_good_schema import BakedGoodSchema
 def test_baked_good_table_name():
     """
     Tests that the BakedGoodSchema uses the correct database table name.
-
-    Verifies that the SQLAlchemy model is mapped to the "baked_goods"
-    database table.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
 
     assert BakedGoodSchema.__tablename__ == "baked_good"
@@ -26,15 +16,6 @@ def test_baked_good_table_name():
 def test_baked_good_columns():
     """
     Tests that the BakedGoodSchema contains the expected columns and data types.
-
-    Inspects the SQLAlchemy model and verifies that the ID is the primary key
-    and that each baked good field uses the expected Python data type.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
 
     columns = inspect(BakedGoodSchema).columns
@@ -43,22 +24,17 @@ def test_baked_good_columns():
     assert columns["active"].type.python_type is bool
     assert columns["name"].type.python_type is str
     assert columns["description"].type.python_type is str
-    assert columns["purchasing_cost"].type.python_type is float
-    assert columns["retail_price"].type.python_type is float
+
+    assert isinstance(columns["purchasing_cost"].type, Numeric)
+    assert isinstance(columns["retail_price"].type, Numeric)
+
+    assert columns["purchasing_cost"].type.scale == 2
+    assert columns["retail_price"].type.scale == 2
 
 
 def test_description_is_required():
     """
     Tests that the baked good description is required.
-
-    Inspects the description column and verifies that it does not allow
-    NULL values in the database.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
 
     columns = inspect(BakedGoodSchema).columns
@@ -69,15 +45,6 @@ def test_description_is_required():
 def test_name_is_required():
     """
     Tests that the baked good name is required.
-
-    Inspects the name column and verifies that it does not allow NULL
-    values in the database.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
 
     columns = inspect(BakedGoodSchema).columns
@@ -88,16 +55,8 @@ def test_name_is_required():
 def test_id_is_unique_primary_key():
     """
     Tests that the baked good ID is configured as the primary key.
-
-    Inspects the ID column and verifies that it is configured as the
-    primary key for the baked goods table.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
+
     columns = inspect(BakedGoodSchema).columns
 
     assert columns["id"].primary_key is True
@@ -125,15 +84,6 @@ def test_vendor_id_foreign_key():
 def test_vendor_id_is_required():
     """
     Tests that the baked good vendor ID is required.
-
-    Inspects the vendor_id column and verifies that it does not allow
-    NULL values in the database.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
 
     columns = inspect(BakedGoodSchema).columns

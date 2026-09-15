@@ -1,19 +1,19 @@
 """
 Business logic for creating purchases.
-
-Handles price lookup, promotion validation, discount calculation,
-tax computation, loyalty point awarding, and persistence through
-the PurchaseRepository. This service contains all domain rules
-for the checkout process.
 """
 
 from datetime import UTC, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from math import floor
 
 from fastapi import HTTPException, status
 
 from repositories.customer_repository import CustomerRepository
 from repositories.purchase_repository import PurchaseRepository
+
+TWO_PLACES = Decimal("0.01")
+TAX_RATE = Decimal("0.07")
+
 
 class PurchaseService:
     """
@@ -22,29 +22,24 @@ class PurchaseService:
     """
 
     def __init__(self, db):
-        """
-        Initialize the purchase service with a database session.
-
-        Args:
-            db (Session): SQLAlchemy database session.
-        """
         self.db = db
         self.repo = PurchaseRepository(db)
         self.customer_repo = CustomerRepository(db)
 
+    @staticmethod
+    def _quantize(value: Decimal) -> Decimal:
+        """Round a Decimal to exactly two decimal places, half-up."""
+        return value.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
     def _build_line_items_and_subtotal(self, purchase_create):
         """
         Build line items and compute the subtotal.
 
-        Args:
-            purchase_create (PurchaseCreate): Incoming purchase payload.
-
         Returns:
-            tuple[list[dict], float]: Line items and subtotal.
+            tuple[list[dict], Decimal]: Line items and subtotal.
         """
         line_items = []
-        subtotal = 0.0
+        subtotal = Decimal("0")
 
         for item in purchase_create.items:
             price = self.repo.get_item_price(item.item_type, item.item_id)
@@ -64,15 +59,11 @@ class PurchaseService:
         """
         Validate and apply a promotion to compute the discount amount.
 
-        Args:
-            promo_id (int | None): Promotion ID.
-            subtotal (float): Current subtotal.
-
         Returns:
-            float: Discount amount.
+            Decimal: Discount amount.
         """
         if promo_id is None:
-            return 0.0
+            return Decimal("0")
 
         promo = self.repo.get_promotion(promo_id)
         if promo is None:
@@ -97,42 +88,31 @@ class PurchaseService:
                 detail="Promotion is not within valid date range",
             )
 
-        return subtotal * (promo.discount_percentage / 100)
+        discount_percentage = promo.discount_percentage
+        if not isinstance(discount_percentage, Decimal):
+            discount_percentage = Decimal(str(discount_percentage))
 
-    def _compute_totals(self, subtotal, discount):
+        return subtotal * (discount_percentage / Decimal("100"))
+
+    def _compute_totals(self, subtotal: Decimal, discount: Decimal):
         """
-        Compute taxable amount, tax, total, and loyalty points.
-
-        Args:
-            subtotal (float): Subtotal before discount.
-            discount (float): Discount amount.
+        Compute tax, total, and loyalty points.
 
         Returns:
-            tuple[float, float, float, int]: tax_amount, total, loyalty_points
+            tuple[Decimal, Decimal, int]: tax_amount, total, loyalty_points
         """
         taxable = subtotal - discount
-        tax_amount = taxable * 0.07
-        total = taxable + tax_amount
-
-        tax_amount = round(tax_amount, 2)
-        total = round(total, 2)
+        tax_amount = self._quantize(taxable * TAX_RATE)
+        total = self._quantize(taxable + tax_amount)
         loyalty_points = floor(total)
 
         return tax_amount, total, loyalty_points
 
     def _update_loyalty_points(self, customer_id, loyalty_points):
-        """
-        Update loyalty points for a customer if applicable.
-
-        Args:
-            customer_id (int | None): Customer ID.
-            loyalty_points (int): Points to award.
-        """
         if customer_id is None:
             return
 
         customer = self.customer_repo.get_customer_or_404(customer_id)
-
         customer.loyalty_points += loyalty_points
         self.db.add(customer)
 
@@ -156,8 +136,8 @@ class PurchaseService:
         line_items, subtotal = self._build_line_items_and_subtotal(purchase_create)
         discount = self._apply_promotion(purchase_create.promo_id, subtotal)
 
-        subtotal = round(subtotal, 2)
-        discount = round(discount, 2)
+        subtotal = self._quantize(subtotal)
+        discount = self._quantize(discount)
 
         tax_amount, total, loyalty_points = self._compute_totals(subtotal, discount)
         self._update_loyalty_points(purchase_create.customer_id, loyalty_points)

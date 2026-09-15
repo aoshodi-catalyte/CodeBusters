@@ -9,9 +9,9 @@ the Vendor model.
 from sqlalchemy import (
     Boolean,
     Column,
-    Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     UniqueConstraint,
 )
@@ -50,8 +50,10 @@ class BakedGoodSchema(Base):
     active = Column(Boolean, default=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    purchasing_cost = Column(Float, nullable=False)
-    retail_price = Column(Float, nullable=False)
+
+    # Monetary values use fixed-point decimal precision.
+    purchasing_cost = Column(Numeric(10, 2), nullable=False)
+    retail_price = Column(Numeric(10, 2), nullable=False)
 
     vendor_id = Column(Integer, ForeignKey("vendor.id"), nullable=False)
 
