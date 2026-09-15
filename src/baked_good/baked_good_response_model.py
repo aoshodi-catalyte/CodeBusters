@@ -6,7 +6,9 @@ This model ensures consistent serialization of baked good data across all
 endpoints and supports ORM mode via `from_attributes=True`.
 """
 
-from pydantic import BaseModel, ConfigDict
+from decimal import Decimal, ROUND_HALF_UP
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BakedGoodResponseModel(BaseModel):
@@ -18,8 +20,8 @@ class BakedGoodResponseModel(BaseModel):
         active (bool): Whether the baked good is currently active.
         name (str): Name of the baked good.
         description (str): Description of the baked good.
-        purchasing_cost (float): Cost to produce or purchase the baked good.
-        retail_price (float): Price at which the baked good is sold.
+        purchasing_cost (Decimal): Cost to produce or purchase the baked good.
+        retail_price (Decimal): Price at which the baked good is sold.
         vendor_id (int): ID of the vendor associated with the baked good.
     """
 
@@ -27,8 +29,21 @@ class BakedGoodResponseModel(BaseModel):
     active: bool
     name: str
     description: str
-    purchasing_cost: float
-    retail_price: float
+
+    purchasing_cost: Decimal = Field(decimal_places=2)
+    retail_price: Decimal = Field(decimal_places=2)
+
     vendor_id: int
+
+    @field_validator("purchasing_cost", "retail_price")
+    @classmethod
+    def format_money(cls, value: Decimal) -> Decimal:
+        """
+        Ensures monetary values have exactly two decimal places.
+        """
+        return value.quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
 
     model_config = ConfigDict(from_attributes=True)
