@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+import pytest
+from sqlalchemy.exc import IntegrityError
 
 from purchase.purchase_schema import PurchaseItemSchema, PurchaseSchema
 
@@ -33,6 +35,7 @@ def test_purchase_schema_defaults(db):
         tax_amount=0.56,
         total=8.56,
         customer_id=None,
+        employee_id=1,
         promo_id=None,
     )
 
@@ -48,6 +51,7 @@ def test_purchase_schema_defaults(db):
     assert purchase.created_at.tzinfo is None
 
     assert purchase.id > 0
+    assert purchase.employee_id == 1
     assert purchase.subtotal == 10.00
     assert purchase.discount_amount == 2.00
     assert purchase.tax_amount == 0.56
@@ -63,6 +67,7 @@ def test_purchase_schema_relationship_items(db):
         tax_amount=1.40,
         total=21.40,
         customer_id=None,
+        employee_id=3,
         promo_id=None,
     )
 
@@ -95,7 +100,8 @@ def test_purchase_schema_relationship_items(db):
     assert len(purchase.items) == 2
     assert purchase.items[0].purchase_id == purchase.id
     assert purchase.items[1].purchase_id == purchase.id
-
+    assert item1.purchase.id == purchase.id
+    assert item2.purchase.id == purchase.id
 
 def test_purchase_schema_foreign_keys_nullable(db):
     """customer_id and promo_id should allow NULL values."""
@@ -105,6 +111,7 @@ def test_purchase_schema_foreign_keys_nullable(db):
         tax_amount=1.05,
         total=16.05,
         customer_id=None,
+        employee_id=5,
         promo_id=None,
     )
 
@@ -114,3 +121,40 @@ def test_purchase_schema_foreign_keys_nullable(db):
 
     assert purchase.customer_id is None
     assert purchase.promo_id is None
+    assert purchase.employee_id == 5
+
+def test_purchase_schema_employee_id_persistence(db):
+    """PurchaseSchema should persist and retrieve the employee ID."""
+    purchase = PurchaseSchema(
+        subtotal=10.00,
+        discount_amount=0.00,
+        tax_amount=0.70,
+        total=10.70,
+        customer_id=None,
+        employee_id=3,
+        promo_id=None,
+    )
+
+    db.add(purchase)
+    db.commit()
+    db.refresh(purchase)
+
+    assert purchase.employee_id == 3
+
+def test_purchase_schema_requires_employee_id(db):
+    """PurchaseSchema should require an employee ID."""
+    purchase = PurchaseSchema(
+        subtotal=10.00,
+        discount_amount=0.00,
+        tax_amount=0.70,
+        total=10.70,
+        customer_id=None,
+        promo_id=None,
+    )
+
+    db.add(purchase)
+
+    with pytest.raises(IntegrityError):
+        db.commit()
+
+    db.rollback()

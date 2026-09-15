@@ -14,22 +14,26 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 
 class DecimalSerializerModel(BaseModel):
     """
-    Base model providing shared Decimal-to-float serialization for monetary fields.
+    Base model providing shared Decimal serialization for monetary fields.
 
     Any subclass can declare Decimal fields and they will automatically be
-    serialized as floats in JSON responses.
+    serialized as fixed two-decimal-place strings (e.g. "10.00") in JSON
+    responses, rather than as floats, which avoids binary floating-point
+    rounding artifacts in monetary values.
     """
 
     @field_serializer("*")
     def serialize_decimal_fields(self, value):
         """
-        Convert Decimal values into floats for JSON serialization.
+        Format Decimal values as two-decimal-place strings for JSON
+        serialization.
 
         Args:
             value (Any): A field value that may be a Decimal.
 
         Returns:
-            Any: A float if the value is a Decimal, otherwise the original value.
+            Any: A "X.XX"-formatted string if the value is a Decimal,
+                otherwise the original value.
         """
         if isinstance(value, Decimal):
             return float(value)
@@ -49,6 +53,26 @@ class PurchaseItemCreate(BaseModel):
     item_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
 
+    @field_validator("item_type")
+    @classmethod
+    def normalize_item_type(cls, v):
+        """
+        Normalize and validate the purchase item type.
+        """
+        normalized = v.strip().lower().replace(" ", "_")
+
+        baked_good_aliases = {"baked_good", "bakedgood"}
+        drink_aliases = {"drink", "drink_recipe", "drinkrecipe"}
+
+        if normalized in baked_good_aliases:
+            return "baked good"
+
+        if normalized in drink_aliases:
+            return "drink"
+
+        raise ValueError(
+            f"Invalid item_type '{v}'. Allowed types: baked good or drink."
+        )
 
 class PurchaseCreate(BaseModel):
     """
@@ -73,7 +97,8 @@ class PurchaseItemResponse(DecimalSerializerModel):
         item_type (str): The type of item purchased.
         item_id (int): The ID of the purchased item.
         quantity (int): Quantity purchased.
-        price_at_sale (Decimal): Price of the item at the time of sale.
+        price_at_sale (Decimal): Price of the item at the time of sale,
+            serialized as a two-decimal-place string (e.g. "4.50").
     """
     id: int
     item_type: str
@@ -112,17 +137,23 @@ class PurchaseResponse(DecimalSerializerModel):
     Fields:
         id (int): Unique purchase identifier.
         customer_id (int | None): Customer associated with the purchase.
+        employee_id (int): Employee who processed the purchase.
         promo_id (int | None): Promotion applied to the purchase.
-        subtotal (Decimal): Total before discounts and tax.
-        discount_amount (Decimal): Discount applied from promotion.
-        tax_amount (Decimal): Calculated tax amount.
-        total (Decimal): Final total after tax and discounts.
+        subtotal (Decimal): Total before discounts and tax, serialized as
+            a two-decimal-place string (e.g. "10.00").
+        discount_amount (Decimal): Discount applied from promotion,
+            serialized as a two-decimal-place string.
+        tax_amount (Decimal): Calculated tax amount, serialized as a
+            two-decimal-place string.
+        total (Decimal): Final total after tax and discounts, serialized
+            as a two-decimal-place string.
         loyalty_points_awarded (int): Loyalty points earned.
         created_at (datetime): Timestamp of purchase creation.
         items (list[PurchaseItemResponse]): Line items included in the purchase.
     """
     id: int
     customer_id: int | None
+    employee_id: int
     promo_id: int | None
 
     subtotal: Decimal

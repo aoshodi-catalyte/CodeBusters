@@ -1,5 +1,7 @@
 """Tests for ingredient Pydantic models."""
 
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 
@@ -25,8 +27,8 @@ def test_ingredient():
     ingredient = Ingredient(
         active=True,
         name="Whole Milk",
-        purchasing_cost=4.50,
-        unit_amount=1.00,
+        purchasing_cost=Decimal("4.50"),
+        unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.LITERS,
         allergens=["milk"],
         vendor_id=1,
@@ -34,8 +36,8 @@ def test_ingredient():
 
     assert ingredient.active is True
     assert ingredient.name == "Whole Milk"
-    assert ingredient.purchasing_cost == 4.50
-    assert ingredient.unit_amount == 1.00
+    assert ingredient.purchasing_cost == Decimal("4.50")
+    assert ingredient.unit_amount == Decimal("1.00")
     assert ingredient.unit_of_measure == UnitOfMeasure.LITERS
     assert ingredient.allergens == ["Milk"]
     assert ingredient.vendor_id == 1
@@ -45,8 +47,8 @@ def test_ingredient_active_defaults_to_true():
     """Test that active defaults to True."""
     ingredient = Ingredient(
         name="Whole Milk",
-        purchasing_cost=4.50,
-        unit_amount=1.00,
+        purchasing_cost=Decimal("4.50"),
+        unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.LITERS,
         vendor_id=1,
     )
@@ -58,8 +60,8 @@ def test_ingredient_allergens_default_to_empty_list():
     """Test that allergens default to an empty list."""
     ingredient = Ingredient(
         name="Whole Milk",
-        purchasing_cost=4.50,
-        unit_amount=1.00,
+        purchasing_cost=Decimal("4.50"),
+        unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.LITERS,
         vendor_id=1,
     )
@@ -72,8 +74,8 @@ def test_purchasing_cost_cannot_be_negative():
     with pytest.raises(ValidationError):
         Ingredient(
             name="Whole Milk",
-            purchasing_cost=-4.50,
-            unit_amount=1.00,
+            purchasing_cost=Decimal("-4.50"),
+            unit_amount=Decimal("1.00"),
             unit_of_measure=UnitOfMeasure.LITERS,
             vendor_id=1,
         )
@@ -84,8 +86,8 @@ def test_unit_amount_must_be_greater_than_zero():
     with pytest.raises(ValidationError):
         Ingredient(
             name="Whole Milk",
-            purchasing_cost=4.50,
-            unit_amount=-1.00,
+            purchasing_cost=Decimal("4.50"),
+            unit_amount=Decimal("-1.00"),
             unit_of_measure=UnitOfMeasure.LITERS,
             vendor_id=1,
         )
@@ -95,8 +97,8 @@ def test_unit_of_measure():
     """Test that a valid unit of measure is accepted."""
     ingredient = Ingredient(
         name="Whole Milk",
-        purchasing_cost=4.50,
-        unit_amount=1.00,
+        purchasing_cost=Decimal("4.50"),
+        unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.LITERS,
         vendor_id=1,
     )
@@ -108,8 +110,8 @@ def test_create_ingredient_with_empty_allergens():
     """Test that an ingredient can have no allergens."""
     ingredient = Ingredient(
         name="Flour",
-        purchasing_cost=4.50,
-        unit_amount=1.00,
+        purchasing_cost=Decimal("4.50"),
+        unit_amount=Decimal("1.00"),
         unit_of_measure=UnitOfMeasure.KILOGRAMS,
         allergens=[],
         vendor_id=1,
@@ -123,8 +125,8 @@ def test_invalid_allergen_raises_validation_error():
     with pytest.raises(ValidationError):
         Ingredient(
             name="Mystery Item",
-            purchasing_cost=4.50,
-            unit_amount=1.00,
+            purchasing_cost=Decimal("4.50"),
+            unit_amount=Decimal("1.00"),
             unit_of_measure=UnitOfMeasure.LITERS,
             allergens=["Kryptonite"],
             vendor_id=1,
@@ -136,9 +138,47 @@ def test_invalid_unit_of_measure_raises_validation_error():
     with pytest.raises(ValidationError):
         Ingredient(
             name="Mystery Item",
-            purchasing_cost=4.50,
-            unit_amount=1.00,
+            purchasing_cost=Decimal("4.50"),
+            unit_amount=Decimal("1.00"),
             unit_of_measure="parsecs",
             allergens=[],
+            vendor_id=1,
+        )
+
+
+def test_purchasing_cost_allows_two_decimal_places():
+    """Test that purchasing cost accepts exactly two decimal places."""
+    ingredient = Ingredient(
+        name="Coffee Beans",
+        purchasing_cost=Decimal("5.50"),
+        unit_amount=Decimal("1.00"),
+        unit_of_measure=UnitOfMeasure.KILOGRAMS,
+        vendor_id=1,
+    )
+
+    assert ingredient.purchasing_cost == Decimal("5.50")
+
+
+def test_purchasing_cost_allows_whole_dollar_amount():
+    """Test that purchasing cost accepts a whole dollar amount."""
+    ingredient = Ingredient(
+        name="Coffee Beans",
+        purchasing_cost=Decimal("5"),
+        unit_amount=Decimal("1.00"),
+        unit_of_measure=UnitOfMeasure.KILOGRAMS,
+        vendor_id=1,
+    )
+
+    assert ingredient.purchasing_cost == Decimal("5")
+
+
+def test_purchasing_cost_rejects_more_than_two_decimal_places():
+    """Test that purchasing cost rejects more than two decimal places."""
+    with pytest.raises(ValidationError):
+        Ingredient(
+            name="Coffee Beans",
+            purchasing_cost=Decimal("5.555"),
+            unit_amount=Decimal("1.00"),
+            unit_of_measure=UnitOfMeasure.KILOGRAMS,
             vendor_id=1,
         )

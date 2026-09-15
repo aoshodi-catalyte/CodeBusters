@@ -11,24 +11,34 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from dependencies.auth_dependencies import get_current_employee_id
+from exceptions.baked_good_exceptions import BakedGoodNotFoundError
+from exceptions.customer_exceptions import CustomerNotFoundError
+from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
 from purchase.purchase_model import PurchaseCreate, PurchaseResponse
 from purchase.purchase_service_logic import PurchaseService
+from security.secure_manager_login import check_role
 
 router = APIRouter(prefix="/purchases", tags=["Purchases"])
 
 
 @router.post(
     "",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=PurchaseResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db)):
+def create_purchase(payload: PurchaseCreate,
+db: Session = Depends(get_db),
+employee_id: int = Depends
+(get_current_employee_id)):
     """
     Create a new purchase.
 
     Args:
         payload (PurchaseCreate): Incoming purchase request body.
         db (Session): Database session dependency.
+        employee_id (int): ID of the authenticated employee from the JWT.
 
     Returns:
         PurchaseResponse: The created purchase record.
@@ -36,14 +46,13 @@ def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db)):
     service = PurchaseService(db)
 
     try:
-        return service.create_purchase(payload)
+        return service.create_purchase(payload, employee_id)
 
-    except ValueError as e:
+    except (BakedGoodNotFoundError, DrinkRecipeNotFoundError, CustomerNotFoundError,) as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         ) from e
-
 
 @router.get(
     "/{purchase_id}",
