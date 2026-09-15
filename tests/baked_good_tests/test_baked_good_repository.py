@@ -1,45 +1,17 @@
-from baked_good.baked_good_schema import BakedGoodSchema
-import models
-
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
 
 from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
-from repositories.baked_good_repository import BakedGoodRepository
-from database import Base
+from baked_good.baked_good_schema import BakedGoodSchema
 from exceptions.baked_good_exceptions import (
     BakedGoodAlreadyDeactivatedError,
     BakedGoodNotFoundError,
     DuplicateBakedGoodError,
-    VendorNotFoundError, 
+    VendorNotFoundError,
 )
+import models
+from repositories.baked_good_repository import BakedGoodRepository
+from repositories.deactivate_audit_repository import AuditRepository
 from vendor.vendor_schema import Vendor
-
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-test_engine = create_engine(
-    TEST_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
-)
-
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=test_engine
-)  # pylint: disable=invalid-name
-
-
-@pytest.fixture
-def db():
-    """Creates a fresh database session for each test."""
-    Base.metadata.create_all(bind=test_engine)
-    session = TestingSessionLocal()
-
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=test_engine)
 
 
 def make_vendor(vendor_id=1, name="Test Vendor", email="vendor1@example.com"):
@@ -536,8 +508,9 @@ def test_deactivate_baked_good_success(db):
     db.refresh(baked_good)
 
     repo = BakedGoodRepository(db)
+    audit_db = AuditRepository(db)
 
-    result = repo.deactivate_baked_good(baked_good.id)
+    result = repo.deactivate_baked_good(baked_good.id, "test_user", audit_db)
 
     assert result.id == baked_good.id
     assert result.active is False
@@ -553,9 +526,10 @@ def test_deactivate_baked_good_not_found(db):
 
     """Test deactivating a baked good that does not exist."""
     repo = BakedGoodRepository(db)
+    audit_db = AuditRepository(db)
 
     with pytest.raises(BakedGoodNotFoundError):
-        repo.deactivate_baked_good(9999)
+        repo.deactivate_baked_good(9999, "test_user", audit_db)
 
 def test_deactivate_baked_good_already_deactivated(db):
     vendor = make_vendor()
@@ -578,6 +552,7 @@ def test_deactivate_baked_good_already_deactivated(db):
     db.refresh(baked_good)
 
     repo = BakedGoodRepository(db)
+    audit_db = AuditRepository(db)
 
     with pytest.raises(BakedGoodAlreadyDeactivatedError):
-        repo.deactivate_baked_good(baked_good.id)
+        repo.deactivate_baked_good(baked_good.id, "test_user", audit_db)

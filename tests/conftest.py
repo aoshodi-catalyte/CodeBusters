@@ -5,6 +5,7 @@ Ensures both main and audit tables are created in the in‑memory SQLite DB.
 
 from datetime import date
 
+import pytest
 from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine
@@ -76,6 +77,37 @@ def client(db):
         yield db
 
     # Audit DB uses the SAME SQLite session
+    def override_get_audit_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_audit_db] = override_get_audit_db
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def acting_user():
+    return "test_user@example.com"
+
+
+@pytest.fixture
+def fake_audit_repo():
+    class FakeAuditRepo:
+        def record_deactivation(self, item_id, item_name, acting_user, entity_type):
+            pass
+    return FakeAuditRepo()
+
+
+@pytest.fixture
+def clean_client(db):
+    """Client without seeding the acting manager."""
+    def override_get_db():
+        yield db
+
     def override_get_audit_db():
         yield db
 

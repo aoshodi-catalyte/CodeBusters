@@ -14,13 +14,16 @@ from typing import List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from exceptions.baked_good_exceptions import (
-    BakedGoodNotFoundError,
-    DuplicateBakedGoodError,
-    VendorNotFoundError, BakedGoodAlreadyDeactivatedError,
-)
 from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from baked_good.baked_good_schema import BakedGoodSchema
+from constants.entity_types import EntityType
+from exceptions.baked_good_exceptions import (
+    BakedGoodAlreadyDeactivatedError,
+    BakedGoodNotFoundError,
+    DuplicateBakedGoodError,
+    VendorNotFoundError,
+)
+from repositories.deactivate_audit_repository import AuditRepository
 from vendor.vendor_schema import Vendor
 
 
@@ -219,19 +222,14 @@ class BakedGoodRepository:
 
         return baked_good
 
-    def deactivate_baked_good(self, baked_good_id: int) -> BakedGoodSchema:
+    def deactivate_baked_good(
+        self,
+        baked_good_id: int,
+        acting_user: str,
+        audit_repo: AuditRepository
+    ) -> BakedGoodSchema:
         """
         Deactivates an existing baked good by setting its active status to False.
-
-        Args:
-            baked_good_id: The ID of the baked good to deactivate.
-
-        Raises:
-            BakedGoodNotFoundError: If the baked good does not exist.
-            BakedGoodAlreadyDeactivatedError: If the baked good is already inactive.
-
-        Returns:
-            The updated baked good with its active status set to False.
         """
         baked_good = self.get_baked_good_by_id(baked_good_id)
 
@@ -245,5 +243,8 @@ class BakedGoodRepository:
 
         self.session.commit()
         self.session.refresh(baked_good)
+
+        # pylint: disable-next=line-too-long
+        audit_repo.record_deactivation(baked_good_id, baked_good.name, acting_user, EntityType.BAKED_GOOD)
 
         return baked_good
