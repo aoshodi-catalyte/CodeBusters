@@ -97,6 +97,14 @@ def test_create_ingredient(db_session):
     assert ingredient.vendor_id == 1
 
 
+def test_ingredient_monetary_column_uses_two_decimal_places():
+    """Test that purchasing_cost uses Numeric with two decimal places."""
+    column = IngredientSchema.__table__.columns["purchasing_cost"]
+
+    assert column.type.precision == 10
+    assert column.type.scale == 2
+
+
 def test_ingredient_active_defaults_to_true(db_session):
     """Test that active defaults to True."""
     create_vendor(db_session)
