@@ -12,44 +12,6 @@ from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_schema import EmployeeSchema
 from tests.factories.auth_factories import manager_token
 
-TEST_DB_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    TEST_DB_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
-)
-
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture
-def db():
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-
-    role = EmployeeRoleSchema(role="manager")
-    session.add(role)
-    session.commit()
-
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def client(db):
-
-    def override_get_db():
-        yield db
-
-    app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app)
-
-    yield client
-    app.dependency_overrides.clear()
-
 
 def test_post_new_employee_success(client):
     token = manager_token()
@@ -178,17 +140,16 @@ def test_post_new_employee_integrity_error(monkeypatch, client):
         "detail"] == "Employee with this email already exists."
 
 
-def test_get_all_employees_empty(client):
-    """Test retrieving employees when none exist."""
-    response = client.get("/employees")
+def test_get_all_employees_empty(clean_client):
+    response = clean_client.get("/employees")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
 def test_get_all_employees(client):
-    """Test retrieving all employees."""
     token = manager_token()
+
     payload_1 = {
         "active": True,
         "first_name": "John",
@@ -217,17 +178,18 @@ def test_get_all_employees(client):
                 headers={"Authorization": f"Bearer {token}"})
 
     response = client.get("/employees")
-
     assert response.status_code == 200
 
     data = response.json()
 
-    assert len(data) == 2
-    assert data[0]["first_name"] == "John"
-    assert data[0]["email"] == "john@doe.com"
-    assert data[0]["role"] == "manager"
-    assert data[1]["first_name"] == "Jane"
-    assert data[1]["email"] == "jane@doe.com"
+    employees = [e for e in data if e["email"] != "manager@example.com"]
+
+    assert len(employees) == 2
+    assert employees[0]["first_name"] == "John"
+    assert employees[0]["email"] == "john@doe.com"
+    assert employees[0]["role"] == "manager"
+    assert employees[1]["first_name"] == "Jane"
+    assert employees[1]["email"] == "jane@doe.com"
 
 
 def test_get_all_employees_response_contains_expected_fields(client):
@@ -413,8 +375,11 @@ def test_deactivate_employee_success(client):
 
 def test_deactivate_employee_not_found(client):
     token = manager_token()
+
     response = client.delete(
-        "/employees/999", headers={"Authorization": f"Bearer {token}"})
+        "/employees/999",
+        headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 404
     assert "does not exist" in response.json()["detail"].lower()
