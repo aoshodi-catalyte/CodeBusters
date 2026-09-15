@@ -11,8 +11,7 @@ from repositories.password_reset_repository import (
 from services.email_service import EmailService
 from services.sms_service import SmsService
 from utils.password_reset_helpers import (
-    INVALID_RESET_MESSAGE,
-    apply_password_reset,
+    complete_password_reset,
     get_reset_context,
 )
 
@@ -94,16 +93,12 @@ class PasswordResetService:
                 code,
             )
 
-            if not verified:
-                raise ValueError(
-                    INVALID_RESET_MESSAGE
-                )
-
-            apply_password_reset(
+            complete_password_reset(
                 auth,
                 reset_record,
                 new_password,
                 datetime.now(timezone.utc),
+                verified,
             )
 
             db.commit()

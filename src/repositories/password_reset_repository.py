@@ -11,7 +11,7 @@ from password_reset.password_reset_model import PasswordResetChannel
 from password_reset.password_reset_schema import PasswordResetToken
 from utils.password_reset_helpers import (
     INVALID_RESET_MESSAGE,
-    apply_password_reset,
+    complete_password_reset,
     get_auth_by_username,
     get_reset_context,
 )
@@ -169,23 +169,25 @@ class PasswordResetRepository:
                 INVALID_RESET_MESSAGE
             )
 
-        if not verify_password(
+        verified = verify_password(
             code,
             reset_record.token_hash,
-        ):
-            reset_record.attempt_count += 1
+        )
 
+        if not verified:
+            reset_record.attempt_count += 1
             db.commit()
 
             raise ValueError(
                 INVALID_RESET_MESSAGE
             )
 
-        apply_password_reset(
+        complete_password_reset(
             auth,
             reset_record,
             new_password,
             now,
+            verified,
         )
 
         db.commit()
