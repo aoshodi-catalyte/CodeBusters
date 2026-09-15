@@ -244,6 +244,7 @@ class BakedGoodRepository:
         self.session.commit()
         self.session.refresh(baked_good)
 
+        # pylint: disable-next=line-too-long
         audit_repo.record_deactivation(baked_good_id, baked_good.name, acting_user, EntityType.BAKED_GOOD)
 
         return baked_good
