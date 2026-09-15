@@ -9,12 +9,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from database import Base, get_db
+from database import AuditBase, Base, get_audit_db, get_db
 from routers.ingredient_router import router as ingredient_router
 from routers.vendor_router import router as vendor_router
 from tests.factories.auth_factories import manager_token
 
-# Use an in-memory SQLite database for fast integration tests
+
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
@@ -36,33 +36,49 @@ app.include_router(vendor_router)
 
 @pytest.fixture
 def client():
-    """
-    Creates a test client using a temporary in-memory database.
-    """
+    """Create a test client using temporary in-memory databases."""
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
+    # Create the audit tables on the same SQLite connection used
+    # by the tests. This is test-only setup and does not change the
+    # application's production database configuration.
+    AuditBase.metadata.drop_all(bind=engine)
+    AuditBase.metadata.create_all(bind=engine)
+
     def override_get_db():
         db = TestingSessionLocal()
+
         try:
             yield db
         finally:
             db.close()
 
+    def override_get_audit_db():
+        audit_db = TestingSessionLocal()
+
+        try:
+            yield audit_db
+        finally:
+            audit_db.close()
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_audit_db] = override_get_audit_db
 
     with TestClient(app) as test_client:
         yield test_client
 
     app.dependency_overrides.clear()
+
+    AuditBase.metadata.drop_all(bind=engine)
     Base.metadata.drop_all(bind=engine)
 
 
-def test_create_ingredient_success(client):
-    """Test 1: Successfully creating an ingredient returns 201 Created."""
-
+def create_vendor(client):
+    """Create and return a test vendor ID."""
     token = manager_token()
-    vendor_res = client.post(
+
+    response = client.post(
         "/vendors/",
         json={
             "active": True,
@@ -72,10 +88,17 @@ def test_create_ingredient_success(client):
             "email": "bestburgers@burger.com",
             "phone": "1234567896",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
-    vendor_id = vendor_res.json()["id"]
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+def test_create_ingredient_success(client):
+    """Test 1: Successfully creating an ingredient returns 201."""
+    token = manager_token()
+    vendor_id = create_vendor(client)
 
     payload = {
         "active": True,
@@ -87,19 +110,24 @@ def test_create_ingredient_success(client):
         "allergens": ["gluten"],
     }
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 201
+
     data = response.json()
+
     assert data["name"] == "Flour"
     assert "id" in data
 
 
 def test_create_ingredient_vendor_not_found(client):
-    """Test 2: Creating an ingredient with a non-existent vendor returns 404."""
-
+    """Test 2: Missing vendor returns 404."""
     token = manager_token()
+
     payload = {
         "active": True,
         "name": "Sugar",
@@ -110,30 +138,20 @@ def test_create_ingredient_vendor_not_found(client):
         "allergens": [],
     }
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 404
     assert response.json()["detail"]["error"] == "vendor_not_found"
 
 
 def test_create_ingredient_already_exists(client):
-    """Test 3: Creating a duplicate ingredient name returns 409 Conflict."""
+    """Test 3: Duplicate ingredient name returns 409."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    vendor_id = vendor_res.json()["id"]
+    vendor_id = create_vendor(client)
 
     payload = {
         "active": True,
@@ -145,34 +163,30 @@ def test_create_ingredient_already_exists(client):
         "allergens": [],
     }
 
-    client.post("/ingredients/", json=payload,
-                headers={"Authorization": f"Bearer {token}"})
+    first_response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    assert first_response.status_code == 201
+
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"] == "ingredient_already_exists"
+    assert response.json()["detail"]["error"] == (
+        "ingredient_already_exists"
+    )
 
 
 def test_create_ingredient_invalid_data_type(client):
     """Test 4: Invalid data types return 422."""
-
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    vendor_id = vendor_res.json()["id"]
+    vendor_id = create_vendor(client)
 
     payload = {
         "active": True,
@@ -184,20 +198,23 @@ def test_create_ingredient_invalid_data_type(client):
         "allergens": [],
     }
 
-    response = client.post("/ingredients/", json=payload,
-                           headers={"Authorization": f"Bearer {token}"})
+    response = client.post(
+        "/ingredients/",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 422
 
 
 def test_create_ingredient_missing_required_field(client):
-    """Test 5: Omitting a required field returns 422."""
-
+    """Test 5: Missing required fields return 422."""
     token = manager_token()
+
     response = client.post(
         "/ingredients/",
         json={"name": "Incomplete"},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 422
@@ -205,22 +222,8 @@ def test_create_ingredient_missing_required_field(client):
 
 def test_read_all_ingredients_success(client):
     """Test 6: Retrieving all ingredients returns 200."""
-
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    vendor_id = vendor_res.json()["id"]
+    vendor_id = create_vendor(client)
 
     client.post(
         "/ingredients/",
@@ -233,7 +236,7 @@ def test_read_all_ingredients_success(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     response = client.get("/ingredients/")
@@ -243,8 +246,7 @@ def test_read_all_ingredients_success(client):
 
 
 def test_read_all_ingredients_empty(client):
-    """Test 7: Retrieving inventory when empty returns an empty list."""
-
+    """Test 7: Empty inventory returns an empty list."""
     response = client.get("/ingredients/")
 
     assert response.status_code == 200
@@ -254,21 +256,9 @@ def test_read_all_ingredients_empty(client):
 def test_read_ingredient_by_id_success(client):
     """Test 8: Retrieving a valid ingredient ID returns 200."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    vendor_id = create_vendor(client)
 
-    vendor_id = vendor_res.json()["id"]
-    create_res = client.post(
+    create_response = client.post(
         "/ingredients/",
         json={
             "active": True,
@@ -279,11 +269,14 @@ def test_read_ingredient_by_id_success(client):
             "vendor_id": vendor_id,
             "allergens": ["Milk"],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
-    ingredient_id = create_res.json()["id"]
 
-    response = client.get(f"/ingredients/{ingredient_id}")
+    ingredient_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/ingredients/{ingredient_id}"
+    )
 
     assert response.status_code == 200
     assert response.json()["id"] == ingredient_id
@@ -291,32 +284,21 @@ def test_read_ingredient_by_id_success(client):
 
 
 def test_read_ingredient_by_id_not_found(client):
-    """Test 9: Retrieving a non-existent ingredient returns 404."""
-
+    """Test 9: Retrieving a nonexistent ingredient returns 404."""
     response = client.get("/ingredients/999")
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"] == "ingredient_not_found"
+    assert response.json()["detail"]["error"] == (
+        "ingredient_not_found"
+    )
 
 
 def test_update_ingredient_success(client):
     """Test 10: Successfully updating an ingredient returns 200."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    vendor_id = create_vendor(client)
 
-    vendor_id = vendor_res.json()["id"]
-    create_res = client.post(
+    create_response = client.post(
         "/ingredients/",
         json={
             "active": True,
@@ -327,9 +309,10 @@ def test_update_ingredient_success(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
-    ingredient_id = create_res.json()["id"]
+
+    ingredient_id = create_response.json()["id"]
 
     update_payload = {
         "active": False,
@@ -344,7 +327,7 @@ def test_update_ingredient_success(client):
     response = client.put(
         f"/ingredients/{ingredient_id}",
         json=update_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
@@ -353,23 +336,9 @@ def test_update_ingredient_success(client):
 
 
 def test_update_ingredient_not_found(client):
-    """Test 11: Updating a non-existent ingredient returns 404."""
-
+    """Test 11: Updating a nonexistent ingredient returns 404."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    vendor_id = vendor_res.json()["id"]
+    vendor_id = create_vendor(client)
 
     payload = {
         "active": True,
@@ -384,31 +353,21 @@ def test_update_ingredient_not_found(client):
     response = client.put(
         "/ingredients/999",
         json=payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"] == "ingredient_not_found"
+    assert response.json()["detail"]["error"] == (
+        "ingredient_not_found"
+    )
 
 
 def test_update_ingredient_vendor_not_found(client):
-    """Test 12: Updating with a non-existent vendor returns 404."""
+    """Test 12: Updating with a nonexistent vendor returns 404."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    vendor_id = create_vendor(client)
 
-    vendor_id = vendor_res.json()["id"]
-    create_res = client.post(
+    create_response = client.post(
         "/ingredients/",
         json={
             "active": True,
@@ -419,9 +378,10 @@ def test_update_ingredient_vendor_not_found(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
-    ingredient_id = create_res.json()["id"]
+
+    ingredient_id = create_response.json()["id"]
 
     update_payload = {
         "active": True,
@@ -436,31 +396,20 @@ def test_update_ingredient_vendor_not_found(client):
     response = client.put(
         f"/ingredients/{ingredient_id}",
         json=update_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"] == "vendor_not_found"
+    assert response.json()["detail"]["error"] == (
+        "vendor_not_found"
+    )
 
 
 def test_update_ingredient_already_exists(client):
-    """Test 13: Updating to an existing ingredient name returns 409."""
-
+    """Test 13: Updating to an existing name returns 409."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    vendor_id = create_vendor(client)
 
-    vendor_id = vendor_res.json()["id"]
     client.post(
         "/ingredients/",
         json={
@@ -472,8 +421,9 @@ def test_update_ingredient_already_exists(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
+
     item2 = client.post(
         "/ingredients/",
         json={
@@ -485,7 +435,7 @@ def test_update_ingredient_already_exists(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     ).json()
 
     update_payload = {
@@ -501,20 +451,23 @@ def test_update_ingredient_already_exists(client):
     response = client.put(
         f"/ingredients/{item2['id']}",
         json=update_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"] == "ingredient_already_exists"
+    assert response.json()["detail"]["error"] == (
+        "ingredient_already_exists"
+    )
 
 
 def test_update_ingredient_invalid_schema(client):
     """Test 14: Invalid update payload returns 422."""
     token = manager_token()
+
     response = client.put(
         "/ingredients/1",
         json={"invalid_field": True},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 422
@@ -523,20 +476,7 @@ def test_update_ingredient_invalid_schema(client):
 def test_get_all_ingredients_multiple(client):
     """Test 15: Retrieving multiple ingredients returns correct count."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Bob's Burgers",
-            "contact_name": "Bob Belcher",
-            "contact_role": "CEO",
-            "email": "bestburgers@burger.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    vendor_id = vendor_res.json()["id"]
+    vendor_id = create_vendor(client)
 
     for name in ["Carrot", "Potato", "Tomato"]:
         client.post(
@@ -550,7 +490,7 @@ def test_get_all_ingredients_multiple(client):
                 "vendor_id": vendor_id,
                 "allergens": [],
             },
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
     response = client.get("/ingredients/")
@@ -560,24 +500,11 @@ def test_get_all_ingredients_multiple(client):
 
 
 def test_soft_delete_ingredient_success(client):
-    """Test 16: Successfully soft deleting an ingredient returns 204."""
+    """Test 16: Successfully soft deleting returns 204."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Soft Delete Vendor",
-            "contact_name": "John Doe",
-            "contact_role": "Sales",
-            "email": "softdelete@test.com",
-            "phone": "1234567896",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    vendor_id = create_vendor(client)
 
-    vendor_id = vendor_res.json()["id"]
-
-    create_res = client.post(
+    create_response = client.post(
         "/ingredients/",
         json={
             "active": True,
@@ -588,47 +515,41 @@ def test_soft_delete_ingredient_success(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
-    ingredient_id = create_res.json()["id"]
+    ingredient_id = create_response.json()["id"]
 
     response = client.delete(
-        f"/ingredients/{ingredient_id}", headers={"Authorization": f"Bearer {token}"})
+        f"/ingredients/{ingredient_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 204
     assert response.content == b""
 
 
 def test_soft_delete_ingredient_not_found(client):
-    """Test 17: Soft deleting a non-existent ingredient returns 404."""
+    """Test 17: Soft deleting a nonexistent ingredient returns 404."""
     token = manager_token()
+
     response = client.delete(
-        "/ingredients/9999", headers={"Authorization": f"Bearer {token}"})
+        "/ingredients/9999",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"] == "ingredient_not_found"
+    assert response.json()["detail"]["error"] == (
+        "ingredient_not_found"
+    )
 
 
 def test_soft_delete_ingredient_is_persisted(client):
-    """Test 18: Soft deleting an ingredient persists active=False."""
+    """Test 18: Soft deletion persists active=False."""
     token = manager_token()
-    vendor_res = client.post(
-        "/vendors/",
-        json={
-            "active": True,
-            "name": "Persistence Vendor",
-            "contact_name": "John Doe",
-            "contact_role": "Sales",
-            "email": "persistdelete@test.com",
-            "phone": "1234567897",
-        },
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    vendor_id = create_vendor(client)
 
-    vendor_id = vendor_res.json()["id"]
-
-    create_res = client.post(
+    create_response = client.post(
         "/ingredients/",
         json={
             "active": True,
@@ -639,19 +560,96 @@ def test_soft_delete_ingredient_is_persisted(client):
             "vendor_id": vendor_id,
             "allergens": [],
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
 
-    ingredient_id = create_res.json()["id"]
+    ingredient_id = create_response.json()["id"]
 
     delete_response = client.delete(
-        f"/ingredients/{ingredient_id}", headers={"Authorization": f"Bearer {token}"})
+        f"/ingredients/{ingredient_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert delete_response.status_code == 204
 
-    # Verify the soft delete through the GET endpoint.
-    get_response = client.get(f"/ingredients/{ingredient_id}")
+    get_response = client.get(
+        f"/ingredients/{ingredient_id}"
+    )
 
     assert get_response.status_code == 200
     assert get_response.json()["id"] == ingredient_id
     assert get_response.json()["active"] is False
+
+
+def test_get_deactivated_ingredients(client):
+    """Test 19: Managers can view deactivated ingredients."""
+    token = manager_token()
+    vendor_id = create_vendor(client)
+
+    active_response = client.post(
+        "/ingredients/",
+        json={
+            "active": True,
+            "name": "Active Flour",
+            "purchasing_cost": 2.00,
+            "unit_amount": 1.0,
+            "unit_of_measure": "kg",
+            "vendor_id": vendor_id,
+            "allergens": [],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    inactive_response = client.post(
+        "/ingredients/",
+        json={
+            "active": True,
+            "name": "Inactive Flour",
+            "purchasing_cost": 2.50,
+            "unit_amount": 1.0,
+            "unit_of_measure": "kg",
+            "vendor_id": vendor_id,
+            "allergens": [],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    active_id = active_response.json()["id"]
+    inactive_id = inactive_response.json()["id"]
+
+    delete_response = client.delete(
+        f"/ingredients/{inactive_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert delete_response.status_code == 204
+
+    response = client.get(
+        "/ingredients/deactivated",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["id"] == inactive_id
+    assert data[0]["active"] is False
+
+    assert data[0]["id"] != active_id
+
+
+def test_get_deactivation_history_not_found(client):
+    """Test 20: History for a nonexistent ingredient returns 404."""
+    token = manager_token()
+
+    response = client.get(
+        "/ingredients/9999/deactivation-history",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"] == (
+        "ingredient_not_found"
+    )

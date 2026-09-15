@@ -1,24 +1,25 @@
 """Tests for the ingredient repository."""
 
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
+from constants.entity_types import EntityType
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
+    IngredientAlreadyInactiveError,
     IngredientConstraintError,
-    VendorNotFoundError,
     IngredientNotFoundError,
+    VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
+from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
 from repositories.ingredient_repository import (
     IngredientRepository,
     get_or_create_allergen,
 )
-from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
-import models
 from vendor.vendor_schema import Vendor
 
 
@@ -30,19 +31,7 @@ def make_ingredient(
     unit_of_measure="lb",
     allergens=None,
 ):
-    """Create an Ingredient object for testing.
-
-    Args:
-        name: Ingredient name.
-        vendor_id: ID of the ingredient vendor.
-        purchasing_cost: Ingredient purchasing cost.
-        unit_amount: Quantity of the ingredient.
-        unit_of_measure: Unit used to measure the ingredient.
-        allergens: List of ingredient allergens.
-
-    Returns:
-        A validated Ingredient object.
-    """
+    """Create an Ingredient object for testing."""
     if allergens is None:
         allergens = ["Wheat"]
 
@@ -71,7 +60,9 @@ def test_create_ingredient_success(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     result = repo.create_ingredient(
         make_ingredient(
             name="Flour",
@@ -99,7 +90,9 @@ def test_create_ingredient_with_vendor(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     result = repo.create_ingredient(
         make_ingredient(
             name="Sugar",
@@ -116,6 +109,7 @@ def test_create_ingredient_vendor_not_found(db):
     """Test that a missing vendor raises VendorNotFoundError."""
     with pytest.raises(VendorNotFoundError):
         repo = IngredientRepository(db)
+
         repo.create_ingredient(
             make_ingredient(
                 name="Flour",
@@ -162,6 +156,7 @@ def test_create_ingredient_with_allergens(db):
     db.refresh(vendor)
 
     repo = IngredientRepository(db)
+
     result = repo.create_ingredient(
         make_ingredient(
             name="Chocolate",
@@ -192,6 +187,7 @@ def test_duplicate_allergens_are_removed(db):
     db.refresh(vendor)
 
     repo = IngredientRepository(db)
+
     result = repo.create_ingredient(
         make_ingredient(
             name="Butter",
@@ -218,7 +214,9 @@ def test_duplicate_ingredient_raises_error(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     repo.create_ingredient(
         make_ingredient(
             name="Flour",
@@ -227,7 +225,6 @@ def test_duplicate_ingredient_raises_error(db):
     )
 
     with pytest.raises(IngredientAlreadyExistsError):
-        repo = IngredientRepository(db)
         repo.create_ingredient(
             make_ingredient(
                 name="Flour",
@@ -256,28 +253,24 @@ def test_invalid_purchasing_cost_raises_constraint_error(db):
         vendor_id=vendor.id,
     )
 
-    # Bypass Pydantic validation so the database constraint
-    # is responsible for rejecting the invalid value.
     ingredient_data.purchasing_cost = Decimal("-5.00")
 
     with pytest.raises(IngredientConstraintError):
         repo = IngredientRepository(db)
-        repo.create_ingredient(
-            ingredient_data,
-        )
+        repo.create_ingredient(ingredient_data)
 
 
 def test_unexpected_sqlalchemy_error_is_reraised():
     """Test that unexpected SQLAlchemy errors are re-raised."""
     db = MagicMock()
+    db.query.side_effect = SQLAlchemyError(
+        "Unexpected database failure"
+    )
 
-    db.query.side_effect = SQLAlchemyError("Unexpected database failure")
+    repo = IngredientRepository(db)
 
     with pytest.raises(SQLAlchemyError):
-        repo = IngredientRepository(db)
-        repo.create_ingredient(
-            make_ingredient(),
-        )
+        repo.create_ingredient(make_ingredient())
 
     db.rollback.assert_called_once()
 
@@ -296,7 +289,9 @@ def test_update_ingredient_success(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     ingredient = repo.create_ingredient(
         make_ingredient(
             name="Flour",
@@ -330,7 +325,7 @@ def test_update_ingredient_success(db):
 
 
 def test_update_ingredient_is_persisted(db):
-    """Test that ingredient updates are persisted to the database."""
+    """Test that ingredient updates are persisted."""
     vendor = Vendor(
         name="Persistence Vendor",
         contact_name="John Doe",
@@ -343,7 +338,9 @@ def test_update_ingredient_is_persisted(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     ingredient = repo.create_ingredient(
         make_ingredient(
             name="Sugar",
@@ -364,7 +361,7 @@ def test_update_ingredient_is_persisted(db):
     )
 
     db.expire_all()
-    repo = IngredientRepository(db)
+
     persisted = repo.get_ingredient_by_id(
         ingredient_id=ingredient.id,
     )
@@ -407,6 +404,7 @@ def test_update_ingredient_not_found(db):
         "Ingredient with ID 9999 does not exist."
     )
 
+
 def test_update_ingredient_replaces_allergens(db):
     """Test that updating an ingredient replaces its allergens."""
     vendor = Vendor(
@@ -421,7 +419,9 @@ def test_update_ingredient_replaces_allergens(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     ingredient = repo.create_ingredient(
         make_ingredient(
             name="Chocolate",
@@ -430,7 +430,10 @@ def test_update_ingredient_replaces_allergens(db):
         ),
     )
 
-    assert {allergen.name for allergen in ingredient.allergens} == {"Milk", "Soy"}
+    assert {allergen.name for allergen in ingredient.allergens} == {
+        "Milk",
+        "Soy",
+    }
 
     updated_data = make_ingredient(
         name="Dark Chocolate",
@@ -444,11 +447,14 @@ def test_update_ingredient_replaces_allergens(db):
     )
 
     assert result is not None
-    assert {allergen.name for allergen in result.allergens} == {"Soy", "Wheat"}
+    assert {allergen.name for allergen in result.allergens} == {
+        "Soy",
+        "Wheat",
+    }
 
 
 def test_update_ingredient_duplicate_name_raises_error(db):
-    """Test that updating to an existing ingredient name raises an error."""
+    """Test that updating to an existing name raises an error."""
     vendor = Vendor(
         name="Duplicate Update Vendor",
         contact_name="John Doe",
@@ -461,7 +467,9 @@ def test_update_ingredient_duplicate_name_raises_error(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     repo.create_ingredient(
         make_ingredient(
             name="Flour",
@@ -500,7 +508,9 @@ def test_update_ingredient_vendor_not_found(db):
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+
     repo = IngredientRepository(db)
+
     ingredient = repo.create_ingredient(
         make_ingredient(
             name="Flour",
@@ -519,7 +529,7 @@ def test_update_ingredient_vendor_not_found(db):
 
 
 def test_soft_delete_ingredient_success(db):
-    """Test that an active ingredient is successfully soft deleted."""
+    """Test that an active ingredient can be soft deleted."""
     vendor = Vendor(
         name="Soft Delete Vendor",
         contact_name="John Doe",
@@ -534,6 +544,7 @@ def test_soft_delete_ingredient_success(db):
     db.refresh(vendor)
 
     repo = IngredientRepository(db)
+
     ingredient = repo.create_ingredient(
         make_ingredient(
             name="Vanilla Extract",
@@ -541,13 +552,31 @@ def test_soft_delete_ingredient_success(db):
         ),
     )
 
-    result = repo.soft_delete_ingredient(
-        ingredient_id=ingredient.id,
-    )
+    audit_db = MagicMock()
 
-    assert result is not None
-    assert result.id == ingredient.id
-    assert result.active is False
+    with patch(
+        "repositories.ingredient_repository.AuditRepository"
+    ) as audit_repository_class:
+        audit_repo = audit_repository_class.return_value
+
+        result = repo.__class__(
+            db=db,
+            audit_db=audit_db,
+        ).soft_delete_ingredient(
+            ingredient_id=ingredient.id,
+            employee_id=123,
+        )
+
+        assert result is not None
+        assert result.id == ingredient.id
+        assert result.active is False
+
+        audit_repo.record_deactivation.assert_called_once_with(
+            item_id=ingredient.id,
+            item_name=ingredient.name,
+            user="123",
+            item_type=EntityType.INGREDIENT,
+        )
 
 
 def test_soft_delete_ingredient_not_found(db):
@@ -556,22 +585,112 @@ def test_soft_delete_ingredient_not_found(db):
 
     result = repo.soft_delete_ingredient(
         ingredient_id=99999,
+        employee_id=123,
     )
 
     assert result is None
 
 
+def test_soft_delete_already_inactive_ingredient(db):
+    """Test that an already inactive ingredient cannot be deactivated again."""
+    vendor = Vendor(
+        name="Already Inactive Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="alreadyinactive@test.com",
+        phone="3125558000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    ingredient = IngredientSchema(
+        active=False,
+        name="Inactive Ingredient",
+        purchasing_cost=Decimal("5.00"),
+        unit_amount=Decimal("1.00"),
+        unit_of_measure="kg",
+        vendor_id=vendor.id,
+    )
+
+    db.add(ingredient)
+    db.commit()
+    db.refresh(ingredient)
+
+    repo = IngredientRepository(db)
+
+    with pytest.raises(IngredientAlreadyInactiveError):
+        repo.soft_delete_ingredient(
+            ingredient_id=ingredient.id,
+            employee_id=123,
+        )
+
+
+def test_get_deactivated_ingredients(db):
+    """Test that only inactive ingredients are returned."""
+    vendor = Vendor(
+        name="Deactivated List Vendor",
+        contact_name="John Doe",
+        contact_role="Sales",
+        email="deactivatedlist@test.com",
+        phone="3125559000",
+        active=True,
+    )
+
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+
+    active_ingredient = IngredientSchema(
+        active=True,
+        name="Active Ingredient",
+        purchasing_cost=Decimal("5.00"),
+        unit_amount=Decimal("1.00"),
+        unit_of_measure="kg",
+        vendor_id=vendor.id,
+    )
+
+    inactive_ingredient = IngredientSchema(
+        active=False,
+        name="Inactive Ingredient",
+        purchasing_cost=Decimal("6.00"),
+        unit_amount=Decimal("1.00"),
+        unit_of_measure="kg",
+        vendor_id=vendor.id,
+    )
+
+    db.add_all(
+        [
+            active_ingredient,
+            inactive_ingredient,
+        ]
+    )
+    db.commit()
+
+    repo = IngredientRepository(db)
+
+    result = repo.get_deactivated_ingredients()
+
+    assert len(result) == 1
+    assert result[0].id == inactive_ingredient.id
+    assert result[0].active is False
+
+
 def test_soft_delete_ingredient_sqlalchemy_error():
     """Test that SQLAlchemy errors are rolled back and re-raised."""
     db = MagicMock()
-
-    db.query.side_effect = SQLAlchemyError("Unexpected database failure")
+    db.query.side_effect = SQLAlchemyError(
+        "Unexpected database failure"
+    )
 
     repo = IngredientRepository(db)
 
     with pytest.raises(SQLAlchemyError):
         repo.soft_delete_ingredient(
             ingredient_id=1,
+            employee_id=123,
         )
 
     db.rollback.assert_called_once()

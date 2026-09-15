@@ -3,16 +3,21 @@
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from constants.entity_types import EntityType
+from deactivation_log.deactivation_log_schema import DeactivationLogSchema
 from exceptions.ingredient_exceptions import (
+    IngredientAlreadyInactiveError,
     IngredientAlreadyExistsError,
     IngredientConstraintError,
-    VendorNotFoundError,
     IngredientNotFoundError,
+    VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient
 from ingredient.ingredient_schema import AllergenSchema, IngredientSchema
-from vendor.vendor_schema import Vendor
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.deactivation_log_repository import DeactivationLogRepository
+from vendor.vendor_schema import Vendor
+
 
 def get_or_create_allergen(
     db: Session,
@@ -36,8 +41,14 @@ def get_or_create_allergen(
 class IngredientRepository:
     """Repository for managing ingredient-related database operations."""
 
-    def __init__(self, db: Session):
+    def __init__(
+        self,
+        db: Session,
+        audit_db: Session | None = None,
+    ):
+        """Initialize the ingredient repository."""
         self.db = db
+        self.audit_db = audit_db
 
     def create_ingredient(
         self,
@@ -116,6 +127,16 @@ class IngredientRepository:
         """Return all ingredients."""
         return self.db.query(IngredientSchema).all()
 
+    def get_deactivated_ingredients(
+        self,
+    ) -> list[IngredientSchema]:
+        """Return all ingredients that have been deactivated."""
+        return (
+            self.db.query(IngredientSchema)
+            .filter(IngredientSchema.active.is_(False))
+            .all()
+        )
+
     def get_ingredient_by_id(
         self,
         ingredient_id: int,
@@ -181,6 +202,10 @@ class IngredientRepository:
             self.db.rollback()
             raise
 
+        except IngredientNotFoundError:
+            self.db.rollback()
+            raise
+
         except IntegrityError as exc:
             self.db.rollback()
 
@@ -211,13 +236,29 @@ class IngredientRepository:
     def soft_delete_ingredient(
         self,
         ingredient_id: int,
+        employee_id: int,
     ) -> IngredientSchema | None:
-        """Soft delete an ingredient and record active relationships."""
+        """
+        Deactivate an ingredient and record the deactivation event.
+
+        The ingredient is soft deleted by setting active to False.
+        Existing active recipe relationships are recorded using the
+        existing deactivation log repository.
+
+        The audit record is written using the existing audit repository,
+        which automatically records the deactivation timestamp and the
+        user performing the action.
+        """
         try:
             ingredient = self.get_ingredient_by_id(ingredient_id)
 
             if ingredient is None:
                 return None
+
+            if not ingredient.active:
+                raise IngredientAlreadyInactiveError(
+                    ingredient_id
+                )
 
             active_recipes = [
                 recipe_link.drink_recipe
@@ -228,6 +269,7 @@ class IngredientRepository:
 
             ingredient.active = False
 
+            # Existing relationship/error logging remains unchanged.
             log_repo = DeactivationLogRepository(self.db)
 
             for recipe in active_recipes:
@@ -249,8 +291,51 @@ class IngredientRepository:
             self.db.commit()
             self.db.refresh(ingredient)
 
+            # Write the audit record after the ingredient has been
+            # successfully deactivated.
+            if self.audit_db is not None:
+                audit_repo = AuditRepository(self.audit_db)
+
+                audit_repo.record_deactivation(
+                    item_id=ingredient.id,
+                    item_name=ingredient.name,
+                    user=str(employee_id),
+                    item_type=EntityType.INGREDIENT,
+                )
+
             return ingredient
+
+        except IngredientAlreadyInactiveError:
+            self.db.rollback()
+            raise
 
         except SQLAlchemyError as exc:
             self.db.rollback()
             raise exc
+
+    def get_ingredient_deactivation_history(
+        self,
+        ingredient_id: int,
+        audit_db: Session,
+    ) -> list[DeactivationLogSchema]:
+        """
+        Return audit records for a specific ingredient.
+
+        This method queries the audit table directly rather than changing
+        the shared AuditRepository.
+        """
+        from deactivation_log.deactivation_schema import DeactivationRecord
+
+        return (
+            audit_db.query(DeactivationRecord)
+            .filter(
+                DeactivationRecord.item_id == ingredient_id,
+                DeactivationRecord.entity_type_id
+                == EntityType.INGREDIENT.value,
+            )
+            .order_by(
+                DeactivationRecord.deactivated_at.desc(),
+                DeactivationRecord.id.desc(),
+            )
+            .all()
+        )

@@ -1,10 +1,10 @@
 """
 FastAPI router for ingredient management endpoints.
 
-This module exposes API routes for creating, retrieving, and listing
-ingredients. It coordinates request validation, repository operations,
-and domain‑specific exception handling to ensure consistent and meaningful
-HTTP responses for ingredient‑related actions.
+This module exposes API routes for creating, retrieving, updating,
+and deactivating ingredients. It coordinates request validation,
+repository operations, authorization, and domain-specific exception
+handling to ensure consistent HTTP responses for ingredient actions.
 """
 
 import logging
@@ -14,14 +14,18 @@ from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from constants.entity_types import EntityType
+from database import get_audit_db, get_db
+from deactivation_log.deactivation_schema import DeactivationRecord
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
+    IngredientAlreadyInactiveError,
     IngredientConstraintError,
     IngredientNotFoundError,
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient, IngredientOut
+from ingredient.ingredient_schema import IngredientSchema
 from repositories.ingredient_repository import IngredientRepository
 from security.secure_manager_login import check_role
 from utils.response import to_response
@@ -30,6 +34,7 @@ router = APIRouter(
     prefix="/ingredients",
     tags=["ingredient"],
 )
+
 logger = logging.getLogger("codebusters")
 
 
@@ -43,24 +48,7 @@ def create(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
 ):
-    """Create a new ingredient.
-
-    Args:
-        ingredient: Validated ingredient information.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The newly created ingredient.
-
-    Raises:
-        HTTPException:
-            404 if the vendor does not exist.
-        HTTPException:
-            409 if the ingredient already exists or violates
-            a database constraint.
-        HTTPException:
-            500 if an unexpected database error occurs.
-    """
+    """Create a new ingredient."""
     logger.debug("POST /ingredients called — creating ingredient")
     repo = IngredientRepository(db)
 
@@ -120,19 +108,107 @@ def create(
 def read_all_ingredients(
     db: Session = Depends(get_db),
 ):
-    """Retrieve all ingredients in the inventory.
-
-    Args:
-        db: Database session provided by FastAPI.
-
-    Returns:
-        A response containing a message and a list of all ingredients.
-    """
+    """Retrieve all ingredients in the inventory."""
     logger.debug("GET /ingredients called — retrieving all ingredients")
     repo = IngredientRepository(db)
     ingredients = repo.get_all_ingredients()
     logger.info("Retrieved %s ingredients", len(ingredients))
-    return [to_response(IngredientOut, ingredient) for ingredient in ingredients]
+    return [
+        to_response(IngredientOut, ingredient)
+        for ingredient in ingredients
+    ]
+
+
+@router.get(
+    "/deactivated",
+    response_model=list[IngredientOut],
+    dependencies=[Depends(check_role(["manager"]))],
+)
+def read_deactivated_ingredients(
+    db: Session = Depends(get_db),
+):
+    """Retrieve all deactivated ingredients."""
+    logger.debug(
+        "GET /ingredients/deactivated called — "
+        "retrieving deactivated ingredients"
+    )
+
+    repo = IngredientRepository(db)
+    ingredients = repo.get_deactivated_ingredients()
+
+    logger.info(
+        "Retrieved %s deactivated ingredients",
+        len(ingredients),
+    )
+
+    return [
+        to_response(IngredientOut, ingredient)
+        for ingredient in ingredients
+    ]
+
+
+@router.get(
+    "/{ingredient_id}/deactivation-history",
+    dependencies=[Depends(check_role(["manager"]))],
+)
+def read_ingredient_deactivation_history(
+    ingredient_id: int,
+    db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db),
+):
+    """
+    Retrieve deactivation audit history for an ingredient.
+
+    The audit information includes the timestamp and user responsible
+    for the deactivation.
+    """
+    logger.debug(
+        "GET /ingredients/%s/deactivation-history called",
+        ingredient_id,
+    )
+
+    ingredient = (
+        db.query(IngredientSchema)
+        .filter(IngredientSchema.id == ingredient_id)
+        .first()
+    )
+
+    if ingredient is None:
+        logger.warning(
+            "Ingredient %s not found when retrieving history",
+            ingredient_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "ingredient_not_found",
+                "message": (
+                    f"Ingredient with ID {ingredient_id} was not found."
+                ),
+            },
+        )
+
+    history = (
+        audit_db.query(DeactivationRecord)
+        .filter(
+            DeactivationRecord.item_id == ingredient_id,
+            DeactivationRecord.entity_type_id
+            == EntityType.INGREDIENT.value,
+        )
+        .order_by(
+            DeactivationRecord.deactivated_at.desc(),
+            DeactivationRecord.id.desc(),
+        )
+        .all()
+    )
+
+    logger.info(
+        "Retrieved %s deactivation history records for ingredient %s",
+        len(history),
+        ingredient_id,
+    )
+
+    return history
 
 
 @router.get(
@@ -143,20 +219,12 @@ def read_ingredient(
     ingredient_id: int,
     db: Session = Depends(get_db),
 ):
-    """Retrieve a single ingredient by its ID.
+    """Retrieve a single ingredient by its ID."""
+    logger.debug(
+        "GET /ingredients/%s called — fetching ingredient",
+        ingredient_id,
+    )
 
-    Args:
-        ingredient_id: ID of the ingredient to retrieve.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The ingredient matching the specified ID.
-
-    Raises:
-        HTTPException:
-            404 if the ingredient does not exist.
-    """
-    logger.debug("GET /ingredients/%s called — fetching ingredient", ingredient_id)
     repo = IngredientRepository(db)
     ingredient = repo.get_ingredient_by_id(ingredient_id)
 
@@ -172,7 +240,11 @@ def read_ingredient(
             },
         )
 
-    logger.info("Ingredient %s retrieved successfully", ingredient_id)
+    logger.info(
+        "Ingredient %s retrieved successfully",
+        ingredient_id,
+    )
+
     return to_response(IngredientOut, ingredient)
 
 
@@ -186,30 +258,22 @@ def update(
     ingredient: Ingredient,
     db: Session = Depends(get_db),
 ):
-    """Update an existing ingredient.
+    """Update an existing ingredient."""
+    logger.debug(
+        "PUT /ingredients/%s called — updating ingredient",
+        ingredient_id,
+    )
 
-    Args:
-        ingredient_id: ID of the ingredient to update.
-        ingredient: Validated ingredient information.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        The updated ingredient.
-
-    Raises:
-        HTTPException:
-            404 if the ingredient or vendor does not exist.
-        HTTPException:
-            409 if the update violates a database constraint.
-        HTTPException:
-            500 if an unexpected database error occurs.
-    """
-    logger.debug("PUT /ingredients/%s called — updating ingredient", ingredient_id)
     repo = IngredientRepository(db)
 
     try:
         result = repo.update_ingredient(ingredient_id, ingredient)
-        logger.info("Ingredient %s updated successfully", ingredient_id)
+
+        logger.info(
+            "Ingredient %s updated successfully",
+            ingredient_id,
+        )
+
         return to_response(IngredientOut, result)
 
     except IngredientNotFoundError as exc:
@@ -268,57 +332,100 @@ def update(
 
 class IngredientDeleteResponse(BaseModel):
     """Schema used when confirming an ingredient soft delete."""
+
     message: str
     id: int
 
 
 @router.delete(
     "/{ingredient_id}",
-    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_ingredient_endpoint(
     ingredient_id: int,
+    current_user: dict = Depends(check_role(["manager"])),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db),
 ):
-    """Soft delete an ingredient by its ID.
-
-    Args:
-        ingredient_id: ID of the ingredient to deactivate.
-        db: Database session provided by FastAPI.
-
-    Returns:
-        A confirmation message and the ID of the deactivated ingredient.
-
-    Raises:
-        HTTPException:
-            404 if the ingredient does not exist.
-        HTTPException:
-            500 if a database error occurs.
     """
-    logger.debug("DELETE /ingredients/%s called — deleting ingredient", ingredient_id)
-    repo = IngredientRepository(db)
+    Soft delete an ingredient by its ID.
+
+    The authenticated manager's employee ID is passed to the repository
+    so that the deactivation is recorded in the audit database.
+    """
+    logger.debug(
+        "DELETE /ingredients/%s called — deleting ingredient",
+        ingredient_id,
+    )
+
+    employee_id = current_user.get("employee_id")
+
+    if employee_id is None:
+        logger.error(
+            "Authenticated user does not contain employee_id"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "employee_not_identified",
+                "message": (
+                    "The authenticated employee could not be identified."
+                ),
+            },
+        )
+
+    repo = IngredientRepository(
+        db=db,
+        audit_db=audit_db,
+    )
 
     try:
-        ingredient = repo.soft_delete_ingredient(ingredient_id)
+        ingredient = repo.soft_delete_ingredient(
+            ingredient_id=ingredient_id,
+            employee_id=employee_id,
+        )
 
         if ingredient is None:
-            logger.warning("Ingredient %s not found for deletion", ingredient_id)
+            logger.warning(
+                "Ingredient %s not found for deletion",
+                ingredient_id,
+            )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "error": "ingredient_not_found",
                     "message": (
-                        f"Ingredient with ID {ingredient_id} was not found."
+                        f"Ingredient with ID {ingredient_id} "
+                        "was not found."
                     ),
                 },
             )
 
-        logger.info("Ingredient %s deleted successfully", ingredient_id)
+        logger.info(
+            "Ingredient %s deactivated successfully",
+            ingredient_id,
+        )
+
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+    except IngredientAlreadyInactiveError as exc:
+        logger.warning(
+            "Ingredient %s is already inactive",
+            ingredient_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "ingredient_already_inactive",
+                "message": str(exc),
+            },
+        ) from exc
+
     except SQLAlchemyError as exc:
-        logger.error("Ingredient deletion failed: %s", exc)
+        logger.error(
+            "Ingredient deletion failed: %s",
+            exc,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

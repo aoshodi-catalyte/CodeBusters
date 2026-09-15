@@ -1,3 +1,5 @@
+"""Tests for the deactivation log repository."""
+
 from datetime import datetime
 
 from deactivation_log.deactivation_log_schema import DeactivationLogSchema
@@ -5,12 +7,13 @@ from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from repositories.deactivation_log_repository import DeactivationLogRepository
-from deactivation_log.deactivation_log_schema import DeactivationLogSchema
 from repositories.ingredient_repository import IngredientRepository
 from tests.ingredient_tests.test_ingredient_repository import make_ingredient
 from vendor.vendor_schema import Vendor
 
+
 def test_create_deactivation_log(db):
+    """Test that a deactivation log can be created."""
     repo = DeactivationLogRepository(db)
 
     log = repo.create(
@@ -44,6 +47,7 @@ def test_create_deactivation_log(db):
 
 
 def test_get_all_deactivation_logs(db):
+    """Test that all deactivation logs can be retrieved."""
     repo = DeactivationLogRepository(db)
 
     repo.create(
@@ -76,6 +80,7 @@ def test_get_all_deactivation_logs(db):
 
 
 def test_get_all_logs_newest_first(db):
+    """Test that deactivation logs are returned newest first."""
     repo = DeactivationLogRepository(db)
 
     first = repo.create(
@@ -114,6 +119,7 @@ def test_get_all_logs_newest_first(db):
 
 
 def test_get_all_logs_pagination(db):
+    """Test that deactivation logs can be paginated."""
     repo = DeactivationLogRepository(db)
 
     for number in range(1, 6):
@@ -144,6 +150,7 @@ def test_get_all_logs_pagination(db):
 
 
 def test_get_deactivation_log_by_id(db):
+    """Test that a deactivation log can be retrieved by ID."""
     repo = DeactivationLogRepository(db)
 
     log = repo.create(
@@ -168,16 +175,18 @@ def test_get_deactivation_log_by_id(db):
 
 
 def test_get_missing_deactivation_log_returns_none(db):
+    """Test that a missing deactivation log returns None."""
     repo = DeactivationLogRepository(db)
 
     result = repo.get_by_id(999999)
 
     assert result is None
 
-def test_soft_delete_ingredient_creates_deactivation_log(
-    db,
-):
-    """Test that deleting an ingredient creates a deactivation log."""
+
+def test_soft_delete_ingredient_creates_deactivation_log(db):
+    """
+    Test that deactivating an ingredient creates a relationship log.
+    """
     vendor = Vendor(
         name="Deactivation Log Vendor",
         contact_name="John Doe",
@@ -235,8 +244,11 @@ def test_soft_delete_ingredient_creates_deactivation_log(
     db.refresh(recipe_ingredient)
 
     # Deactivate the ingredient.
+    # employee_id is required so the deactivation can identify
+    # the user who performed the action.
     result = ingredient_repo.soft_delete_ingredient(
         ingredient_id=ingredient.id,
+        employee_id=123,
     )
 
     # Verify the ingredient was deactivated.
