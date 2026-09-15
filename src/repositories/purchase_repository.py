@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from baked_good.baked_good_schema import BakedGoodSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
+from exceptions.baked_good_exceptions import BakedGoodNotFoundError
+from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
 from promotion.promotion_schema import PromotionSchema
 from purchase.purchase_schema import PurchaseItemSchema, PurchaseSchema
 
@@ -72,7 +74,9 @@ class PurchaseRepository:
             Decimal: The price of the item at time of sale.
 
         Raises:
-            ValueError: If the item does not exist or type is unknown.
+            BakedGoodNotFoundError: If the baked good does not exist.
+            DrinkRecipeNotFoundError: If the drink recipe does not exist.
+            ValueError: If the item type is unknown.
         """
         item_type = self._normalize_item_type(item_type)
 
@@ -83,8 +87,8 @@ class PurchaseRepository:
                 .first()
             )
             if item is None:
-                raise ValueError(f"Baked good with id {item_id} not found")
-            return self._as_decimal(item.retail_price)
+                raise BakedGoodNotFoundError(item_id)
+            return item.retail_price
 
         if item_type == "drink_recipe":
             item = (
@@ -93,13 +97,11 @@ class PurchaseRepository:
                 .first()
             )
             if item is None:
-                raise ValueError(f"Drink recipe with id {item_id} not found")
-            return self._as_decimal(item.sale_price)
+                raise DrinkRecipeNotFoundError(item_id)
+            return item.sale_price
 
-        raise ValueError(
-            f"Invalid item_type '{item_type}'. "
-            "Allowed types: Baked good or drink."
-        )
+        # Should never reach here because normalization handles errors
+        raise ValueError(f"Invalid item_type '{item_type}'. Allowed types: Baked good or drink.")
 
     def get_promotion(self, promo_id: int) -> PromotionSchema | None:
         """
@@ -132,8 +134,11 @@ class PurchaseRepository:
         price at the time of sale.
 
         Args:
-            purchase_data: Purchase-level data used to create the purchase.
-            items: List of item data included in the purchase.
+            purchase_data (dict): Dictionary containing subtotal, discount,
+                                tax, total, loyalty points, customer_id,
+                                employee_id, and promo_id.
+            items (list[dict]): List of item dictionaries containing
+                                item_type, item_id, quantity, price_at_sale.
 
         Returns:
             PurchaseSchema: The newly created purchase with its items.
@@ -141,29 +146,34 @@ class PurchaseRepository:
         Raises:
             ValueError: If an item type is invalid or an item cannot be found.
         """
-        purchase = PurchaseSchema(**purchase_data)
+        try:
+            purchase = PurchaseSchema(**purchase_data)
 
-        self.db.add(purchase)
-        self.db.flush()
+            self.db.add(purchase)
+            self.db.flush()
 
-        for item in items:
-            normalized_type = self._normalize_item_type(item["item_type"])
-            price = self.get_item_price(
-                normalized_type,
-                item["item_id"],
-            )
+            for item in items:
+                normalized_type = self._normalize_item_type(item["item_type"])
+                price = self.get_item_price(
+                    normalized_type,
+                    item["item_id"],
+                )
 
-            purchase_item = PurchaseItemSchema(
-                purchase_id=purchase.id,
-                item_type=normalized_type,
-                item_id=item["item_id"],
-                quantity=item["quantity"],
-                price_at_sale=price,
-            )
-            self.db.add(purchase_item)
+                purchase_item = PurchaseItemSchema(
+                    purchase_id=purchase.id,
+                    item_type=normalized_type,
+                    item_id=item["item_id"],
+                    quantity=item["quantity"],
+                    price_at_sale=price,
+                )
+                self.db.add(purchase_item)
 
-        self.db.commit()
-        self.db.refresh(purchase)
+            self.db.commit()
+            self.db.refresh(purchase)
+
+        except Exception:
+            self.db.rollback()
+            raise
 
         return purchase
 
