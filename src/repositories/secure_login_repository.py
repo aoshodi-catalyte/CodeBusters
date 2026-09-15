@@ -11,8 +11,6 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from employee.employee_schema import EmployeeSchema
-from utils.password_reset_helpers import get_auth_by_username
-from repositories.employee_repository import EmployeeRepository
 from exceptions.secure_login_exceptions import (
     CredentialsAlreadyExistError,
     EmployeeNotFoundError,
@@ -22,10 +20,12 @@ from exceptions.secure_login_exceptions import (
     UsernameNotFoundError,
     UsernameTakenError,
 )
+from repositories.employee_repository import EmployeeRepository
 from secure_login.secure_login_model import EmployeeAuthCreate
 from secure_login.secure_login_schema import EmployeeAuth
 from secure_logout.secure_logout_schema import TokenBlacklist
 from utils.jwt_utils import decode_token, extract_jti
+from utils.password_reset_helpers import get_auth_by_username
 from utils.password_utils import hash_password, verify_password
 
 
@@ -261,4 +261,3 @@ class SecureLoginRepository:
 
         db.commit()
         db.refresh(auth)
-    

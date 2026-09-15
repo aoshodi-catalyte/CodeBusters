@@ -13,8 +13,7 @@ from services.sms_service import SmsService
 from utils.password_reset_helpers import (
     INVALID_RESET_MESSAGE,
     apply_password_reset,
-    get_active_reset_record,
-    get_auth_by_username,
+    get_reset_context,
 )
 
 
@@ -75,25 +74,13 @@ class PasswordResetService:
 
         Email resets are verified using the stored password-reset code.
 
-        Phone resets are verified using Twilio Verify. The reset channel
-        is determined from the active password-reset record.
+        Phone resets are verified using Twilio Verify.
         """
 
-        auth = get_auth_by_username(
+        auth, reset_record = get_reset_context(
             db,
             username,
         )
-
-        if auth is None:
-            raise ValueError(INVALID_RESET_MESSAGE)
-
-        reset_record = get_active_reset_record(
-            db,
-            auth.employee_id,
-        )
-
-        if reset_record is None:
-            raise ValueError(INVALID_RESET_MESSAGE)
 
         channel = PasswordResetChannel(
             reset_record.channel

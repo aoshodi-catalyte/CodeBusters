@@ -48,6 +48,36 @@ def get_active_reset_record(
     )
 
 
+def get_reset_context(
+    db: Session,
+    username: str,
+):
+    """
+    Return the employee authentication record and active reset record.
+
+    Raises:
+        ValueError: When the username or reset request is invalid.
+    """
+
+    auth = get_auth_by_username(
+        db,
+        username,
+    )
+
+    if auth is None:
+        raise ValueError(INVALID_RESET_MESSAGE)
+
+    reset_record = get_active_reset_record(
+        db,
+        auth.employee_id,
+    )
+
+    if reset_record is None:
+        raise ValueError(INVALID_RESET_MESSAGE)
+
+    return auth, reset_record
+
+
 def apply_password_reset(
     auth: EmployeeAuth,
     reset_record: PasswordResetToken,
@@ -55,8 +85,10 @@ def apply_password_reset(
     used_at: datetime,
 ) -> None:
     """Apply a new password and complete the reset request."""
+
     auth.password_hash = hash_password(
         new_password
     )
+
     auth.is_temporary_password = False
     reset_record.used_at = used_at

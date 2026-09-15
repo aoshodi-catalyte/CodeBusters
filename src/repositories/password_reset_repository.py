@@ -9,12 +9,11 @@ from sqlalchemy.orm import Session
 
 from password_reset.password_reset_model import PasswordResetChannel
 from password_reset.password_reset_schema import PasswordResetToken
-from secure_login.secure_login_schema import EmployeeAuth
 from utils.password_reset_helpers import (
     INVALID_RESET_MESSAGE,
     apply_password_reset,
-    get_active_reset_record,
     get_auth_by_username,
+    get_reset_context,
 )
 from utils.password_utils import hash_password, verify_password
 
@@ -44,9 +43,13 @@ class PasswordResetRepository:
         """
 
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(
+                tzinfo=timezone.utc
+            )
 
-        return value.astimezone(timezone.utc)
+        return value.astimezone(
+            timezone.utc
+        )
 
     def initiate_reset(
         self,
@@ -100,7 +103,6 @@ class PasswordResetRepository:
         for token in existing_tokens:
             token.used_at = now
 
-        # Generate a new reset code.
         code = self.generate_reset_code()
 
         reset_record = PasswordResetToken(
@@ -143,21 +145,10 @@ class PasswordResetRepository:
             - marks the reset token as used
         """
 
-        auth = get_auth_by_username(
+        auth, reset_record = get_reset_context(
             db,
             username,
         )
-
-        if auth is None:
-            raise ValueError(INVALID_RESET_MESSAGE)
-
-        reset_record = get_active_reset_record(
-            db,
-            auth.employee_id,
-        )
-
-        if reset_record is None:
-            raise ValueError(INVALID_RESET_MESSAGE)
 
         now = datetime.now(timezone.utc)
 
@@ -166,10 +157,17 @@ class PasswordResetRepository:
         )
 
         if expires_at <= now:
-            raise ValueError(INVALID_RESET_MESSAGE)
+            raise ValueError(
+                INVALID_RESET_MESSAGE
+            )
 
-        if reset_record.attempt_count >= self.MAX_RESET_ATTEMPTS:
-            raise ValueError(INVALID_RESET_MESSAGE)
+        if (
+            reset_record.attempt_count
+            >= self.MAX_RESET_ATTEMPTS
+        ):
+            raise ValueError(
+                INVALID_RESET_MESSAGE
+            )
 
         if not verify_password(
             code,
@@ -179,7 +177,9 @@ class PasswordResetRepository:
 
             db.commit()
 
-            raise ValueError(INVALID_RESET_MESSAGE)
+            raise ValueError(
+                INVALID_RESET_MESSAGE
+            )
 
         apply_password_reset(
             auth,
@@ -191,4 +191,3 @@ class PasswordResetRepository:
         db.commit()
         db.refresh(auth)
         db.refresh(reset_record)
-    
