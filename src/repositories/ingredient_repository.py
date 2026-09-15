@@ -269,7 +269,6 @@ class IngredientRepository:
 
             ingredient.active = False
 
-            # Existing relationship/error logging remains unchanged.
             log_repo = DeactivationLogRepository(self.db)
 
             for recipe in active_recipes:
