@@ -27,6 +27,10 @@ router = APIRouter(
 
 
 def get_password_reset_service() -> PasswordResetService:
+    """
+    Create and configure the password reset service with its
+    repository, email delivery, and SMS verification dependencies.
+    """
     email_service = EmailService(
         api_key=settings.SENDGRID_API_KEY or "",
         from_email=settings.SENDGRID_FROM_EMAIL or "",
@@ -44,7 +48,6 @@ def get_password_reset_service() -> PasswordResetService:
         sms_service=sms_service,
     )
 
-
 @router.post("/initiate")
 def initiate_password_reset(
     data: PasswordResetInitiateRequest,
@@ -53,6 +56,10 @@ def initiate_password_reset(
         get_password_reset_service
     ),
 ):
+    """
+    Initiate a password reset and send a verification code
+    through the employee's selected verification method.
+    """
     service.initiate_reset(
         db,
         data.username,
@@ -76,6 +83,10 @@ def confirm_password_reset(
         get_password_reset_service
     ),
 ):
+    """
+    Confirm a password reset using the verification code and
+    set the employee's new password.
+    """
     try:
         service.confirm_reset(
             db,

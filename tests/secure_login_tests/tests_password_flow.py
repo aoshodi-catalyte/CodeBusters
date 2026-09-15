@@ -1,3 +1,7 @@
+"""
+Integration tests for the temporary-to-permanent password lifecycle.
+"""
+
 from employee.employee_model import Employee
 from constants.employee_roles import EmployeeRole
 from repositories.employee_repository import EmployeeRepository
@@ -24,15 +28,16 @@ def test_temporary_password_to_permanent_password_flow(
     9. Confirm the new password works.
     """
 
-    temporary_password = "Temporary123!"
-
-    permanent_password = "Permanent123!"
+    passwords = {
+        "temporary": "Temporary123!",
+        "permanent": "Permanent123!",
+    }
 
     # Use a known temporary password for the test.
     # Production code still generates a secure random password.
     monkeypatch.setattr(
         "repositories.employee_repository.generate_temporary_password",
-        lambda: temporary_password,
+        lambda: passwords["temporary"],
     )
 
     employee_data = Employee(
@@ -68,10 +73,10 @@ def test_temporary_password_to_permanent_password_flow(
     # Step 2: Verify the password was hashed.
     # ---------------------------------------------------------
 
-    assert auth.password_hash != temporary_password
+    assert auth.password_hash != passwords["temporary"]
 
     assert verify_password(
-        temporary_password,
+        passwords["temporary"],
         auth.password_hash,
     )
 
@@ -81,7 +86,6 @@ def test_temporary_password_to_permanent_password_flow(
 
     assert auth.is_temporary_password is True
 
-    # Save the original hash so we can prove it changes later.
     original_password_hash = auth.password_hash
 
     # ---------------------------------------------------------
@@ -92,7 +96,7 @@ def test_temporary_password_to_permanent_password_flow(
         "/auth/login",
         data={
             "username": "john.smith",
-            "password": temporary_password,
+            "password": passwords["temporary"],
         },
     )
 
@@ -121,8 +125,8 @@ def test_temporary_password_to_permanent_password_flow(
             "Authorization": f"Bearer {access_token}",
         },
         json={
-            "current_password": temporary_password,
-            "new_password": permanent_password,
+            "current_password": passwords["temporary"],
+            "new_password": passwords["permanent"],
         },
     )
 
@@ -148,21 +152,16 @@ def test_temporary_password_to_permanent_password_flow(
 
     assert updated_auth is not None
 
-    # Temporary flag must now be false.
     assert updated_auth.is_temporary_password is False
-
-    # The password hash must have changed.
     assert updated_auth.password_hash != original_password_hash
 
-    # The new password must match the new bcrypt hash.
     assert verify_password(
-        permanent_password,
+        passwords["permanent"],
         updated_auth.password_hash,
     )
 
-    # The old password must no longer match.
     assert not verify_password(
-        temporary_password,
+        passwords["temporary"],
         updated_auth.password_hash,
     )
 
@@ -174,7 +173,7 @@ def test_temporary_password_to_permanent_password_flow(
         "/auth/login",
         data={
             "username": "john.smith",
-            "password": temporary_password,
+            "password": passwords["temporary"],
         },
     )
 
@@ -188,7 +187,7 @@ def test_temporary_password_to_permanent_password_flow(
         "/auth/login",
         data={
             "username": "john.smith",
-            "password": permanent_password,
+            "password": passwords["permanent"],
         },
     )
 
@@ -204,4 +203,3 @@ def test_temporary_password_to_permanent_password_flow(
     # ---------------------------------------------------------
 
     assert new_login_data["must_change_password"] is False
-

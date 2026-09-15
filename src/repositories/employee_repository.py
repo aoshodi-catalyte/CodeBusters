@@ -9,7 +9,10 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
-from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError, EmployeeAlreadyDeactivatedError
+from exceptions.employee_exceptions import (
+    EmployeeEmailAlreadyExistsError,
+    EmployeeAlreadyDeactivatedError,
+)
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from secure_login.secure_login_schema import EmployeeAuth
 from utils.credential_generator import generate_temporary_password, generate_username
@@ -225,7 +228,7 @@ class EmployeeRepository:
             counter += 1
 
         return username
-    
+
     def deactivate_employee(self, employee_id:int):
         """
         Deactivate an employee by setting active to False.
