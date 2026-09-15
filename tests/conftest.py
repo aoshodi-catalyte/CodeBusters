@@ -16,7 +16,7 @@ from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_schema import EmployeeSchema
 from main import app
 from constants.employee_roles import EmployeeRole
-from employee.employee_role_schema import EmployeeRoleSchema
+
 
 
 TEST_DB_URL = "sqlite:///:memory:"
@@ -69,9 +69,15 @@ def db():
 
 def _seed_acting_manager(db):
     """Insert the employee that manager_token() claims to represent."""
-    manager_role = EmployeeRoleSchema(role="manager")
-    db.add(manager_role)
-    db.flush()
+    manager_role = (
+        db.query(EmployeeRoleSchema)
+        .filter(EmployeeRoleSchema.role == EmployeeRole.MANAGER.value)
+        .first()
+    )
+
+    if manager_role is None:
+        raise RuntimeError("Manager role was not seeded.")
+
     db.add(
         EmployeeSchema(
             id=1,
