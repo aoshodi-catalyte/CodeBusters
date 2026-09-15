@@ -279,7 +279,7 @@ class DrinkRecipeRepository:
         recipe_id: int,
         acting_user: str,
         audit_repo: AuditRepository
-        ) -> DrinkRecipeSchema:
+    ) -> DrinkRecipeSchema:
         """
         Set a drink recipe's status to false by its ID.
         """
