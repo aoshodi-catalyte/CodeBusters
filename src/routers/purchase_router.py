@@ -13,16 +13,18 @@ from sqlalchemy.orm import Session
 from database import get_db
 from dependencies.auth_dependencies import get_current_employee_id
 from exceptions.baked_good_exceptions import BakedGoodNotFoundError
-from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
 from exceptions.customer_exceptions import CustomerNotFoundError
+from exceptions.drink_recipe_exceptions import DrinkRecipeNotFoundError
 from purchase.purchase_model import PurchaseCreate, PurchaseResponse
 from purchase.purchase_service_logic import PurchaseService
+from security.secure_manager_login import check_role
 
 router = APIRouter(prefix="/purchases", tags=["Purchases"])
 
 
 @router.post(
     "",
+    dependencies=[Depends(check_role(["manager"]))],
     response_model=PurchaseResponse,
     status_code=status.HTTP_201_CREATED
 )

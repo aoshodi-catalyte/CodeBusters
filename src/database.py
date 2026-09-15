@@ -10,7 +10,7 @@ from config import settings
 
 DATABASE_URL = settings.DATABASE_URL
 
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL)
 
 # pylint: disable=C0103
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
