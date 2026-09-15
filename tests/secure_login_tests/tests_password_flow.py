@@ -170,9 +170,12 @@ def test_temporary_password_to_permanent_password_flow(
 
     assert new_password_response.status_code == 200
 
-    new_login_data = new_password_response.json()
-
-    assert "access_token" in new_login_data
-    assert new_login_data["token_type"] == "bearer"
-
-    assert new_login_data["must_change_password"] is False
+    assert "access_token" in new_password_response.json()
+    assert (
+        new_password_response.json()["token_type"]
+        == "bearer"
+    )
+    assert (
+        new_password_response.json()["must_change_password"]
+        is False
+    )
