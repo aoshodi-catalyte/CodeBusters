@@ -6,8 +6,12 @@ Initializes the API, seeds required database values, and registers all routers.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import logging
+import time
 
+from fastapi import FastAPI, Request
+
+from utils.logging_config import configure_logging
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
 from database import SessionLocal, create_db
@@ -24,6 +28,8 @@ from routers.promotion_router import router as promotion_router
 from routers.secure_login_router import router as secure_login_router
 from routers.secure_logout_router import router as secure_logout_router
 from routers.vendor_router import router as vendor_router
+from routers.password_reset_router import router as password_reset_router
+
 from routers.deactivation_log_router import router as deactivation_log_router
 
 @asynccontextmanager
@@ -67,8 +73,53 @@ async def lifespan(_app: FastAPI):
     # e.g., close global resources, flush logs, etc.
 
 
+configure_logging()
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(lifespan=lifespan)
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """
+    Log each HTTP request with its method, path, status code, and duration.
+
+    Unhandled exceptions are logged with their traceback before being
+    re-raised so FastAPI can handle them normally.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+
+    except Exception:
+        duration_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        logger.exception(
+            "Unhandled exception during %s %s (%.2f ms)",
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+
+        raise
+
+    duration_ms = (
+        time.perf_counter() - start_time
+    ) * 1000
+
+    logger.info(
+        "%s %s -> %s (%.2f ms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+
+    return response
 
 @app.get("/")
 def root():
@@ -88,5 +139,6 @@ app.include_router(employee_router)
 app.include_router(promotion_router)
 app.include_router(secure_login_router)
 app.include_router(secure_logout_router)
+app.include_router(password_reset_router)
 app.include_router(deactivation_log_router)
 app.include_router(purchase_router)

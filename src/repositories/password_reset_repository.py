@@ -1,0 +1,195 @@
+"""
+Repository logic for initiating and confirming employee password resets.
+"""
+
+from datetime import datetime, timedelta, timezone
+import secrets
+
+from sqlalchemy.orm import Session
+
+from password_reset.password_reset_model import PasswordResetChannel
+from password_reset.password_reset_schema import PasswordResetToken
+from utils.password_reset_helpers import (
+    INVALID_RESET_MESSAGE,
+    complete_password_reset,
+    get_auth_by_username,
+    get_reset_context,
+)
+from utils.password_utils import hash_password, verify_password
+
+
+class PasswordResetRepository:
+    """
+    Handles creation and confirmation of password reset requests.
+    """
+
+    RESET_CODE_EXPIRATION_MINUTES = 10
+    MAX_RESET_ATTEMPTS = 5
+
+    def generate_reset_code(self) -> str:
+        """Generate a secure six-digit password reset code."""
+
+        return str(
+            secrets.randbelow(900000) + 100000
+        )
+
+    @staticmethod
+    def _ensure_utc(value: datetime) -> datetime:
+        """
+        Normalize a datetime to timezone-aware UTC.
+
+        SQLite may return timezone-naive datetimes even when the
+        SQLAlchemy column uses timezone=True.
+        """
+
+        if value.tzinfo is None:
+            return value.replace(
+                tzinfo=timezone.utc
+            )
+
+        return value.astimezone(
+            timezone.utc
+        )
+
+    def initiate_reset(
+        self,
+        db: Session,
+        username: str,
+        channel: PasswordResetChannel,
+    ):
+        """
+        Create a password reset request.
+
+        Any previously unused reset tokens for the employee are
+        invalidated before the new reset token is created.
+
+        Returns:
+            A tuple containing the employee and plaintext reset code.
+
+        The plaintext reset code is never stored in the database.
+        Only its hash is persisted.
+        """
+
+        auth = get_auth_by_username(
+            db,
+            username,
+        )
+
+        if auth is None:
+            return None, None
+
+        employee = auth.employee
+
+        if channel == PasswordResetChannel.EMAIL:
+            if not employee.email:
+                return None, None
+
+        elif channel == PasswordResetChannel.PHONE:
+            if not employee.phone_number:
+                return None, None
+
+        now = datetime.now(timezone.utc)
+
+        # Invalidate any previous unused reset tokens.
+        existing_tokens = (
+            db.query(PasswordResetToken)
+            .filter(
+                PasswordResetToken.employee_id == employee.id,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .all()
+        )
+
+        for token in existing_tokens:
+            token.used_at = now
+
+        code = self.generate_reset_code()
+
+        reset_record = PasswordResetToken(
+            employee_id=employee.id,
+            token_hash=hash_password(code),
+            expires_at=(
+                now
+                + timedelta(
+                    minutes=self.RESET_CODE_EXPIRATION_MINUTES
+                )
+            ),
+            channel=channel.value,
+        )
+
+        db.add(reset_record)
+        db.commit()
+        db.refresh(reset_record)
+
+        return employee, code
+
+    def confirm_reset(
+        self,
+        db: Session,
+        username: str,
+        code: str,
+        new_password: str,
+    ) -> None:
+        """
+        Verify a password reset code and set a new password.
+
+        The reset code must:
+            - belong to the employee
+            - not already be used
+            - not be expired
+            - match the stored hash
+
+        A successful reset:
+            - replaces the employee password hash
+            - clears the temporary-password flag
+            - marks the reset token as used
+        """
+
+        auth, reset_record = get_reset_context(
+            db,
+            username,
+        )
+
+        now = datetime.now(timezone.utc)
+
+        expires_at = self._ensure_utc(
+            reset_record.expires_at
+        )
+
+        if expires_at <= now:
+            raise ValueError(
+                INVALID_RESET_MESSAGE
+            )
+
+        if (
+            reset_record.attempt_count
+            >= self.MAX_RESET_ATTEMPTS
+        ):
+            raise ValueError(
+                INVALID_RESET_MESSAGE
+            )
+
+        verified = verify_password(
+            code,
+            reset_record.token_hash,
+        )
+
+        if not verified:
+            reset_record.attempt_count += 1
+            db.commit()
+
+            raise ValueError(
+                INVALID_RESET_MESSAGE
+            )
+
+        complete_password_reset(
+            auth,
+            reset_record,
+            new_password,
+            now,
+            verified,
+        )
+
+        db.commit()
+        db.refresh(auth)
+        db.refresh(reset_record)

@@ -7,4 +7,5 @@ from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from secure_login.secure_login_schema import EmployeeAuth
+from password_reset.password_reset_schema import PasswordResetToken
 from purchase.purchase_schema import PurchaseSchema

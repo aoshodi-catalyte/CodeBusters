@@ -17,9 +17,17 @@ from datetime import date, timedelta
 
 @pytest.fixture
 def repo(db):
-    role = EmployeeRoleSchema(role="manager")
-    db.add(role)
-    db.commit()
+    role = (
+        db.query(EmployeeRoleSchema)
+        .filter(EmployeeRoleSchema.role == "manager")
+        .first()
+    )
+
+    if role is None:
+        role = EmployeeRoleSchema(role="manager")
+        db.add(role)
+        db.commit()
+
     return EmployeeRepository(db)
 
 

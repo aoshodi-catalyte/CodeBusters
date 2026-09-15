@@ -15,6 +15,9 @@ from database import Base, AuditBase, get_audit_db, get_db
 from employee.employee_role_schema import EmployeeRoleSchema
 from employee.employee_schema import EmployeeSchema
 from main import app
+from constants.employee_roles import EmployeeRole
+
+
 
 TEST_DB_URL = "sqlite:///:memory:"
 
@@ -39,6 +42,23 @@ def db():
 
     session = TestingSessionLocal()
 
+    # Seed employee roles only if they do not already exist.
+    for role in EmployeeRole:
+        existing_role = (
+            session.query(EmployeeRoleSchema)
+            .filter(EmployeeRoleSchema.role == role.value)
+            .first()
+        )
+
+        if existing_role is None:
+            session.add(
+                EmployeeRoleSchema(
+                    role=role.value,
+                )
+            )
+
+    session.commit()
+
     try:
         yield session
     finally:
@@ -49,9 +69,15 @@ def db():
 
 def _seed_acting_manager(db):
     """Insert the employee that manager_token() claims to represent."""
-    manager_role = EmployeeRoleSchema(role="manager")
-    db.add(manager_role)
-    db.flush()
+    manager_role = (
+        db.query(EmployeeRoleSchema)
+        .filter(EmployeeRoleSchema.role == EmployeeRole.MANAGER.value)
+        .first()
+    )
+
+    if manager_role is None:
+        raise RuntimeError("Manager role was not seeded.")
+
     db.add(
         EmployeeSchema(
             id=1,

@@ -30,10 +30,17 @@ class Settings(BaseSettings):
     model_config = ConfigDict(env_file=".env")
     LOG_LEVEL: str | None = "INFO"
     DATABASE_URL: str
+    JWT_SECRET_KEY: str
     AUDIT_DATABASE_URL: str
-    JWT_SECRET_KEY: str | None = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    SENDGRID_API_KEY: str | None = None
+    SENDGRID_FROM_EMAIL: str | None = None
+
+    TWILIO_ACCOUNT_SID: str | None = None
+    TWILIO_AUTH_TOKEN: str | None = None
+    TWILIO_VERIFY_SERVICE_SID: str | None = None
 
 
 settings = Settings()
