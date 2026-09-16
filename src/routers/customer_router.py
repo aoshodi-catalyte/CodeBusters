@@ -188,6 +188,7 @@ def deactivate_customer(
 
     try:
         repo.deactivate_customer(customer_id, acting_user.email, audit_repo)
+        return
     except (CustomerNotFoundError, CustomerAlreadyDeactivatedError) as e:
         return handle_repo_exception(
             db,
