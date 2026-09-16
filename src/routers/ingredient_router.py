@@ -27,6 +27,7 @@ from repositories.deactivate_audit_repository import AuditRepository
 from repositories.ingredient_repository import IngredientRepository
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 from utils.response import to_response
 
 router = APIRouter(
@@ -335,15 +336,10 @@ def delete_ingredient_endpoint(
                 ),
             },
         ) from exc
-    except IngredientAlreadyDeactivatedError(ingredient_id) as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc)
-        ) from exc
-    except Exception as ex:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while deactivating the ingredient."
-        ) from ex
+    except Exception as e:
+        handle_repo_exception(
+            db,
+            e,
+            IngredientNotFoundError(ingredient_id),
+            IngredientAlreadyDeactivatedError(ingredient_id)
+        )

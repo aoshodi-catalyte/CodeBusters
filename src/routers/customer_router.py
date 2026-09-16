@@ -23,6 +23,7 @@ from repositories.customer_repository import CustomerRepository
 from repositories.deactivate_audit_repository import AuditRepository
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 
 
 router = APIRouter()
@@ -187,21 +188,10 @@ def deactivate_customer(
 
     try:
         repo.deactivate_customer(customer_id, acting_user.email, audit_repo)
-    except CustomerNotFoundError(customer_id) as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except CustomerAlreadyDeactivatedError(customer_id) as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc)
-        ) from exc
     except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while deactivating the customer."
-        ) from e
+        handle_repo_exception(
+            db,
+            e,
+            CustomerNotFoundError(customer_id),
+            CustomerAlreadyDeactivatedError(customer_id)
+        )

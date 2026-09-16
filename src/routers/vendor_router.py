@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_audit_db, get_db
+from exceptions.baked_good_exceptions import VendorNotFoundError
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorAlreadyDeactivatedError,
@@ -16,6 +17,7 @@ from repositories.deactivate_audit_repository import AuditRepository
 from repositories.vendor_repository import VendorRepository
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 from vendor.vendor_model import VendorBase
 from vendor.vendor_response import VendorResponse
 
@@ -191,20 +193,10 @@ def deactivate_vendor(
 
     try:
         repo.deactivate_vendor(vendor_id, acting_user.email, audit_repo)
-    except VendorNotFoundException(vendor_id) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except VendorAlreadyDeactivatedError(vendor_id) as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc)
-        ) from exc
     except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while deactivating the vendor."
-        ) from e
+        handle_repo_exception(
+            db,
+            e,
+            VendorNotFoundError(vendor_id),
+            VendorAlreadyDeactivatedError(vendor_id)
+        )

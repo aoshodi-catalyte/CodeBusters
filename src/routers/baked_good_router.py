@@ -27,6 +27,7 @@ from repositories.baked_good_repository import BakedGoodRepository
 from repositories.deactivate_audit_repository import AuditRepository
 from security.secure_manager_login import check_role
 from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 
 router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
 
@@ -199,22 +200,10 @@ def deactivate_baked_good(
     try:
         repo.deactivate_baked_good(baked_good_id, acting_user.email, audit_repo)
         return
-    except BakedGoodNotFoundError(baked_good_id) as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except BakedGoodAlreadyDeactivatedError(baked_good_id) as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    except Exception as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while deactivating the baked good."
-        ) from exc
+    except Exception as e:
+        handle_repo_exception(
+            db,
+            e,
+            BakedGoodNotFoundError(baked_good_id),
+            BakedGoodAlreadyDeactivatedError(baked_good_id)
+        )
