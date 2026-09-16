@@ -47,6 +47,17 @@ class PasswordResetService:
             channel,
         )
 
+        print(
+            "PASSWORD RESET:",
+            username,
+            "employee:",
+            employee is not None,
+            "code:",
+            code is not None,
+            "channel:",
+            channel,
+        )
+
         if employee is None or code is None:
             return
 
