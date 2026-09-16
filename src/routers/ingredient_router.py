@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from database import get_audit_db, get_db
 from exceptions.ingredient_exceptions import (
+    IngredientAlreadyDeactivatedError,
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     IngredientNotFoundError,
@@ -334,3 +335,15 @@ def delete_ingredient_endpoint(
                 ),
             },
         ) from exc
+    except IngredientAlreadyDeactivatedError(ingredient_id) as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc)
+        ) from exc
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deactivating the ingredient."
+        ) from e

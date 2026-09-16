@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from customer.customer_model import CustomerCreate, CustomerResponse, CustomerUpdate
 from database import get_audit_db, get_db
 from exceptions.customer_exceptions import (
+    CustomerAlreadyDeactivatedError,
     CustomerConstraintError,
     CustomerEmailAlreadyExistsError,
     CustomerNotFoundError,
@@ -187,7 +188,20 @@ def deactivate_customer(
     try:
         repo.deactivate_customer(customer_id, acting_user.email, audit_repo)
     except CustomerNotFoundError as exc:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except CustomerAlreadyDeactivatedError(customer_id) as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc)
+        ) from exc
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deactivating the customer."
+        ) from e

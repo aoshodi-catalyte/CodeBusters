@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from database import get_audit_db, get_db
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
+    VendorAlreadyDeactivatedError,
     VendorNotFoundException,
 )
 from repositories.deactivate_audit_repository import AuditRepository
@@ -190,8 +191,20 @@ def deactivate_vendor(
 
     try:
         repo.deactivate_vendor(vendor_id, acting_user.email, audit_repo)
-    except VendorNotFoundException as exc:
+    except VendorNotFoundException(vendor_id) as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except VendorAlreadyDeactivatedError(vendor_id) as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc)
+        ) from exc
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deactivating the vendor."
+        ) from e
