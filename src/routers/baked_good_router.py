@@ -199,14 +199,14 @@ def deactivate_baked_good(
     try:
         repo.deactivate_baked_good(baked_good_id, acting_user.email, audit_repo)
         return
-    except BakedGoodNotFoundError as exc:
+    except BakedGoodNotFoundError(baked_good_id) as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
 
-    except BakedGoodAlreadyDeactivatedError as exc:
+    except BakedGoodAlreadyDeactivatedError(baked_good_id) as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
