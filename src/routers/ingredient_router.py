@@ -16,8 +16,8 @@ from sqlalchemy.orm import Session
 
 from database import get_audit_db, get_db
 from exceptions.ingredient_exceptions import (
-    IngredientAlreadyDeactivatedError,
     IngredientAlreadyExistsError,
+    IngredientAlreadyInactiveError,
     IngredientConstraintError,
     IngredientNotFoundError,
     VendorNotFoundError,
@@ -337,12 +337,12 @@ def delete_ingredient_endpoint(
             },
         ) from exc
     except (
-        IngredientNotFoundError(ingredient_id),
-        IngredientAlreadyDeactivatedError(ingredient_id)
+        IngredientNotFoundError,
+        IngredientAlreadyInactiveError
     ) as e:
         return handle_repo_exception(
             db,
             e,
             IngredientNotFoundError(ingredient_id),
-            IngredientAlreadyDeactivatedError(ingredient_id)
+            IngredientAlreadyInactiveError(ingredient_id)
         )
