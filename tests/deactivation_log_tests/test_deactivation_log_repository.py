@@ -4,8 +4,8 @@ from deactivation_log.deactivation_log_schema import DeactivationLogSchema
 from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from drink_recipe.drink_recipe_schema import DrinkRecipeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.deactivation_log_repository import DeactivationLogRepository
-from deactivation_log.deactivation_log_schema import DeactivationLogSchema
 from repositories.ingredient_repository import IngredientRepository
 from tests.ingredient_tests.test_ingredient_repository import make_ingredient
 from vendor.vendor_schema import Vendor
@@ -193,6 +193,7 @@ def test_soft_delete_ingredient_creates_deactivation_log(
 
     # Create the ingredient.
     ingredient_repo = IngredientRepository(db)
+    audit_db = AuditRepository(db)
 
     ingredient = ingredient_repo.create_ingredient(
         make_ingredient(
@@ -237,6 +238,8 @@ def test_soft_delete_ingredient_creates_deactivation_log(
     # Deactivate the ingredient.
     result = ingredient_repo.soft_delete_ingredient(
         ingredient_id=ingredient.id,
+        acting_user="test_user",
+        audit_repo=audit_db
     )
 
     # Verify the ingredient was deactivated.

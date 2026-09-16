@@ -5,18 +5,23 @@ retrieval, and role mapping logic.
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
 from constants.employee_roles import EmployeeRole
+from constants.entity_types import EntityType
 from employee.employee_model import Employee
-from employee.employee_schema import EmployeeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
+from employee.employee_schema import EmployeeSchema
 from exceptions.employee_exceptions import (
-    EmployeeEmailAlreadyExistsError,
     EmployeeAlreadyDeactivatedError,
+    EmployeeEmailAlreadyExistsError,
 )
+from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
+from repositories.deactivate_audit_repository import AuditRepository
 from secure_login.secure_login_schema import EmployeeAuth
 from utils.credential_generator import generate_temporary_password, generate_username
 from utils.password_utils import hash_password
+
 
 def map_role_enum_to_fk(enum_value: EmployeeRole | str, db: Session) -> int:
     """
@@ -229,7 +234,9 @@ class EmployeeRepository:
 
         return username
 
-    def deactivate_employee(self, employee_id:int):
+
+    def deactivate_employee(self, employee_id: int, acting_user: str,
+                            audit_repo: AuditRepository) -> EmployeeSchema:
         """
         Deactivate an employee by setting active to False.
 
@@ -246,5 +253,9 @@ class EmployeeRepository:
         employee.active = False
         self.db.commit()
         self.db.refresh(employee)
+
+        audit_repo.record_deactivation(
+            employee_id, f"{employee.first_name} {employee.last_name}",
+            acting_user, EntityType.EMPLOYEE)
 
         return employee

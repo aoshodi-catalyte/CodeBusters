@@ -7,10 +7,13 @@ including handling duplicate unique-field conflicts and missing vendors.
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from constants.entity_types import EntityType
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
+    VendorAlreadyDeactivatedError,
     VendorNotFoundException,
 )
+from repositories.deactivate_audit_repository import AuditRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor, VendorSchema
 
@@ -168,7 +171,12 @@ class VendorRepository:
 
         return vendor
 
-    def deactivate_vendor(self, vendor_id: int) -> VendorSchema:
+    def deactivate_vendor(
+        self,
+        vendor_id: int,
+        acting_user: str,
+        audit_repo: AuditRepository
+    ) -> VendorSchema:
         """Deactivate a vendor by setting active to False (soft delete).
 
         The vendor record is preserved for historical purposes; only
@@ -187,12 +195,14 @@ class VendorRepository:
         """
         vendor = self.get_vendor_by_id(vendor_id)
 
-        if vendor is None:
-            raise VendorNotFoundException(vendor_id)
+        if vendor.active is False:
+            raise VendorAlreadyDeactivatedError(vendor_id)
 
         vendor.active = False
 
         self.db.commit()
         self.db.refresh(vendor)
+
+        audit_repo.record_deactivation(vendor_id, vendor.name, acting_user, EntityType.VENDOR)
 
         return vendor

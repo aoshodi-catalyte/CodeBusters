@@ -14,16 +14,20 @@ from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_audit_db, get_db
 from exceptions.ingredient_exceptions import (
     IngredientAlreadyExistsError,
+    IngredientAlreadyInactiveError,
     IngredientConstraintError,
     IngredientNotFoundError,
     VendorNotFoundError,
 )
 from ingredient.ingredient_model import Ingredient, IngredientOut
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.ingredient_repository import IngredientRepository
 from security.secure_manager_login import check_role
+from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 from utils.response import to_response
 
 router = APIRouter(
@@ -279,7 +283,9 @@ class IngredientDeleteResponse(BaseModel):
 )
 def delete_ingredient_endpoint(
     ingredient_id: int,
+    acting_user = Depends(get_acting_user),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db)
 ):
     """Soft delete an ingredient by its ID.
 
@@ -298,9 +304,10 @@ def delete_ingredient_endpoint(
     """
     logger.debug("DELETE /ingredients/%s called — deleting ingredient", ingredient_id)
     repo = IngredientRepository(db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
-        ingredient = repo.soft_delete_ingredient(ingredient_id)
+        ingredient = repo.soft_delete_ingredient(ingredient_id, acting_user.email, audit_repo)
 
         if ingredient is None:
             logger.warning("Ingredient %s not found for deletion", ingredient_id)
@@ -329,3 +336,13 @@ def delete_ingredient_endpoint(
                 ),
             },
         ) from exc
+    except (
+        IngredientNotFoundError,
+        IngredientAlreadyInactiveError
+    ) as e:
+        return handle_repo_exception(
+            db,
+            e,
+            not_found_errors=(IngredientNotFoundError,),
+            conflict_errors=(IngredientAlreadyInactiveError,)
+        )

@@ -11,48 +11,6 @@ from routers.customer_router import router
 from tests.factories.auth_factories import manager_token
 
 
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
-)
-
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
-app = FastAPI()
-app.include_router(router)
-
-
-@pytest.fixture
-def client():
-    """
-    Creates a test client using a temporary in-memory database.
-    """
-
-    Base.metadata.create_all(bind=engine)
-
-    def override_get_db():
-        db = TestingSessionLocal()
-
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    yield TestClient(app)
-
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
-
-
 def test_create_customer(client):
     """
     Verifies that a customer can be created through the API.
@@ -758,7 +716,9 @@ def test_deactivate_customer(client):
     customer_id = create_response.json()["id"]
 
     response = client.delete(
-        f"/customers/{customer_id}", headers={"Authorization": f"Bearer {token}"})
+        f"/customers/{customer_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 204
     assert response.content == b""

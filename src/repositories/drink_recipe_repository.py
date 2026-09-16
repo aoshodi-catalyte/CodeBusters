@@ -27,6 +27,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from constants.drink_types import DrinkType
+from constants.entity_types import EntityType
 from constants.unit_conversions import convert
 from drink_recipe.drink_ingredients_schema import DrinkRecipeIngredientSchema
 from drink_recipe.drink_recipe_model import DrinkRecipe
@@ -41,6 +42,7 @@ from exceptions.drink_recipe_exceptions import (
     UnitConversionError,
 )
 from ingredient.ingredient_schema import IngredientSchema
+from repositories.deactivate_audit_repository import AuditRepository
 from utils.validators import round_float
 
 
@@ -272,7 +274,12 @@ class DrinkRecipeRepository:
         return recipe
 
 
-    def deactivate_drink_recipe_by_id(self, recipe_id: int) -> DrinkRecipeSchema:
+    def deactivate_drink_recipe_by_id(
+        self,
+        recipe_id: int,
+        acting_user: str,
+        audit_repo: AuditRepository
+    ) -> DrinkRecipeSchema:
         """
         Set a drink recipe's status to false by its ID.
         """
@@ -286,4 +293,7 @@ class DrinkRecipeRepository:
 
         self.session.commit()
         self.session.refresh(recipe)
+
+        audit_repo.record_deactivation(recipe_id, recipe.name, acting_user, EntityType.DRINK_RECIPE)
+
         return recipe
