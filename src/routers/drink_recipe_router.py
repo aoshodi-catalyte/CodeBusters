@@ -31,7 +31,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_audit_db, get_db
 from drink_recipe.drink_recipe_model import DrinkRecipe
 from drink_recipe.drink_recipe_response import DrinkRecipeResponse
 from exceptions.drink_recipe_exceptions import (
@@ -42,8 +42,10 @@ from exceptions.drink_recipe_exceptions import (
     IngredientNotFoundError,
     UnitConversionError,
 )
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.drink_recipe_repository import DrinkRecipeRepository
 from security.secure_manager_login import check_role
+from utils.auth import get_acting_user
 from utils.response import to_response
 
 router = APIRouter(
@@ -253,7 +255,12 @@ def update_drink_recipe(recipe_id: int, drink_recipe: DrinkRecipe, db: Session =
 
 
 @router.delete("/{recipe_id}", dependencies=[Depends(check_role(["manager"]))], status_code=204)
-def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
+def deactivate_drink_recipe(
+    recipe_id: int,
+    acting_user = Depends(get_acting_user),
+    db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db)
+    ):
     """
     Deactivate a drink recipe by its ID.
 
@@ -268,9 +275,10 @@ def deactivate_drink_recipe(recipe_id: int, db: Session = Depends(get_db)):
         None: A successful deactivation returns an empty response with status 204.
     """
     repo = DrinkRecipeRepository(db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
-        repo.deactivate_drink_recipe_by_id(recipe_id)
+        repo.deactivate_drink_recipe_by_id(recipe_id, acting_user.email, audit_repo)
         return
     except DrinkRecipeNotFoundError as e:
         db.rollback()

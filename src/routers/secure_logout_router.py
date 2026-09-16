@@ -21,7 +21,7 @@ from exceptions.secure_login_exceptions import (
 )
 from repositories.secure_logout_repository import SecureLogoutRepository
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 logout_repo = SecureLogoutRepository()
 
 

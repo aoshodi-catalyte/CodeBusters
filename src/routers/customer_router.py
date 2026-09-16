@@ -10,20 +10,20 @@ exceptions on failure.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from customer.customer_model import CustomerCreate, CustomerResponse, CustomerUpdate
+from database import get_audit_db, get_db
 from exceptions.customer_exceptions import (
+    CustomerAlreadyDeactivatedError,
     CustomerConstraintError,
     CustomerEmailAlreadyExistsError,
     CustomerNotFoundError,
     CustomerPhoneAlreadyExistsError,
 )
-from customer.customer_model import (
-    CustomerCreate,
-    CustomerResponse,
-    CustomerUpdate,
-)
-from database import get_db
 from repositories.customer_repository import CustomerRepository
+from repositories.deactivate_audit_repository import AuditRepository
 from security.secure_manager_login import check_role
+from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 
 
 router = APIRouter()
@@ -65,6 +65,7 @@ def create_customer(
         ) from exc
 
 # pylint: enable=duplicate-code
+
 
 @router.put(
     "/customers/{customer_id}",
@@ -168,7 +169,9 @@ def get_customer(
 )
 def deactivate_customer(
     customer_id: int,
+    acting_user = Depends(get_acting_user),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db),
 ):
     """
     Deactivate a customer (soft delete) by setting active to False.
@@ -179,13 +182,17 @@ def deactivate_customer(
         HTTPException 404:
             If no customer exists with the provided ID.
     """
+
     repo = CustomerRepository(db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
-        repo.deactivate_customer(customer_id)
-
-    except CustomerNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+        repo.deactivate_customer(customer_id, acting_user.email, audit_repo)
+        return None
+    except (CustomerNotFoundError, CustomerAlreadyDeactivatedError) as e:
+        return handle_repo_exception(
+            db,
+            e,
+            not_found_errors=(CustomerNotFoundError,),
+            conflict_errors=(CustomerAlreadyDeactivatedError,)
+        )

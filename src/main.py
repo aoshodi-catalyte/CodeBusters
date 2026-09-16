@@ -14,7 +14,9 @@ from fastapi import FastAPI, Request
 from utils.logging_config import configure_logging
 from constants.drink_types import DrinkType
 from constants.employee_roles import EmployeeRole
-from database import SessionLocal, create_db
+from constants.entity_types import EntityType
+from database import AuditSessionLocal, SessionLocal, create_db
+from deactivation_log.entity_type_schema import EntityTypeSchema
 from drink_recipe.drink_type_schema import DrinkTypeSchema
 from employee.employee_role_schema import EmployeeRoleSchema
 from health.health_router import router as health_router
@@ -42,6 +44,7 @@ async def lifespan(_app: FastAPI):
     """
     # --- Startup logic ---
     db = SessionLocal()
+    audit_db = AuditSessionLocal()
     create_db()
 
     try:
@@ -61,10 +64,23 @@ async def lifespan(_app: FastAPI):
             if not existing:
                 db.add(EmployeeRoleSchema(role=role.value))
 
+        for entity in EntityType:
+            existing = audit_db.query(EntityTypeSchema).filter_by(id=entity.value).first()
+
+            if not existing:
+                audit_db.add(
+                    EntityTypeSchema(
+                        id=entity.value,
+                        name=entity.label()
+                    )
+                )
+
         db.commit()
+        audit_db.commit()
 
     finally:
         db.close()
+        audit_db.close()
 
     # Yield control to the application
     yield
