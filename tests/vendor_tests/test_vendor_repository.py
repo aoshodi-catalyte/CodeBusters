@@ -1,46 +1,21 @@
-import models
-
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from database import Base
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
     VendorDeletionException,
     VendorNotFoundException,
 )
 from ingredient.ingredient_schema import IngredientSchema
+import models
+from repositories.deactivate_audit_repository import AuditRepository
 from repositories.vendor_repository import VendorRepository
 from vendor.vendor_model import VendorBase
 from vendor.vendor_schema import Vendor
 
 
-@pytest.fixture
-def db_session():
-    """Create a temporary database session for testing."""
-    engine = create_engine("sqlite:///:memory:")
-
-    Base.metadata.create_all(bind=engine)
-
-    testing_session_local = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine,
-    )
-
-    session = testing_session_local()
-
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
-
-
-def test_create_new_vendor(db_session):
+def test_create_new_vendor(db):
     """Test creating a new vendor."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     vendor_data = VendorBase(
         active=True,
@@ -58,9 +33,9 @@ def test_create_new_vendor(db_session):
     assert created_vendor.email == "bestburgers@burger.com"
 
 
-def test_vendor_ingredients_relationship(db_session):
+def test_vendor_ingredients_relationship(db):
     """Test the relationship between vendors and ingredients."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     vendor = repo.create_new_vendor(
         VendorBase(
@@ -82,16 +57,16 @@ def test_vendor_ingredients_relationship(db_session):
         vendor_id=vendor.id,
     )
 
-    db_session.add(ingredient)
-    db_session.commit()
-    db_session.refresh(vendor)
+    db.add(ingredient)
+    db.commit()
+    db.refresh(vendor)
 
     assert len(vendor.ingredients) == 1
     assert vendor.ingredients[0].name == "Ground Beef"
     assert ingredient.vendor.name == "Bob's Burgers Supply Co"
 
 
-def test_get_all_vendors_returns_all_vendors(db_session):
+def test_get_all_vendors_returns_all_vendors(db):
     """Test retrieving multiple vendors."""
     vendor1 = Vendor(
         active=True,
@@ -111,10 +86,10 @@ def test_get_all_vendors_returns_all_vendors(db_session):
         phone="555-2222",
     )
 
-    db_session.add_all([vendor1, vendor2])
-    db_session.commit()
+    db.add_all([vendor1, vendor2])
+    db.commit()
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     result = repo.get_all_vendors()
 
@@ -123,7 +98,7 @@ def test_get_all_vendors_returns_all_vendors(db_session):
     assert result[1].name == "Vendor Two"
 
 
-def test_get_all_vendors_returns_single_vendor(db_session):
+def test_get_all_vendors_returns_single_vendor(db):
     """Test retrieving a single vendor."""
     vendor = Vendor(
         active=True,
@@ -134,10 +109,10 @@ def test_get_all_vendors_returns_single_vendor(db_session):
         phone="555-1111",
     )
 
-    db_session.add(vendor)
-    db_session.commit()
+    db.add(vendor)
+    db.commit()
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     result = repo.get_all_vendors()
 
@@ -146,9 +121,9 @@ def test_get_all_vendors_returns_single_vendor(db_session):
     assert result[0].name == "Vendor One"
 
 
-def test_get_all_vendors_returns_empty_list_when_no_vendors(db_session):
+def test_get_all_vendors_returns_empty_list_when_no_vendors(db):
     """Test retrieving vendors when none exist."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     result = repo.get_all_vendors()
 
@@ -188,7 +163,7 @@ def test_vendor_deletion_exception():
         == "Vendor 123 cannot be deleted because it has associated records."
     )
 
-def test_get_vendor_by_id_returns_vendor(db_session):
+def test_get_vendor_by_id_returns_vendor(db):
     """Test retrieving a vendor by its ID."""
     vendor = Vendor(
         active=True,
@@ -199,11 +174,11 @@ def test_get_vendor_by_id_returns_vendor(db_session):
         phone="5551111111",
     )
 
-    db_session.add(vendor)
-    db_session.commit()
-    db_session.refresh(vendor)
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     result = repo.get_vendor_by_id(vendor.id)
 
@@ -213,7 +188,7 @@ def test_get_vendor_by_id_returns_vendor(db_session):
     assert result.email == "john@vendorone.com"
 
 
-def test_get_vendor_by_id_returns_correct_vendor_when_multiple_exist(db_session):
+def test_get_vendor_by_id_returns_correct_vendor_when_multiple_exist(db):
     """Test retrieving the correct vendor when multiple vendors exist."""
     vendor1 = Vendor(
         active=True,
@@ -233,12 +208,12 @@ def test_get_vendor_by_id_returns_correct_vendor_when_multiple_exist(db_session)
         phone="5552222222",
     )
 
-    db_session.add_all([vendor1, vendor2])
-    db_session.commit()
-    db_session.refresh(vendor1)
-    db_session.refresh(vendor2)
+    db.add_all([vendor1, vendor2])
+    db.commit()
+    db.refresh(vendor1)
+    db.refresh(vendor2)
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     result = repo.get_vendor_by_id(vendor2.id)
 
@@ -250,9 +225,9 @@ def test_get_vendor_by_id_returns_correct_vendor_when_multiple_exist(db_session)
     assert result.id != vendor1.id
 
 
-def test_get_vendor_by_id_raises_not_found_exception(db_session):
+def test_get_vendor_by_id_raises_not_found_exception(db):
     """Test that retrieving a nonexistent vendor raises VendorNotFoundException."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     with pytest.raises(VendorNotFoundException) as exc_info:
         repo.get_vendor_by_id(999)
@@ -261,9 +236,9 @@ def test_get_vendor_by_id_raises_not_found_exception(db_session):
     assert str(exc_info.value) == "Vendor with ID 999 was not found."
 
 
-def test_get_vendor_by_id_raises_exception_for_negative_id(db_session):
+def test_get_vendor_by_id_raises_exception_for_negative_id(db):
     """Test that a nonexistent negative vendor ID raises VendorNotFoundException."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     with pytest.raises(VendorNotFoundException) as exc_info:
         repo.get_vendor_by_id(-1)
@@ -272,9 +247,9 @@ def test_get_vendor_by_id_raises_exception_for_negative_id(db_session):
     assert str(exc_info.value) == "Vendor with ID -1 was not found."
 
 
-def test_get_vendor_by_id_raises_exception_for_zero_id(db_session):
+def test_get_vendor_by_id_raises_exception_for_zero_id(db):
     """Test that a nonexistent zero vendor ID raises VendorNotFoundException."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
     with pytest.raises(VendorNotFoundException) as exc_info:
         repo.get_vendor_by_id(0)
@@ -461,7 +436,7 @@ def test_update_vendor_persists_changes(db):
 
 
 def test_update_vendor_duplicate_name_raises_correct_field(
-    db_session,
+    db,
 ):
     # Arrange
     existing_vendor = Vendor(
@@ -482,10 +457,10 @@ def test_update_vendor_duplicate_name_raises_correct_field(
         phone="2222222222",
     )
 
-    db_session.add_all([existing_vendor, vendor_to_update])
-    db_session.commit()
+    db.add_all([existing_vendor, vendor_to_update])
+    db.commit()
 
-    repository = VendorRepository(db_session)
+    repository = VendorRepository(db)
 
     vendor_data = VendorBase(
         active=True,
@@ -506,7 +481,7 @@ def test_update_vendor_duplicate_name_raises_correct_field(
     assert exc_info.value.field == "name"
     assert exc_info.value.value == "Existing Vendor"
 
-def test_deactivate_vendor(db_session):
+def test_deactivate_vendor(db):
     """Test that deactivate_vendor sets active to False."""
     vendor = Vendor(
         active=True,
@@ -517,18 +492,24 @@ def test_deactivate_vendor(db_session):
         phone="5551111111",
     )
 
-    db_session.add(vendor)
-    db_session.commit()
-    db_session.refresh(vendor)
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
-    deactivated_vendor = repo.deactivate_vendor(vendor.id)
+    audit_repo = AuditRepository(db)
+
+    deactivated_vendor = repo.deactivate_vendor(
+        vendor.id,
+        acting_user="test_user",
+        audit_repo=audit_repo
+    )
 
     assert deactivated_vendor.active is False
 
 
-def test_deactivate_vendor_persists_to_database(db_session):
+def test_deactivate_vendor_persists_to_database(db):
     """Test that deactivation is persisted in the database."""
     vendor = Vendor(
         active=True,
@@ -539,34 +520,42 @@ def test_deactivate_vendor_persists_to_database(db_session):
         phone="5552222222",
     )
 
-    db_session.add(vendor)
-    db_session.commit()
-    db_session.refresh(vendor)
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
-    repo.deactivate_vendor(vendor.id)
+    audit_repo = AuditRepository(db)
 
-    stored_vendor = (
-        db_session.query(Vendor)
-        .filter(Vendor.id == vendor.id)
-        .first()
+    repo.deactivate_vendor(
+        vendor.id,
+        acting_user="test_user",
+        audit_repo=audit_repo
     )
 
-    assert stored_vendor.active is False
+    stored_vendor = (
+            db.query(Vendor)
+            .filter(Vendor.id == vendor.id)
+            .first()
+        )
+    
+    assert stored_vendor.active is False  
 
 
-def test_deactivate_vendor_raises_not_found_exception(db_session):
+def test_deactivate_vendor_raises_not_found_exception(db):
     """Test that deactivating a nonexistent vendor raises VendorNotFoundException."""
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
+    audit_repo = AuditRepository(db)
 
     with pytest.raises(VendorNotFoundException) as exc_info:
-        repo.deactivate_vendor(999)
+        repo.deactivate_vendor(999, acting_user="test_user",
+        audit_repo=audit_repo)
 
     assert exc_info.value.vendor_id == 999
 
 
-def test_deactivate_vendor_preserves_other_fields(db_session):
+def test_deactivate_vendor_preserves_other_fields(db):
     """Test that deactivating a vendor does not alter its other fields."""
     vendor = Vendor(
         active=True,
@@ -577,13 +566,15 @@ def test_deactivate_vendor_preserves_other_fields(db_session):
         phone="5553333333",
     )
 
-    db_session.add(vendor)
-    db_session.commit()
-    db_session.refresh(vendor)
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
 
-    repo = VendorRepository(db_session)
+    repo = VendorRepository(db)
 
-    result = repo.deactivate_vendor(vendor.id)
+    audit_repo = AuditRepository(db)
+
+    result = repo.deactivate_vendor(vendor.id, "test_user", audit_repo)
 
     assert result.name == "Vendor Three"
     assert result.contact_name == "Alex Kim"

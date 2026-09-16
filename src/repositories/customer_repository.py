@@ -11,14 +11,17 @@ domain exceptions instead.
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from constants.entity_types import EntityType
 from customer.customer_model import CustomerCreate, CustomerUpdate
 from customer.customer_schema import CustomerSchema
 from exceptions.customer_exceptions import (
+    CustomerAlreadyDeactivatedError,
     CustomerConstraintError,
     CustomerEmailAlreadyExistsError,
     CustomerNotFoundError,
     CustomerPhoneAlreadyExistsError,
 )
+from repositories.deactivate_audit_repository import AuditRepository
 from utils.error_utils import parse_integrity_error
 
 
@@ -39,7 +42,6 @@ class CustomerRepository:
                 database operations.
         """
         self.db = db
-
 
     def get_customer_or_404(self, customer_id: int) -> CustomerSchema:
         """
@@ -64,7 +66,6 @@ class CustomerRepository:
             raise CustomerNotFoundError(customer_id)
 
         return customer
-
 
     def create_customer(
         self,
@@ -199,7 +200,8 @@ class CustomerRepository:
 
         return db_customer
 
-    def deactivate_customer(self, customer_id: int) -> None:
+    def deactivate_customer(self, customer_id: int, acting_user: str,
+                            audit_repo: AuditRepository) -> CustomerSchema:
         """
         Deactivate a customer by setting active to False (soft delete).
 
@@ -215,9 +217,17 @@ class CustomerRepository:
         """
         db_customer = self.get_customer_by_id(customer_id)
 
+        if db_customer.active is False:
+            raise CustomerAlreadyDeactivatedError(customer_id)
+
         db_customer.active = False
 
         self.db.commit()
+        self.db.refresh(db_customer)
+
+        audit_repo.record_deactivation(
+            customer_id, f"{db_customer.first_name} {db_customer.last_name}",
+            acting_user, EntityType.CUSTOMER)
 
     def get_customers(self) -> list[CustomerSchema]:
         """

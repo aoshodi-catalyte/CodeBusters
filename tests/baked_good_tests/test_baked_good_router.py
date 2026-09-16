@@ -1,117 +1,108 @@
 import models
 import pytest
-
-from fastapi import FastAPI
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
-
-from database import Base, get_db
-from routers.baked_good_router import router as baked_good_router
-from routers.vendor_router import router as vendor_router
-from security.secure_manager_login import check_role, oauth2_scheme
+from tests.factories.auth_factories import manager_token
 
 
-TEST_DATABASE_URL = "sqlite:///:memory:"
+# TEST_DATABASE_URL = "sqlite:///:memory:"
 
-test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# test_engine = create_engine(
+#     TEST_DATABASE_URL,
+#     connect_args={"check_same_thread": False},
+#     poolclass=StaticPool,
+# )
 
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=test_engine,
-)
+# TestingSessionLocal = sessionmaker(
+#     autocommit=False,
+#     autoflush=False,
+#     bind=test_engine,
+# )
 
-app = FastAPI()
-app.include_router(vendor_router)
-app.include_router(baked_good_router)
-
-
-def override_manager_role():
-    """
-    Bypasses manager authentication during router tests.
-    """
-    return {"role": "manager"}
+# app = FastAPI()
+# app.include_router(vendor_router)
+# app.include_router(baked_good_router)
 
 
-def override_oauth2_scheme():
-    """
-    Bypasses the bearer-token requirement during router tests.
-
-    role_checker declares Depends(oauth2_scheme) as its own sub-dependency.
-    Overriding role_checker's own call is enough to bypass oauth2_scheme too
-    (FastAPI rebuilds the sub-dependency tree from the override callable's
-    signature), but this override is kept as a safety net in case any route
-    ever depends on oauth2_scheme directly rather than through check_role.
-    """
-    return "test-token"
+# def override_manager_role():
+#     """
+#     Bypasses manager authentication during router tests.
+#     """
+#     return {"role": "manager"}
 
 
-@pytest.fixture(scope="function")
-def client():
-    """
-    Creates a test client using a temporary in-memory database.
+# def override_oauth2_scheme():
+#     """
+#     Bypasses the bearer-token requirement during router tests.
 
-    The manager authentication dependency is overridden so these tests
-    can focus on baked good endpoint behavior.
-    """
-    Base.metadata.drop_all(bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
+#     role_checker declares Depends(oauth2_scheme) as its own sub-dependency.
+#     Overriding role_checker's own call is enough to bypass oauth2_scheme too
+#     (FastAPI rebuilds the sub-dependency tree from the override callable's
+#     signature), but this override is kept as a safety net in case any route
+#     ever depends on oauth2_scheme directly rather than through check_role.
+#     """
+#     return "test-token"
 
-    def override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
 
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[oauth2_scheme] = override_oauth2_scheme
+# @pytest.fixture(scope="function")
+# def client():
+#     """
+#     Creates a test client using a temporary in-memory database.
 
-    # check_role(["manager"]) is evaluated when each router module is
-    # imported, so the actual dependency function (the "role_checker"
-    # closure) must be located and overridden directly.
-    #
-    # NOTE: this walks the ORIGINAL router objects' `.routes` (built at
-    # route-decoration time), not `app.routes`. In current FastAPI
-    # versions, `app.routes` wraps included routers in a lazy internal
-    # object that does not expose a populated `.dependant` tree the way
-    # a plain APIRoute does, so walking `app.routes` here would silently
-    # find nothing and leave every protected route unauthenticated.
-    for router in (vendor_router, baked_good_router):
-        for route in router.routes:
-            if not hasattr(route, "dependant"):
-                continue
+#     The manager authentication dependency is overridden so these tests
+#     can focus on baked good endpoint behavior.
+#     """
+#     Base.metadata.drop_all(bind=test_engine)
+#     Base.metadata.create_all(bind=test_engine)
 
-            for dependency in route.dependant.dependencies:
-                dependency_call = dependency.call
+#     def override_get_db():
+#         db = TestingSessionLocal()
+#         try:
+#             yield db
+#         finally:
+#             db.close()
 
-                if dependency_call is None:
-                    continue
+#     app.dependency_overrides[get_db] = override_get_db
+#     app.dependency_overrides[oauth2_scheme] = override_oauth2_scheme
 
-                if dependency_call.__name__ in {
-                    "check_role",
-                    "role_checker",
-                    "verify_role",
-                }:
-                    app.dependency_overrides[
-                        dependency_call
-                    ] = override_manager_role
+#     # check_role(["manager"]) is evaluated when each router module is
+#     # imported, so the actual dependency function (the "role_checker"
+#     # closure) must be located and overridden directly.
+#     #
+#     # NOTE: this walks the ORIGINAL router objects' `.routes` (built at
+#     # route-decoration time), not `app.routes`. In current FastAPI
+#     # versions, `app.routes` wraps included routers in a lazy internal
+#     # object that does not expose a populated `.dependant` tree the way
+#     # a plain APIRoute does, so walking `app.routes` here would silently
+#     # find nothing and leave every protected route unauthenticated.
+#     for router in (vendor_router, baked_good_router):
+#         for route in router.routes:
+#             if not hasattr(route, "dependant"):
+#                 continue
 
-    with TestClient(app) as test_client:
-        yield test_client
+#             for dependency in route.dependant.dependencies:
+#                 dependency_call = dependency.call
 
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=test_engine)
+#                 if dependency_call is None:
+#                     continue
+
+#                 if dependency_call.__name__ in {
+#                     "check_role",
+#                     "role_checker",
+#                     "verify_role",
+#                 }:
+#                     app.dependency_overrides[
+#                         dependency_call
+#                     ] = override_manager_role
+
+#     with TestClient(app) as test_client:
+#         yield test_client
+
+#     app.dependency_overrides.clear()
+#     Base.metadata.drop_all(bind=test_engine)
 
 
 def create_vendor(client, name="Test Vendor", email="vendor@example.com"):
     """Helper to create a vendor and return its ID."""
+    token = manager_token()
     vendor = {
         "active": True,
         "name": name,
@@ -121,7 +112,7 @@ def create_vendor(client, name="Test Vendor", email="vendor@example.com"):
         "phone": "5551234567",
     }
 
-    response = client.post("/vendors", json=vendor)
+    response = client.post("/vendors", json=vendor, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 201
 
@@ -132,6 +123,7 @@ def test_post_baked_good(client):
     """Tests that a valid baked good can be created through the API."""
 
     vendor_id = create_vendor(client)
+    token = manager_token()
 
     baked_good = {
         "active": True,
@@ -145,6 +137,7 @@ def test_post_baked_good(client):
     baked_good_response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert baked_good_response.status_code == 201
@@ -161,6 +154,7 @@ def test_post_baked_good(client):
 
 
 def test_post_baked_good_missing_description(client):
+    token = manager_token()
     baked_good = {
         "active": True,
         "name": "Chocolate Chip Cookie",
@@ -173,12 +167,14 @@ def test_post_baked_good_missing_description(client):
     response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
 
 
 def test_post_baked_good_invalid_retail_price(client):
+    token = manager_token()
     baked_good = {
         "active": True,
         "name": "Chocolate Chip Cookie",
@@ -191,12 +187,14 @@ def test_post_baked_good_invalid_retail_price(client):
     response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
 
 
 def test_post_baked_good_empty_name(client):
+    token = manager_token()
     baked_good = {
         "active": True,
         "name": "   ",
@@ -209,6 +207,7 @@ def test_post_baked_good_empty_name(client):
     response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 422
@@ -222,6 +221,7 @@ def test_get_baked_goods_empty(client):
 
 
 def test_get_baked_goods(client):
+    token = manager_token()
     vendor_id = create_vendor(
         client,
         name="Test Vendor",
@@ -240,6 +240,7 @@ def test_get_baked_goods(client):
     baked_good_response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert baked_good_response.status_code == 201
@@ -259,6 +260,7 @@ def test_get_baked_goods(client):
 
 
 def test_post_baked_good_invalid_vendor(client):
+    token = manager_token()
     baked_good = {
         "active": True,
         "name": "Chocolate Cake",
@@ -271,12 +273,14 @@ def test_post_baked_good_invalid_vendor(client):
     response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 404
 
 
 def test_post_duplicate_baked_good(client):
+    token = manager_token()
     vendor_id = create_vendor(
         client,
         name="Test Vendor",
@@ -295,6 +299,7 @@ def test_post_duplicate_baked_good(client):
     first_response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert first_response.status_code == 201
@@ -302,12 +307,14 @@ def test_post_duplicate_baked_good(client):
     second_response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert second_response.status_code == 409
 
 
 def test_post_same_baked_good_different_vendor(client):
+    token = manager_token()
     vendor_1_id = create_vendor(
         client,
         name="Test Vendor One",
@@ -341,11 +348,13 @@ def test_post_same_baked_good_different_vendor(client):
     response_1 = client.post(
         "/baked_goods/",
         json=baked_good_1,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     response_2 = client.post(
         "/baked_goods/",
         json=baked_good_2,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response_1.status_code == 201
@@ -353,6 +362,7 @@ def test_post_same_baked_good_different_vendor(client):
 
 
 def test_get_baked_good_by_id(client):
+    token = manager_token()
     vendor_id = create_vendor(
         client,
         name="Test Vendor",
@@ -371,6 +381,7 @@ def test_get_baked_good_by_id(client):
     baked_good_response = client.post(
         "/baked_goods/",
         json=baked_good,
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert baked_good_response.status_code == 201
@@ -398,7 +409,7 @@ def test_get_baked_good_by_id(client):
 
 def test_put_baked_good_success(client):
     """AC1: valid PUT updates the baked good and returns the entity."""
-
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -411,6 +422,7 @@ def test_put_baked_good_success(client):
             "retail_price": 10.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     baked_good_id = create_response.json()["id"]
@@ -427,6 +439,7 @@ def test_put_baked_good_success(client):
     response = client.put(
         f"/baked_goods/{baked_good_id}",
         json=update_payload,
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
@@ -444,7 +457,7 @@ def test_put_baked_good_success(client):
 
 def test_put_baked_good_persists_change(client):
     """Verifies the update is reflected on a subsequent GET."""
-
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -457,6 +470,7 @@ def test_put_baked_good_persists_change(client):
             "retail_price": 2.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     baked_good_id = create_response.json()["id"]
@@ -471,6 +485,7 @@ def test_put_baked_good_persists_change(client):
             "retail_price": 3.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert update_response.status_code == 200
@@ -489,7 +504,7 @@ def test_put_baked_good_persists_change(client):
 
 def test_put_baked_good_with_nonexistent_id(client):
     """AC2: invalid ID returns 404."""
-
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     update_payload = {
@@ -504,6 +519,7 @@ def test_put_baked_good_with_nonexistent_id(client):
     response = client.put(
         "/baked_goods/9999",
         json=update_payload,
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 404
@@ -513,6 +529,7 @@ def test_put_baked_good_with_nonexistent_id(client):
 
 
 def test_put_baked_good_with_invalid_vendor(client):
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -525,6 +542,7 @@ def test_put_baked_good_with_invalid_vendor(client):
             "retail_price": 3.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     baked_good_id = create_response.json()["id"]
@@ -541,12 +559,14 @@ def test_put_baked_good_with_invalid_vendor(client):
     response = client.put(
         f"/baked_goods/{baked_good_id}",
         json=update_payload,
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 404
 
 
 def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -559,6 +579,7 @@ def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
             "retail_price": 4.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     baked_good_id = create_response.json()["id"]
@@ -573,6 +594,7 @@ def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
             "retail_price": 5.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
@@ -585,7 +607,7 @@ def test_put_baked_good_allows_keeping_own_name_and_vendor(client):
 
 def test_put_baked_good_duplicate_name(client):
     """AC3-adjacent conflict case: name collides with another baked good."""
-
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     client.post(
@@ -598,6 +620,7 @@ def test_put_baked_good_duplicate_name(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     second_response = client.post(
@@ -610,6 +633,7 @@ def test_put_baked_good_duplicate_name(client):
             "retail_price": 4.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     second_id = second_response.json()["id"]
@@ -624,6 +648,7 @@ def test_put_baked_good_duplicate_name(client):
             "retail_price": 4.5,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 409
@@ -631,7 +656,7 @@ def test_put_baked_good_duplicate_name(client):
 
 def test_put_baked_good_invalid_payload(client):
     """AC3: Pydantic validation rejects a malformed update payload."""
-
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -644,6 +669,7 @@ def test_put_baked_good_invalid_payload(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     baked_good_id = create_response.json()["id"]
@@ -658,6 +684,7 @@ def test_put_baked_good_invalid_payload(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 422
@@ -665,7 +692,7 @@ def test_put_baked_good_invalid_payload(client):
 
 def test_put_baked_good_invalid_payload_retail_price_too_low(client):
     """AC3: retail_price <= purchasing_cost is rejected."""
-
+    token = manager_token()
     vendor_id = create_vendor(client)
 
     create_response = client.post(
@@ -678,6 +705,7 @@ def test_put_baked_good_invalid_payload_retail_price_too_low(client):
             "retail_price": 4.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     baked_good_id = create_response.json()["id"]
@@ -692,6 +720,7 @@ def test_put_baked_good_invalid_payload_retail_price_too_low(client):
             "retail_price": 3.0,
             "vendor_id": vendor_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 422
@@ -705,7 +734,7 @@ def test_put_baked_good_updates_vendor(client):
     level because there is no GET /vendors/{id} endpoint exposed here
     to inspect the relationship directly through the API.
     """
-
+    token = manager_token()
     vendor_1_id = create_vendor(
         client,
         name="Vendor One",
@@ -728,6 +757,7 @@ def test_put_baked_good_updates_vendor(client):
             "retail_price": 3.0,
             "vendor_id": vendor_1_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     baked_good_id = create_response.json()["id"]
@@ -742,6 +772,7 @@ def test_put_baked_good_updates_vendor(client):
             "retail_price": 3.0,
             "vendor_id": vendor_2_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200

@@ -9,22 +9,23 @@ baked good data.
 
 from typing import List
 
-from fastapi import Depends, status, APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
-from database import get_db
 
 from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from baked_good.baked_good_response_model import BakedGoodResponseModel
+from database import get_audit_db, get_db
 from exceptions.baked_good_exceptions import (
     BakedGoodAlreadyDeactivatedError,
     BakedGoodNotFoundError,
     DuplicateBakedGoodError,
     VendorNotFoundError,
 )
-
 from repositories.baked_good_repository import BakedGoodRepository
+from repositories.deactivate_audit_repository import AuditRepository
 from security.secure_manager_login import check_role
+from utils.auth import get_acting_user
+from utils.error_handlers import handle_repo_exception
 
 router = APIRouter(prefix="/baked_goods", tags=["baked_goods"])
 
@@ -175,11 +176,14 @@ def put_baked_good(
 
 @router.delete(
     "/{baked_good_id}",
+    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_baked_good(
     baked_good_id: int,
+    acting_user = Depends(get_acting_user),
     db: Session = Depends(get_db),
+    audit_db: Session = Depends(get_audit_db)
 ):
     """
     Deactivates a baked good and returns a 204 No Content response.
@@ -189,18 +193,18 @@ def deactivate_baked_good(
         HTTPException: 409 if the baked good is already deactivated.
     """
     repo = BakedGoodRepository(db)
+    audit_repo = AuditRepository(audit_db)
 
     try:
-        repo.deactivate_baked_good(baked_good_id)
-
-    except BakedGoodNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except BakedGoodAlreadyDeactivatedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
+        repo.deactivate_baked_good(baked_good_id, acting_user.email, audit_repo)
+        return None
+    except (
+        BakedGoodNotFoundError,
+        BakedGoodAlreadyDeactivatedError
+    ) as e:
+        return handle_repo_exception(
+            db,
+            e,
+            not_found_errors=(BakedGoodNotFoundError,),
+            conflict_errors=(BakedGoodAlreadyDeactivatedError)
+        )
