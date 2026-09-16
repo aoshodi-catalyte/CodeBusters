@@ -197,7 +197,7 @@ def deactivate_baked_good(
 
     try:
         repo.deactivate_baked_good(baked_good_id, acting_user.email, audit_repo)
-        return
+        return None
     except (
         BakedGoodNotFoundError,
         BakedGoodAlreadyDeactivatedError
