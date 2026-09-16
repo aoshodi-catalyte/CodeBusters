@@ -341,9 +341,9 @@ def delete_ingredient_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc)
         ) from exc
-    except Exception as e:
+    except Exception as ex:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while deactivating the ingredient."
-        ) from e
+        ) from ex

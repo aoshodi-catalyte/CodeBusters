@@ -187,7 +187,7 @@ def deactivate_customer(
 
     try:
         repo.deactivate_customer(customer_id, acting_user.email, audit_repo)
-    except CustomerNotFoundError as exc:
+    except CustomerNotFoundError(customer_id) as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
