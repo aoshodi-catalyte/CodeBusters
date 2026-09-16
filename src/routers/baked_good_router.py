@@ -9,20 +9,18 @@ baked good data.
 
 from typing import List
 
-from fastapi import Depends, status, APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
-from database import get_audit_db, get_db
 
 from baked_good.baked_good_model import BakedGood, BakedGoodUpdate
 from baked_good.baked_good_response_model import BakedGoodResponseModel
+from database import get_audit_db, get_db
 from exceptions.baked_good_exceptions import (
     BakedGoodAlreadyDeactivatedError,
     BakedGoodNotFoundError,
     DuplicateBakedGoodError,
     VendorNotFoundError,
 )
-
 from repositories.baked_good_repository import BakedGoodRepository
 from repositories.deactivate_audit_repository import AuditRepository
 from security.secure_manager_login import check_role
