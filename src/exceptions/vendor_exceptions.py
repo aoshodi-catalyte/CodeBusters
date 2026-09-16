@@ -8,6 +8,9 @@ caught and translated into appropriate API responses.
 """
 
 
+import ingredient
+
+
 class VendorNotFoundException(Exception):
     """Raised when a requested vendor cannot be found in the database."""
 
@@ -55,3 +58,9 @@ class VendorDeletionException(Exception):
         super().__init__(
             f"Vendor {vendor_id} cannot be deleted because it has associated records."
         )
+
+
+class VendorAlreadyDeactivatedError(Exception):
+    """Raised when a vendor with a false active status is attempted to be deactivated."""
+    def __init__(self, vendor_id: int):
+        super().__init__(f"Vendor with ID {vendor_id} already deactivated.")

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from constants.entity_types import EntityType
 from exceptions.vendor_exceptions import (
     DuplicateVendorException,
+    VendorAlreadyDeactivatedError,
     VendorNotFoundException,
 )
 from repositories.deactivate_audit_repository import AuditRepository
@@ -194,8 +195,8 @@ class VendorRepository:
         """
         vendor = self.get_vendor_by_id(vendor_id)
 
-        if vendor is None:
-            raise VendorNotFoundException(vendor_id)
+        if vendor.active is False:
+            raise VendorAlreadyDeactivatedError(vendor_id)
 
         vendor.active = False
 

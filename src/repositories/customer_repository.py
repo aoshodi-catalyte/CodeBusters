@@ -11,16 +11,17 @@ domain exceptions instead.
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from repositories.deactivate_audit_repository import AuditRepository
 from constants.entity_types import EntityType
 from customer.customer_model import CustomerCreate, CustomerUpdate
 from customer.customer_schema import CustomerSchema
 from exceptions.customer_exceptions import (
+    CustomerAlreadyDeactivatedError,
     CustomerConstraintError,
     CustomerEmailAlreadyExistsError,
     CustomerNotFoundError,
     CustomerPhoneAlreadyExistsError,
 )
+from repositories.deactivate_audit_repository import AuditRepository
 from utils.error_utils import parse_integrity_error
 
 
@@ -215,6 +216,9 @@ class CustomerRepository:
                 If no customer exists with the given ID.
         """
         db_customer = self.get_customer_by_id(customer_id)
+
+        if db_customer.active is False:
+            raise CustomerAlreadyDeactivatedError(customer_id)
 
         db_customer.active = False
 

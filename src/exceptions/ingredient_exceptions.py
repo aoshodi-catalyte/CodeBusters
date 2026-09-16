@@ -85,3 +85,9 @@ class InactiveIngredientError(Exception):
         self.ingredient_id = ingredient_id
 
         super().__init__(f"Ingredient with ID {ingredient_id} is inactive.")
+
+
+class IngredientAlreadyDeactivatedError(Exception):
+    """Raised when an ingredient with a false active status is attempted to be deactivated."""
+    def __init__(self, ingredient_id: int):
+        super().__init__(f"Ingredient with ID {ingredient_id} already deactivated.")

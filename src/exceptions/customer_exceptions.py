@@ -45,3 +45,9 @@ class CustomerConstraintError(Exception):
         super().__init__(
             "The customer record violates a database constraint."
         )
+
+
+class CustomerAlreadyDeactivatedError(Exception):
+    """Raised when a customer with a false active status is attempted to be deactivated."""
+    def __init__(self, customer_id: int):
+        super().__init__(f"Customer with ID {customer_id} already deactivated.")

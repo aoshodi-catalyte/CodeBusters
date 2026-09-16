@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from constants.entity_types import EntityType
 from exceptions.ingredient_exceptions import (
+    IngredientAlreadyDeactivatedError,
     IngredientAlreadyExistsError,
     IngredientConstraintError,
     IngredientNotFoundError,
@@ -219,6 +220,9 @@ class IngredientRepository:
         """Soft delete an ingredient and record active relationships."""
         try:
             ingredient = self.get_ingredient_by_id(ingredient_id)
+
+            if ingredient.active is False:
+                raise IngredientAlreadyDeactivatedError(ingredient_id)
 
             if ingredient is None:
                 return None
