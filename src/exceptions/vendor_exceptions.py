@@ -8,9 +8,6 @@ caught and translated into appropriate API responses.
 """
 
 
-import ingredient
-
-
 class VendorNotFoundException(Exception):
     """Raised when a requested vendor cannot be found in the database."""
 

@@ -193,7 +193,7 @@ def deactivate_vendor(
 
     try:
         repo.deactivate_vendor(vendor_id, acting_user.email, audit_repo)
-    except Exception as e:
+    except (VendorNotFoundError(vendor_id), VendorAlreadyDeactivatedError(vendor_id)) as e:
         handle_repo_exception(
             db,
             e,
