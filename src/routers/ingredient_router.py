@@ -343,6 +343,6 @@ def delete_ingredient_endpoint(
         return handle_repo_exception(
             db,
             e,
-            IngredientNotFoundError(ingredient_id),
-            IngredientAlreadyInactiveError(ingredient_id)
+            not_found_errors=(IngredientNotFoundError,),
+            conflict_errors=(IngredientAlreadyInactiveError,)
         )
