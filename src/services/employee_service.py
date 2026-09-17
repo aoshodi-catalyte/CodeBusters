@@ -2,6 +2,8 @@
 Application service for employee creation and credential delivery.
 """
 
+# pylint: disable=unused-argument
+
 from config import settings
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema
@@ -24,10 +26,15 @@ class EmployeeService:
 
     def create_employee(
         self,
+        db,
         employee_data: Employee,
     ) -> EmployeeSchema:
         """
         Create an employee and email the generated credentials.
+
+        The database session is accepted for compatibility with the
+        router/service contract. The repository already owns the
+        configured database session.
         """
 
         employee, username, temporary_password = (
