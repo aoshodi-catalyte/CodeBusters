@@ -47,20 +47,45 @@ def manager_headers():
     }
 
 
+class FakeEmailService:
+    """
+    Fake email service used by employee router tests.
+
+    These tests should not make real SendGrid HTTP requests.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def send_initial_credentials(
+        self,
+        recipient_email,
+        username,
+        temporary_password,
+    ):
+        pass
+
+    def send_password_reset_code(
+        self,
+        recipient_email,
+        code,
+    ):
+        pass
+
+
 @pytest.fixture(autouse=True)
-def remove_default_authorization_header(request):
+def mock_email_service(monkeypatch):
     """
-    Remove any default Authorization header from the active TestClient.
+    Replace the real EmailService for employee router tests.
 
-    Manager-protected requests provide their own valid JWT explicitly.
+    This prevents tests from creating an HTTP Authorization header
+    with an empty SendGrid API key.
     """
-    if "client" in request.fixturenames:
-        test_client = request.getfixturevalue("client")
-        test_client.headers.pop("Authorization", None)
-
-    elif "clean_client" in request.fixturenames:
-        test_client = request.getfixturevalue("clean_client")
-        test_client.headers.pop("Authorization", None)
+    monkeypatch.setattr(
+        employee_service,
+        "EmailService",
+        FakeEmailService,
+    )
 
 
 def test_post_new_employee_success(client):
@@ -86,7 +111,9 @@ def test_post_new_employee_success(client):
     data = response.json()
 
     assert data["first_name"] == "John"
+    assert data["last_name"] == "Doe"
     assert data["email"] == "john@doe.com"
+    assert data["role"] == "manager"
 
 
 def test_post_new_employee_duplicate_email(client):
@@ -101,23 +128,26 @@ def test_post_new_employee_duplicate_email(client):
         "term_date": None,
     }
 
-    client.post(
+    first_response = client.post(
         "/employees",
         json=payload,
         headers=manager_headers(),
     )
 
-    response = client.post(
+    assert first_response.status_code == 201
+
+    second_response = client.post(
         "/employees",
         json=payload,
         headers=manager_headers(),
     )
 
-    assert response.status_code == 409
+    assert second_response.status_code == 409
 
-    assert response.json()[
-        "detail"
-    ] == "Employee with this email already exists."
+    assert (
+        second_response.json()["detail"]
+        == "Employee with this email already exists."
+    )
 
 
 def test_post_new_employee_invalid_model(client):
@@ -213,9 +243,10 @@ def test_post_new_employee_integrity_error(
 
     assert response.status_code == 409
 
-    assert response.json()[
-        "detail"
-    ] == "Employee with this email already exists."
+    assert (
+        response.json()["detail"]
+        == "Employee with this email already exists."
+    )
 
 
 def test_post_new_employee_sends_credentials_and_allows_initial_login(
@@ -225,7 +256,7 @@ def test_post_new_employee_sends_credentials_and_allows_initial_login(
 ):
     captured = {}
 
-    class FakeEmailService:
+    class FakeEmployeeEmailService:
         def __init__(self, *args, **kwargs):
             pass
 
@@ -242,7 +273,7 @@ def test_post_new_employee_sends_credentials_and_allows_initial_login(
     monkeypatch.setattr(
         employee_service,
         "EmailService",
-        FakeEmailService,
+        FakeEmployeeEmailService,
     )
 
     payload = {
@@ -332,17 +363,20 @@ def test_get_all_employees(client):
         "term_date": None,
     }
 
-    client.post(
+    first_response = client.post(
         "/employees",
         json=payload_1,
         headers=manager_headers(),
     )
 
-    client.post(
+    second_response = client.post(
         "/employees",
         json=payload_2,
         headers=manager_headers(),
     )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
 
     response = client.get("/employees")
 
@@ -364,13 +398,12 @@ def test_get_all_employees(client):
 
     assert employees[1]["first_name"] == "Jane"
     assert employees[1]["email"] == "jane@doe.com"
+    assert employees[1]["role"] == "manager"
 
 
 def test_get_all_employees_response_contains_expected_fields(
     client,
 ):
-    """Test that employee list response contains expected fields."""
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -382,17 +415,25 @@ def test_get_all_employees_response_contains_expected_fields(
         "term_date": None,
     }
 
-    client.post(
+    create_response = client.post(
         "/employees",
         json=payload,
         headers=manager_headers(),
     )
 
+    assert create_response.status_code == 201
+
     response = client.get("/employees")
 
     assert response.status_code == 200
 
-    employee = response.json()[0]
+    employees = response.json()
+
+    employee = next(
+        employee
+        for employee in employees
+        if employee["email"] == "john@doe.com"
+    )
 
     assert "id" in employee
     assert "active" in employee
@@ -422,16 +463,15 @@ def test_get_single_employee_by_id_success(client):
 
     assert post_response.status_code == 201
 
-    created = post_response.json()
-    employee_id = created["id"]
+    employee_id = post_response.json()["id"]
 
-    get_response = client.get(
+    response = client.get(
         f"/employees/{employee_id}"
     )
 
-    assert get_response.status_code == 200
+    assert response.status_code == 200
 
-    data = get_response.json()
+    data = response.json()
 
     assert data["id"] == employee_id
     assert data["first_name"] == "John"
@@ -468,13 +508,15 @@ def test_update_employee_success(client):
         "term_date": None,
     }
 
-    create_resp = client.post(
+    create_response = client.post(
         "/employees",
         json=payload,
         headers=manager_headers(),
     )
 
-    employee_id = create_resp.json()["id"]
+    assert create_response.status_code == 201
+
+    employee_id = create_response.json()["id"]
 
     update_payload = {
         "active": False,
@@ -487,17 +529,19 @@ def test_update_employee_success(client):
         "term_date": "01/02/2023",
     }
 
-    resp = client.put(
+    response = client.put(
         f"/employees/{employee_id}",
         json=update_payload,
         headers=manager_headers(),
     )
 
-    assert resp.status_code == 200
+    assert response.status_code == 200
 
-    data = resp.json()
+    data = response.json()
 
+    assert data["id"] == employee_id
     assert data["first_name"] == "Johnny"
+    assert data["last_name"] == "Doe"
     assert data["email"] == "johnny@doe.com"
     assert data["active"] is False
 
@@ -514,15 +558,15 @@ def test_update_employee_not_found(client):
         "term_date": None,
     }
 
-    resp = client.put(
+    response = client.put(
         "/employees/999",
         json=update_payload,
         headers=manager_headers(),
     )
 
-    assert resp.status_code == 404
+    assert response.status_code == 404
     assert "does not exist" in (
-        resp.json()["detail"].lower()
+        response.json()["detail"].lower()
     )
 
 
@@ -538,13 +582,13 @@ def test_update_employee_invalid_payload(client):
         "term_date": None,
     }
 
-    resp = client.put(
+    response = client.put(
         "/employees/1",
         json=invalid_payload,
         headers=manager_headers(),
     )
 
-    assert resp.status_code == 422
+    assert response.status_code == 422
 
 
 def test_deactivate_employee_success(client):
@@ -559,23 +603,22 @@ def test_deactivate_employee_success(client):
         "term_date": None,
     }
 
-    post_response = client.post(
+    create_response = client.post(
         "/employees",
         json=payload,
         headers=manager_headers(),
     )
 
-    assert post_response.status_code == 201
+    assert create_response.status_code == 201
 
-    created = post_response.json()
-    employee_id = created["id"]
+    employee_id = create_response.json()["id"]
 
-    delete_response = client.delete(
+    response = client.delete(
         f"/employees/{employee_id}",
         headers=manager_headers(),
     )
 
-    assert delete_response.status_code == 204
+    assert response.status_code == 204
 
 
 def test_deactivate_employee_not_found(client):
@@ -602,16 +645,15 @@ def test_deactivate_employee_already_deactivated(client):
         "term_date": None,
     }
 
-    post_response = client.post(
+    create_response = client.post(
         "/employees",
         json=payload,
         headers=manager_headers(),
     )
 
-    assert post_response.status_code == 201
+    assert create_response.status_code == 201
 
-    created = post_response.json()
-    employee_id = created["id"]
+    employee_id = create_response.json()["id"]
 
     first_delete_response = client.delete(
         f"/employees/{employee_id}",
@@ -639,7 +681,7 @@ def test_employee_can_change_temporary_password_and_login_permanently(
 ):
     captured = {}
 
-    class FakeEmailService:
+    class FakeEmployeeEmailService:
         def __init__(self, *args, **kwargs):
             pass
 
@@ -656,7 +698,7 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     monkeypatch.setattr(
         employee_service,
         "EmailService",
-        FakeEmailService,
+        FakeEmployeeEmailService,
     )
 
     employee_payload = {
@@ -697,6 +739,7 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     first_login_data = first_login_response.json()
 
     assert "access_token" in first_login_data
+    assert first_login_data["token_type"] == "bearer"
     assert first_login_data["must_change_password"] is True
 
     access_token = first_login_data["access_token"]
@@ -710,7 +753,7 @@ def test_employee_can_change_temporary_password_and_login_permanently(
             "new_password": new_password,
         },
         headers={
-            "Authorization": f"Bearer {access_token}"
+            "Authorization": f"Bearer {access_token}",
         },
     )
 
