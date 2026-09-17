@@ -47,6 +47,22 @@ def manager_headers():
     }
 
 
+@pytest.fixture(autouse=True)
+def remove_default_authorization_header(request):
+    """
+    Remove any default Authorization header from the active TestClient.
+
+    Manager-protected requests provide their own valid JWT explicitly.
+    """
+    if "client" in request.fixturenames:
+        test_client = request.getfixturevalue("client")
+        test_client.headers.pop("Authorization", None)
+
+    elif "clean_client" in request.fixturenames:
+        test_client = request.getfixturevalue("clean_client")
+        test_client.headers.pop("Authorization", None)
+
+
 def test_post_new_employee_success(client):
     payload = {
         "active": True,
@@ -668,7 +684,6 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     assert username == "yemi.permanent"
     assert temporary_password
 
-    # First login with the generated temporary password.
     first_login_response = client.post(
         "/auth/login",
         data={
@@ -686,7 +701,6 @@ def test_employee_can_change_temporary_password_and_login_permanently(
 
     access_token = first_login_data["access_token"]
 
-    # Change the temporary password to a permanent password.
     new_password = "Permanent123!"
 
     change_response = client.post(
@@ -719,7 +733,6 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     assert auth_record is not None
     assert auth_record.is_temporary_password is False
 
-    # The employee can now log in with the permanent password.
     permanent_login_response = client.post(
         "/auth/login",
         data={
@@ -735,7 +748,6 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     assert "access_token" in permanent_login_data
     assert permanent_login_data["must_change_password"] is False
 
-    # The old temporary password must no longer work.
     old_password_response = client.post(
         "/auth/login",
         data={
