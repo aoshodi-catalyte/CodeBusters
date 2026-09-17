@@ -1,5 +1,9 @@
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
+from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -13,15 +17,37 @@ from employee.employee_schema import EmployeeSchema
 from secure_login.secure_login_schema import EmployeeAuth
 from services.employee_service import EmployeeService
 from services import employee_service
-from tests.factories.auth_factories import manager_token
+
+
+TEST_JWT_SECRET = "test-secret"
+TEST_JWT_ALGORITHM = "HS256"
+
+
+def manager_headers():
+    """Create deterministic authorization headers for manager tests."""
+    now = datetime.now(UTC)
+
+    payload = {
+        "sub": "1",
+        "employee_id": 1,
+        "role": "manager",
+        "jti": str(uuid4()),
+        "iat": now,
+        "exp": now + timedelta(hours=1),
+    }
+
+    token = jwt.encode(
+        payload,
+        TEST_JWT_SECRET,
+        algorithm=TEST_JWT_ALGORITHM,
+    )
+
+    return {
+        "Authorization": f"Bearer {token}",
+    }
 
 
 def test_post_new_employee_success(client):
-    token = manager_token()
-
-    print("PYTEST TOKEN:", repr(token))
-    print("PYTEST TOKEN LENGTH:", len(token))
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -36,9 +62,7 @@ def test_post_new_employee_success(client):
     response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 201
@@ -50,8 +74,6 @@ def test_post_new_employee_success(client):
 
 
 def test_post_new_employee_duplicate_email(client):
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -66,17 +88,13 @@ def test_post_new_employee_duplicate_email(client):
     client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 409
@@ -87,8 +105,6 @@ def test_post_new_employee_duplicate_email(client):
 
 
 def test_post_new_employee_invalid_model(client):
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -103,9 +119,7 @@ def test_post_new_employee_invalid_model(client):
     response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 422
@@ -124,8 +138,6 @@ def test_post_new_employee_value_error(
         fake_create_employee,
     )
 
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -140,9 +152,7 @@ def test_post_new_employee_value_error(
     response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 400
@@ -168,8 +178,6 @@ def test_post_new_employee_integrity_error(
         fake_create_employee,
     )
 
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -184,9 +192,7 @@ def test_post_new_employee_integrity_error(
     response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 409
@@ -223,8 +229,6 @@ def test_post_new_employee_sends_credentials_and_allows_initial_login(
         FakeEmailService,
     )
 
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "Yemi",
@@ -239,9 +243,7 @@ def test_post_new_employee_sends_credentials_and_allows_initial_login(
     response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 201
@@ -292,8 +294,6 @@ def test_get_all_employees_empty(clean_client):
 
 
 def test_get_all_employees(client):
-    token = manager_token()
-
     payload_1 = {
         "active": True,
         "first_name": "John",
@@ -319,17 +319,13 @@ def test_get_all_employees(client):
     client.post(
         "/employees",
         json=payload_1,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     client.post(
         "/employees",
         json=payload_2,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     response = client.get("/employees")
@@ -359,8 +355,6 @@ def test_get_all_employees_response_contains_expected_fields(
 ):
     """Test that employee list response contains expected fields."""
 
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -375,9 +369,7 @@ def test_get_all_employees_response_contains_expected_fields(
     client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     response = client.get("/employees")
@@ -395,8 +387,6 @@ def test_get_all_employees_response_contains_expected_fields(
 
 
 def test_get_single_employee_by_id_success(client):
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -411,9 +401,7 @@ def test_get_single_employee_by_id_success(client):
     post_response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert post_response.status_code == 201
@@ -453,8 +441,6 @@ def test_get_single_employee_by_id_invalid_id_type(client):
 
 
 def test_update_employee_success(client):
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -469,9 +455,7 @@ def test_update_employee_success(client):
     create_resp = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     employee_id = create_resp.json()["id"]
@@ -490,9 +474,7 @@ def test_update_employee_success(client):
     resp = client.put(
         f"/employees/{employee_id}",
         json=update_payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert resp.status_code == 200
@@ -505,8 +487,6 @@ def test_update_employee_success(client):
 
 
 def test_update_employee_not_found(client):
-    token = manager_token()
-
     update_payload = {
         "active": True,
         "first_name": "Jane",
@@ -521,9 +501,7 @@ def test_update_employee_not_found(client):
     resp = client.put(
         "/employees/999",
         json=update_payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert resp.status_code == 404
@@ -533,8 +511,6 @@ def test_update_employee_not_found(client):
 
 
 def test_update_employee_invalid_payload(client):
-    token = manager_token()
-
     invalid_payload = {
         "active": True,
         "first_name": "Jane",
@@ -549,17 +525,13 @@ def test_update_employee_invalid_payload(client):
     resp = client.put(
         "/employees/1",
         json=invalid_payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert resp.status_code == 422
 
 
 def test_deactivate_employee_success(client):
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -574,9 +546,7 @@ def test_deactivate_employee_success(client):
     post_response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert post_response.status_code == 201
@@ -586,22 +556,16 @@ def test_deactivate_employee_success(client):
 
     delete_response = client.delete(
         f"/employees/{employee_id}",
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert delete_response.status_code == 204
 
 
 def test_deactivate_employee_not_found(client):
-    token = manager_token()
-
     response = client.delete(
         "/employees/999",
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert response.status_code == 404
@@ -611,8 +575,6 @@ def test_deactivate_employee_not_found(client):
 
 
 def test_deactivate_employee_already_deactivated(client):
-    token = manager_token()
-
     payload = {
         "active": True,
         "first_name": "John",
@@ -627,9 +589,7 @@ def test_deactivate_employee_already_deactivated(client):
     post_response = client.post(
         "/employees",
         json=payload,
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert post_response.status_code == 201
@@ -639,18 +599,14 @@ def test_deactivate_employee_already_deactivated(client):
 
     first_delete_response = client.delete(
         f"/employees/{employee_id}",
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert first_delete_response.status_code == 204
 
     second_delete_response = client.delete(
         f"/employees/{employee_id}",
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers=manager_headers(),
     )
 
     assert second_delete_response.status_code == 409
@@ -687,8 +643,6 @@ def test_employee_can_change_temporary_password_and_login_permanently(
         FakeEmailService,
     )
 
-    manager_token_value = manager_token()
-
     employee_payload = {
         "active": True,
         "first_name": "Yemi",
@@ -703,9 +657,7 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     create_response = client.post(
         "/employees",
         json=employee_payload,
-        headers={
-            "Authorization": f"Bearer {manager_token_value}"
-        },
+        headers=manager_headers(),
     )
 
     assert create_response.status_code == 201
