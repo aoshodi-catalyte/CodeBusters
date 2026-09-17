@@ -67,3 +67,54 @@ class EmailService:
         )
 
         response.raise_for_status()
+
+    def send_initial_credentials(
+        self,
+        recipient_email: str,
+        username: str,
+        temporary_password: str,
+    ) -> None:
+        """
+        Send newly generated employee login credentials.
+        """
+
+        payload = {
+            "personalizations": [
+                {
+                    "to": [
+                        {
+                            "email": recipient_email,
+                        }
+                    ]
+                }
+            ],
+            "from": {
+                "email": self.from_email,
+            },
+            "subject": "Your CodeBusters Account",
+            "content": [
+                {
+                    "type": "text/plain",
+                    "value": (
+                        "Your CodeBusters employee account has been created.\n\n"
+                        f"Username: {username}\n"
+                        f"Temporary password: {temporary_password}\n\n"
+                        "Please log in and change your temporary password."
+                    ),
+                }
+            ],
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        response = httpx.post(
+            self.SENDGRID_URL,
+            json=payload,
+            headers=headers,
+            timeout=10.0,
+        )
+
+        response.raise_for_status()
