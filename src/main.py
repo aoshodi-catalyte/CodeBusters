@@ -31,7 +31,7 @@ from routers.secure_login_router import router as secure_login_router
 from routers.secure_logout_router import router as secure_logout_router
 from routers.vendor_router import router as vendor_router
 from routers.password_reset_router import router as password_reset_router
-
+from routers.login_ui_router import router as login_ui_router
 from routers.deactivation_log_router import router as deactivation_log_router
 
 @asynccontextmanager
@@ -158,3 +158,4 @@ app.include_router(secure_logout_router)
 app.include_router(password_reset_router)
 app.include_router(deactivation_log_router)
 app.include_router(purchase_router)
+app.include_router(login_ui_router)
