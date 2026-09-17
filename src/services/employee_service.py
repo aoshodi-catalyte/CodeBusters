@@ -24,7 +24,6 @@ class EmployeeService:
 
     def create_employee(
         self,
-        db,
         employee_data: Employee,
     ) -> EmployeeSchema:
         """

@@ -19,6 +19,9 @@ from tests.factories.auth_factories import manager_token
 def test_post_new_employee_success(client):
     token = manager_token()
 
+    print("PYTEST TOKEN:", repr(token))
+    print("PYTEST TOKEN LENGTH:", len(token))
+
     payload = {
         "active": True,
         "first_name": "John",
@@ -790,4 +793,3 @@ def test_employee_can_change_temporary_password_and_login_permanently(
     )
 
     assert old_password_response.status_code == 401
-

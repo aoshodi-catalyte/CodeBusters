@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """
 Browser login UI served by FastAPI.
 
