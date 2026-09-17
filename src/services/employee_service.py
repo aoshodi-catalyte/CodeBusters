@@ -67,6 +67,7 @@ def get_employee_service(
         from_email=settings.SENDGRID_FROM_EMAIL or "",
     )
 
+
     return EmployeeService(
         repository=repository,
         email_service=email_service,
