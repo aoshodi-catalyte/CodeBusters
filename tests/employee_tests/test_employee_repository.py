@@ -6,26 +6,42 @@ from constants.employee_roles import EmployeeRole
 from employee.employee_model import Employee
 from employee.employee_schema import EmployeeSchema, Base
 from employee.employee_role_schema import EmployeeRoleSchema
-from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError, EmployeeEmailAlreadyExistsError
+from exceptions.employee_exceptions import (
+    EmployeeAlreadyDeactivatedError,
+    EmployeeEmailAlreadyExistsError,
+)
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
 from repositories.employee_repository import EmployeeRepository
 from secure_login.secure_login_schema import EmployeeAuth
-from routers.employee_router import router
+from utils.password_utils import verify_password
 from pydantic import ValidationError
 from datetime import date, timedelta
 
 
 @pytest.fixture
 def repo(db):
-    role = EmployeeRoleSchema(role="manager")
-    db.add(role)
-    db.commit()
+    role = (
+        db.query(EmployeeRoleSchema)
+        .filter(EmployeeRoleSchema.role == "manager")
+        .first()
+    )
+
+    if role is None:
+        role = EmployeeRoleSchema(role="manager")
+        db.add(role)
+        db.commit()
+
     return EmployeeRepository(db)
 
 
 def run_db():
-    engine = create_engine("sqlite:///:memory:", echo=False)
+    engine = create_engine(
+        "sqlite:///:memory:",
+        echo=False,
+    )
+
     TestingSessionLocal = sessionmaker(bind=engine)
+
     Base.metadata.create_all(bind=engine)
 
     db = TestingSessionLocal()
@@ -41,11 +57,18 @@ def run_db():
 
 
 def setup_db_empty_role_table():
-    engine = create_engine("sqlite:///:memory:", echo=False)
+    engine = create_engine(
+        "sqlite:///:memory:",
+        echo=False,
+    )
+
     TestingSessionLocal = sessionmaker(bind=engine)
+
     Base.metadata.create_all(bind=engine)
+
     db = TestingSessionLocal()
     repo = EmployeeRepository(db)
+
     return db, repo
 
 
@@ -72,6 +95,93 @@ def test_create_new_employee_success():
     assert created.hourly_rate == 10.50
     assert created.role_id == role.id
     assert created.active is True
+
+    db.close()
+
+
+def test_create_new_employee_returns_generated_credentials(
+    monkeypatch,
+):
+    db, repo, role = run_db()
+
+    monkeypatch.setattr(
+        "repositories.employee_repository.generate_temporary_password",
+        lambda: "Temporary123!",
+    )
+
+    employee_model = Employee(
+        active=True,
+        first_name="Yemi",
+        last_name="O",
+        email="yemi.credentials@example.com",
+        phone_number="5551234567",
+        role=EmployeeRole.MANAGER,
+        hourly_rate=25.00,
+        hire_date="09/16/2026",
+    )
+
+    result = repo.create_new_employee(
+        employee_model,
+        return_credentials=True,
+    )
+
+    employee, username, temporary_password = result
+
+    assert employee.first_name == "Yemi"
+    assert employee.last_name == "O"
+    assert username == "yemi.o"
+    assert temporary_password == "Temporary123!"
+
+    db.close()
+
+
+def test_create_new_employee_stores_hashed_temporary_password(
+    monkeypatch,
+):
+    db, repo, role = run_db()
+
+    monkeypatch.setattr(
+        "repositories.employee_repository.generate_temporary_password",
+        lambda: "Temporary123!",
+    )
+
+    employee_model = Employee(
+        active=True,
+        first_name="Yemi",
+        last_name="Password",
+        email="yemi.password@example.com",
+        phone_number="5551234567",
+        role=EmployeeRole.MANAGER,
+        hourly_rate=25.00,
+        hire_date="09/16/2026",
+    )
+
+    employee, username, temporary_password = (
+        repo.create_new_employee(
+            employee_model,
+            return_credentials=True,
+        )
+    )
+
+    auth = (
+        db.query(EmployeeAuth)
+        .filter(
+            EmployeeAuth.employee_id == employee.id
+        )
+        .first()
+    )
+
+    assert auth is not None
+    assert auth.username == username
+
+    assert auth.password_hash != temporary_password
+
+    assert verify_password(
+        temporary_password,
+        auth.password_hash,
+    )
+
+    assert auth.is_temporary_password is True
 
     db.close()
 
@@ -115,12 +225,15 @@ def test_role_fk_lookup_failure():
     )
 
     db.close()
+
     with pytest.raises(ValueError):
         repo.create_new_employee(employee_model)
 
 
 def test_term_date_validation_propagates_to_repository():
-    future_date = (date.today() + timedelta(days=3)).strftime("%m/%d/%Y")
+    future_date = (
+        date.today() + timedelta(days=3)
+    ).strftime("%m/%d/%Y")
 
     with pytest.raises(ValidationError):
         Employee(
@@ -153,6 +266,7 @@ def test_repository_does_not_mutate_input():
     repo.create_new_employee(employee_model)
 
     assert employee_model.model_dump() == original_data
+
     db.close()
 
 
@@ -173,6 +287,8 @@ def test_repository_stores_trimmed_fields():
 
     assert created.first_name == "John"
     assert created.last_name == "Doe"
+
+    db.close()
 
 
 def test_get_all_employees_returns_empty_list():
@@ -323,10 +439,13 @@ def test_repo_update_success(repo, db):
         role="manager",
         hourly_rate="15.00",
         hire_date="01/01/2023",
-        term_date="01/02/2023"
+        term_date="01/02/2023",
     )
 
-    updated = repo.update_employee(emp.id, update_model)
+    updated = repo.update_employee(
+        emp.id,
+        update_model,
+    )
 
     assert updated.first_name == "Johnny"
     assert updated.email == "johnny@doe.com"
@@ -346,7 +465,10 @@ def test_repo_update_not_found(repo):
     )
 
     with pytest.raises(EmployeeNotFoundError):
-        repo.update_employee(999, update_model)
+        repo.update_employee(
+            999,
+            update_model,
+        )
 
 
 def test_repo_update_email_conflict(repo, db):
@@ -388,10 +510,13 @@ def test_repo_update_email_conflict(repo, db):
     )
 
     with pytest.raises(EmployeeEmailAlreadyExistsError):
-        repo.update_employee(emp2.id, update_model)
+        repo.update_employee(
+            emp2.id,
+            update_model,
+        )
 
 
-def test_deactivate_employee_success(acting_user, fake_audit_repo):
+def test_deactivate_employee_success():
     db, repo, role = run_db()
 
     employee_model = Employee(
@@ -405,12 +530,12 @@ def test_deactivate_employee_success(acting_user, fake_audit_repo):
         term_date=None,
     )
 
-    created = repo.create_new_employee(employee_model)
+    created = repo.create_new_employee(
+        employee_model
+    )
 
     result = repo.deactivate_employee(
-        created.id,
-        acting_user=acting_user,
-        audit_repo=fake_audit_repo
+        created.id
     )
 
     assert isinstance(result, EmployeeSchema)
@@ -425,20 +550,16 @@ def test_deactivate_employee_success(acting_user, fake_audit_repo):
     db.close()
 
 
-def test_deactivate_employee_not_found(acting_user, fake_audit_repo):
+def test_deactivate_employee_not_found():
     db, repo, role = run_db()
 
     with pytest.raises(EmployeeNotFoundError):
-        repo.deactivate_employee(
-            9999,
-            acting_user=acting_user,
-            audit_repo=fake_audit_repo
-        )
+        repo.deactivate_employee(9999)
 
     db.close()
 
 
-def test_deactivate_employee_already_deactivated(acting_user, fake_audit_repo):
+def test_deactivate_employee_already_deactivated():
     db, repo, role = run_db()
 
     employee_model = Employee(
@@ -452,13 +573,15 @@ def test_deactivate_employee_already_deactivated(acting_user, fake_audit_repo):
         term_date="01/01/2025",
     )
 
-    created = repo.create_new_employee(employee_model)
+    created = repo.create_new_employee(
+        employee_model
+    )
 
-    with pytest.raises(EmployeeAlreadyDeactivatedError):
+    with pytest.raises(
+        EmployeeAlreadyDeactivatedError
+    ):
         repo.deactivate_employee(
-            created.id,
-            acting_user=acting_user,
-            audit_repo=fake_audit_repo
+            created.id
         )
 
     db.close()

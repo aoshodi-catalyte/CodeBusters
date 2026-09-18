@@ -22,6 +22,7 @@ class Employee(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
     email: str
+    phone_number: str | None = None
     role: EmployeeRole
     hourly_rate: ConstrainedMoney  # type: ignore
     hire_date: date

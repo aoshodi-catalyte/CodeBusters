@@ -7,70 +7,65 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_audit_db, get_db
+from database import get_db
 from employee.employee_model import Employee
 from employee.employee_response import EmployeeResponse
-from exceptions.employee_exceptions import EmployeeEmailAlreadyExistsError
+from exceptions.employee_exceptions import (
+    EmployeeEmailAlreadyExistsError,
+    EmployeeAlreadyDeactivatedError,
+)
 from exceptions.secure_login_exceptions import EmployeeNotFoundError
-from exceptions.employee_exceptions import EmployeeAlreadyDeactivatedError
-from repositories.deactivate_audit_repository import AuditRepository
 from repositories.employee_repository import EmployeeRepository
 from security.secure_manager_login import check_role
-from utils.auth import get_acting_user
+from services.employee_service import get_employee_service
+
 
 router = APIRouter()
 
 
-@router.post("/employees", dependencies=[Depends(check_role(["manager"]))],
-             response_model=EmployeeResponse, status_code=201)
-async def post_new_employee(employee_data: Employee, db: Session = Depends(get_db)):
+@router.post(
+    "/employees",
+    dependencies=[Depends(check_role(["manager"]))],
+    response_model=EmployeeResponse,
+    status_code=201,
+)
+async def post_new_employee(
+    employee_data: Employee,
+    db: Session = Depends(get_db),
+):
     """
-    Create a new employee record and return the newly created employee.
+    Create a new employee record and email the generated credentials.
 
-    This endpoint accepts validated employee input data, delegates creation
-    logic to the EmployeeRepository, and returns the resulting persisted
-    employee record. It also handles common error scenarios such as duplicate
-    emails and invalid business rules.
-
-    Args:
-        employee_data (Employee):
-            Pydantic model containing the employee fields submitted by the client.
-            Includes validation for email format, role normalization, date parsing,
-            and business rules.
-        db (Session):
-            SQLAlchemy database session provided via FastAPI dependency injection.
-
-    Returns:
-        EmployeeResponse:
-            A serialized representation of the newly created employee, including
-            its assigned database ID and normalized role.
-
-    Raises:
-        HTTPException (409 Conflict):
-            Raised when an IntegrityError occurs, typically due to attempting to
-            create an employee with an email that already exists in the database.
-        HTTPException (400 Bad Request):
-            Raised when the repository encounters a ValueError, usually triggered
-            by invalid role mappings or business rule violations.
+    The employee service coordinates:
+        - employee creation
+        - username generation
+        - temporary password generation
+        - initial credential email delivery
     """
 
-    repo = EmployeeRepository(db)
+    service = get_employee_service(db)
 
     try:
-        new_employee = repo.create_new_employee(employee_data)
+        new_employee = service.create_employee(
+            db,
+            employee_data,
+        )
+
         return new_employee
 
     except IntegrityError as exc:
         db.rollback()
+
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Employee with this email already exists.",
         ) from exc
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(
@@ -78,21 +73,22 @@ async def post_new_employee(employee_data: Employee, db: Session = Depends(get_d
     response_model=list[EmployeeResponse],
     status_code=status.HTTP_200_OK,
 )
-async def get_all_employees(db: Session = Depends(get_db)):
+async def get_all_employees(
+    db: Session = Depends(get_db),
+):
     """
     Retrieve all employee records.
 
     Args:
-        db (Session):
-            SQLAlchemy database session provided via FastAPI dependency injection.
+        db:
+            SQLAlchemy database session.
 
     Returns:
-        list[EmployeeResponse]:
-            A list of all employees. Returns an empty list when no employees
-            exist.
+        A list of all employees.
     """
 
     repo = EmployeeRepository(db)
+
     return repo.get_all_employees()
 
 
@@ -100,6 +96,7 @@ def _handle_repo_errors(exc: Exception) -> None:
     """
     Convert repository exceptions into HTTPExceptions.
     """
+
     if isinstance(exc, EmployeeNotFoundError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -124,23 +121,15 @@ def get_single_employee_by_id(
     employee_id: int,
     db: Session = Depends(get_db),
 ):
-    """Retrieve a single employee by ID.
-
-    Args:
-        employee_id (int): The positive unique identifier of the employee.
-        db (Session): Database session injected through FastAPI dependency
-            injection.
-
-    Returns:
-        EmployeeResponse: The requested employee.
-
-    Raises:
-        HTTPException: If the employee does not exist.
     """
+    Retrieve a single employee by ID.
+    """
+
     repo = EmployeeRepository(db)
 
     try:
         return repo.get_employee_by_id(employee_id)
+
     except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -165,15 +154,18 @@ def update_employee(
     Raises:
         HTTPException 404:
             If no employee exists with the provided ID.
+
         HTTPException 409:
-            If the updated email or phone number belongs to another
-            employee, or the record violates another database
-            constraint.
+            If the updated email belongs to another employee.
     """
+
     repo = EmployeeRepository(db)
 
     try:
-        return repo.update_employee(employee_id, employee)
+        return repo.update_employee(
+            employee_id,
+            employee,
+        )
 
     except EmployeeNotFoundError as exc:
         raise HTTPException(
@@ -190,37 +182,36 @@ def update_employee(
 
 @router.delete(
     "/employees/{employee_id}",
-    dependencies=[Depends(check_role(["manager"]))],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def deactivate_employee(
     employee_id: int,
-    acting_user=Depends(get_acting_user),
     db: Session = Depends(get_db),
-    audit_db: Session = Depends(get_audit_db),
 ):
     """
-        Deactivate an employee by setting their active status to False.
+    Deactivate an employee by setting active to False.
 
-        The employee record is preserved in the database for historical purposes.
+    The employee record is preserved for historical purposes.
 
-        Returns:
-            A 204 No Content response when the employee is successfully deactivated.
+    Raises:
+        HTTPException 404:
+            If the employee does not exist.
 
-        Raises:
-            HTTPException: 404 Not Found if the employee does not exist.
-            HTTPException: 409 Conflict if the employee is already deactivated.
+        HTTPException 409:
+            If the employee is already deactivated.
     """
+
     repo = EmployeeRepository(db)
-    audit_repo = AuditRepository(audit_db)
 
     try:
-        repo.deactivate_employee(employee_id, acting_user.email, audit_repo)
+        repo.deactivate_employee(employee_id)
+
     except EmployeeNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
     except EmployeeAlreadyDeactivatedError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

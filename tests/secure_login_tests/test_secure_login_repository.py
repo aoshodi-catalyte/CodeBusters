@@ -31,10 +31,17 @@ class FakeQuery:
 
 
 class FakeDB:
-    def __init__(self, employee=None, username=None, credentials=None):
+    def __init__(
+        self,
+        employee=None,
+        username=None,
+        credentials=None,
+        auth_record=None,
+    ):
         self.employee = employee
         self.username = username
         self.credentials = credentials
+        self.auth_record = auth_record
 
         self.added = None
         self.committed = False
@@ -49,6 +56,10 @@ class FakeDB:
 
         if model.__name__ == "EmployeeAuth":
             self.auth_query_count += 1
+
+            # Used by register_employee_auth tests.
+            if self.auth_record is not None:
+                return FakeQuery(self.auth_record)
 
             if self.auth_query_count == 1:
                 return FakeQuery(self.username)
@@ -78,11 +89,12 @@ def test_authenticate_user_success(monkeypatch):
     db = FakeDB(username=auth_record)
 
     monkeypatch.setattr(
-        "repositories.secure_login_repository.pwd_context.verify",
-        lambda p, h: p == h,
+        "repositories.secure_login_repository.verify_password",
+        lambda password, password_hash: password == password_hash,
     )
 
     result = repo.authenticate_user(db, "jane", "secret")
+
     assert result is auth_record
 
 
@@ -93,11 +105,15 @@ def test_authenticate_user_raises_username_not_found():
 
 
 def test_authenticate_user_raises_incorrect_password(monkeypatch):
-    auth_record = SimpleNamespace(username="jane", password_hash="secret")
+    auth_record = SimpleNamespace(
+        username="jane",
+        password_hash="secret",
+    )
+
     db = FakeDB(username=auth_record)
 
     monkeypatch.setattr(
-        "repositories.secure_login_repository.pwd_context.verify",
+        "repositories.secure_login_repository.verify_password",
         lambda *_: False,
     )
 
@@ -242,3 +258,116 @@ def test_register_employee_auth_raises_credentials_exist():
 
     with pytest.raises(CredentialsAlreadyExistError):
         repo.register_employee_auth(db, data)
+
+
+def test_change_password_success(monkeypatch):
+    auth_record = SimpleNamespace(
+        employee_id=7,
+        username="jane",
+        password_hash="old-hash",
+        is_temporary_password=True,
+    )
+
+    db = FakeDB(auth_record=auth_record)
+
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.verify_password",
+        lambda password, password_hash: (
+            password == "old-password"
+            and password_hash == "old-hash"
+        ),
+    )
+
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.hash_password",
+        lambda password: f"hashed-{password}",
+    )
+
+    repo.change_password(
+        db,
+        employee_id=7,
+        current_password="old-password",
+        new_password="NewPassword123!",
+    )
+
+    assert auth_record.password_hash == "hashed-NewPassword123!"
+    assert auth_record.is_temporary_password is False
+    assert db.committed is True
+    assert db.refreshed is auth_record
+
+
+def test_change_password_rejects_incorrect_current_password(
+    monkeypatch,
+):
+    auth_record = SimpleNamespace(
+        employee_id=7,
+        username="jane",
+        password_hash="old-hash",
+        is_temporary_password=True,
+    )
+
+    db = FakeDB(auth_record=auth_record)
+
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.verify_password",
+        lambda *_args: False,
+    )
+
+    with pytest.raises(IncorrectPasswordError):
+        repo.change_password(
+            db,
+            employee_id=7,
+            current_password="wrong-password",
+            new_password="NewPassword123!",
+        )
+
+    assert auth_record.password_hash == "old-hash"
+    assert auth_record.is_temporary_password is True
+    assert db.committed is False
+
+
+def test_change_password_raises_employee_not_found():
+    db = FakeDB(auth_record=None)
+
+    with pytest.raises(EmployeeNotFoundError):
+        repo.change_password(
+            db,
+            employee_id=999,
+            current_password="old-password",
+            new_password="NewPassword123!",
+        )
+
+    assert db.committed is False
+
+
+def test_change_password_clears_temporary_password_flag(
+    monkeypatch,
+):
+    auth_record = SimpleNamespace(
+        employee_id=7,
+        username="jane",
+        password_hash="old-hash",
+        is_temporary_password=True,
+    )
+
+    db = FakeDB(auth_record=auth_record)
+
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.verify_password",
+        lambda *_args: True,
+    )
+
+    monkeypatch.setattr(
+        "repositories.secure_login_repository.hash_password",
+        lambda password: f"hashed-{password}",
+    )
+
+    repo.change_password(
+        db,
+        employee_id=7,
+        current_password="old-password",
+        new_password="NewPassword123!",
+    )
+
+    assert auth_record.is_temporary_password is False
+
